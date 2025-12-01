@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@vueuse/core": "^14.1.0",
+    "echarts": "^6.0.0",
+    "pinia": "^3.0.4",
+    "sass": "^1.94.2",
+    "vue-router": "^4.6.3"
+  }
+}

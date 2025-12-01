@@ -1,0 +1,77 @@
+:root {
+  --font-main: 'Space Mono', monospace;
+  
+  --color-bg-app: #f8f9fa;
+  --color-bg-card: #ffffff;
+  --color-bg-dark: #000000;
+  
+  --color-text-main: #000000;
+  --color-text-inverse: #ffffff;
+  --color-text-success: #00ff00;
+  
+  --color-border: #000000;
+  
+  --color-accent-purple: #6200ea;
+  --color-accent-green: #00c853;
+  
+  --border-width: 2px;
+  --shadow-offset: 4px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-main);
+  background-color: var(--color-bg-app);
+  color: var(--color-text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Retro Button Style */
+.retro-btn {
+  border: var(--border-width) solid var(--color-border);
+  padding: 10px 20px;
+  font-family: var(--font-main);
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s;
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--color-border);
+  text-transform: uppercase;
+  
+  &:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--color-border);
+  }
+  
+  &.primary {
+    background-color: var(--color-accent-purple);
+    color: var(--color-text-inverse);
+  }
+  
+  &.secondary {
+    background-color: var(--color-bg-card);
+    color: var(--color-text-main);
+  }
+}
+
+/* Retro Card Style */
+.retro-card {
+  background-color: var(--color-bg-card);
+  border: var(--border-width) solid var(--color-border);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 rgba(0,0,0,0.1);
+  padding: 20px;
+}
+
+/* Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-4 { gap: 1rem; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.mb-4 { margin-bottom: 1rem; }
+.p-4 { padding: 1rem; }
