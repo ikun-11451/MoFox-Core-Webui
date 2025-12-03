@@ -66,14 +66,14 @@ onMounted(() => {
   background: var(--bg-white);
   padding: 25px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   border-left: 4px solid var(--primary-blue);
   transition: transform 0.2s;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
+  box-shadow: 0 4px 12px var(--shadow);
 }
 
 .stat-card.success {

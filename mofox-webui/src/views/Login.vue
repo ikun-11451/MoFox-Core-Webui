@@ -204,7 +204,7 @@ const handleLogin = async () => {
 .form-input:focus {
   outline: none;
   border-color: var(--primary-blue);
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+  box-shadow: 0 0 0 3px var(--shadow);
 }
 
 .form-input::placeholder {

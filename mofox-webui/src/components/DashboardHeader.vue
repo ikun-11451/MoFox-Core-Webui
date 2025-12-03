@@ -6,6 +6,9 @@
       </div>
       <div class="user-info">
         <span class="status-badge">● 运行中</span>
+        <button class="pixel-button theme-toggle" @click="themeStore.toggleTheme">
+          {{ themeStore.theme === 'light' ? '🌙' : '☀️' }}
+        </button>
         <button class="pixel-button" @click="handleLogout">登出</button>
       </div>
     </div>
@@ -15,9 +18,11 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 const handleLogout = () => {
   userStore.logout()
@@ -28,7 +33,7 @@ const handleLogout = () => {
 <style scoped>
 .dashboard-header {
   background: var(--bg-white);
-  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   margin-bottom: 30px;
 }
 

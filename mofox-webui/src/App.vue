@@ -3,7 +3,10 @@
 </template>
 
 <script setup lang="ts">
-// 根组件
+import { useThemeStore } from '@/stores/theme'
+
+// 初始化主题
+const themeStore = useThemeStore()
 </script>
 
 <style scoped>

@@ -19,6 +19,20 @@
   --warning-yellow: #F39C12;
   --danger-red: #E74C3C;
   --shadow: rgba(74, 144, 226, 0.1);
+  --nav-active-bg: rgba(74, 144, 226, 0.1);
+}
+
+[data-theme="dark"] {
+  --primary-blue: #5B9FE2;
+  --light-blue: #7DB5EC;
+  --lighter-blue: #4A5568;
+  --bg-white: #2D3748;
+  --bg-light: #1A202C;
+  --text-dark: #F7FAFC;
+  --text-gray: #A0AEC0;
+  --border-color: #4A5568;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --nav-active-bg: rgba(91, 159, 226, 0.15);
 }
 
 body {

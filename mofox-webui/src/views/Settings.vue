@@ -8,7 +8,7 @@
       <div class="editor-container">
         <vue-monaco-editor
           v-model:value="code"
-          theme="vs-light"
+          :theme="editorTheme"
           language="json"
           :options="editorOptions"
           @mount="handleMount"
@@ -23,9 +23,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
+import { useThemeStore } from '@/stores/theme'
+
+const themeStore = useThemeStore()
+const editorTheme = computed(() => themeStore.theme === 'dark' ? 'vs-dark' : 'vs-light')
 
 const code = ref(`{
   "name": "MoFox",
@@ -75,7 +79,7 @@ const resetConfig = () => {
   background: var(--bg-white);
   padding: 25px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   height: 100%;
   display: flex;
   flex-direction: column;

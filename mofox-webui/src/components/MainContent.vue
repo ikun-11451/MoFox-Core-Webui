@@ -6,7 +6,7 @@
         API调用趋势
       </h2>
       <div class="chart-container">
-        <v-chart class="chart" :option="chartOption" autoresize />
+        <v-chart class="chart" :option="chartOption" :theme="themeStore.theme" autoresize />
       </div>
     </div>
     
@@ -58,14 +58,14 @@
         消息流量监控
       </h2>
       <div class="chart-container">
-        <v-chart class="chart" :option="performanceOption" autoresize />
+        <v-chart class="chart" :option="performanceOption" :theme="themeStore.theme" autoresize />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, provide } from 'vue'
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -76,7 +76,8 @@ import {
   GridComponent,
   LegendComponent
 } from 'echarts/components'
-import VChart, { THEME_KEY } from 'vue-echarts'
+import VChart from 'vue-echarts'
+import { useThemeStore } from '@/stores/theme'
 
 use([
   CanvasRenderer,
@@ -87,7 +88,7 @@ use([
   LegendComponent
 ])
 
-provide(THEME_KEY, 'light')
+const themeStore = useThemeStore()
 
 const chartOption = ref({
   tooltip: {
@@ -198,7 +199,7 @@ const performanceOption = ref({
   background: var(--bg-white);
   padding: 25px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   display: flex;
   flex-direction: column;
 }

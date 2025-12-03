@@ -7,7 +7,7 @@
       </h2>
       <div class="model-stats-container">
         <div class="chart-container">
-          <v-chart class="chart" :option="modelChartOption" autoresize />
+          <v-chart class="chart" :option="modelChartOption" :theme="themeStore.theme" autoresize />
         </div>
         <table class="model-table">
           <thead>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, provide } from 'vue'
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -60,7 +60,8 @@ import {
   TooltipComponent,
   LegendComponent
 } from 'echarts/components'
-import VChart, { THEME_KEY } from 'vue-echarts'
+import VChart from 'vue-echarts'
+import { useThemeStore } from '@/stores/theme'
 
 use([
   CanvasRenderer,
@@ -70,7 +71,7 @@ use([
   LegendComponent
 ])
 
-provide(THEME_KEY, 'light')
+const themeStore = useThemeStore()
 
 const modelStats = ref([
   { name: 'Kimi K2 Instruct', requests: 2, tps: '27.5', cost: '0.0228' },
@@ -143,7 +144,7 @@ const activeChats = ref([
   background: var(--bg-white);
   padding: 25px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+  box-shadow: 0 2px 8px var(--shadow);
   overflow: hidden; /* 防止内容溢出 */
 }
 

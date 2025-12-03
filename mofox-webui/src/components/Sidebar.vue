@@ -103,7 +103,7 @@ const toggleCollapse = () => {
 }
 
 .nav-item.active {
-  background-color: rgba(74, 144, 226, 0.1);
+  background-color: var(--nav-active-bg);
   color: var(--primary-blue);
   border-right: 3px solid var(--primary-blue);
 }
