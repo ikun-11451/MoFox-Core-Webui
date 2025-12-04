@@ -34,6 +34,10 @@
             <span>记住我</span>
           </label>
         </div>
+
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
         
         <button type="submit" class="login-button" :disabled="loading">
           {{ loading ? '登录中...' : '登 录' }}
@@ -44,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { Icon } from '@iconify/vue'
@@ -52,24 +56,94 @@ import { Icon } from '@iconify/vue'
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
+const errorMessage = ref('')
+const serverInfo = ref<{ host: string; port: number; api_base_url: string } | null>(null)
+
+// 发现服务器的固定端口
+const DISCOVERY_PORT = 12138
 
 const loginForm = reactive({
   password: '',
   remember: false
 })
 
+// 获取主程序服务器信息
+const fetchServerInfo = async () => {
+  try {
+    const hostname = window.location.hostname
+    const response = await fetch(`http://${hostname}:${DISCOVERY_PORT}/server-info`)
+    if (response.ok) {
+      serverInfo.value = await response.json()
+      console.log('服务器信息:', serverInfo.value)
+    }
+  } catch (error) {
+    console.warn('获取服务器信息失败，将使用发现服务器进行登录:', error)
+  }
+}
+
+// 页面加载时获取服务器信息
+onMounted(() => {
+  fetchServerInfo()
+})
+
 const handleLogin = async () => {
   loading.value = true
+  errorMessage.value = ''
   
-  // 模拟登录请求延迟
-  setTimeout(() => {
-    const success = userStore.login()
-    loading.value = false
+  try {
+    const hostname = window.location.hostname
     
-    if (success) {
-      router.push('/dashboard')
+    // 步骤1: 获取服务器信息（如果还没获取）
+    if (!serverInfo.value) {
+      await fetchServerInfo()
     }
-  }, 1000)
+    
+    if (!serverInfo.value) {
+      errorMessage.value = '无法获取服务器信息，请确保Bot已启动'
+      return
+    }
+    
+    // 保存服务器信息到 store
+    userStore.setServerInfo(serverInfo.value)
+    
+    // 步骤2: 通过主程序的插件API进行登录验证
+    // 前端根据返回的IP和端口自己拼接登录URL
+    const loginUrl = `http://${serverInfo.value.host}:${serverInfo.value.port}/plugin-api/webui_auth/auth/login`
+    
+    const loginResponse = await fetch(loginUrl, {
+      method: 'GET',
+      headers: {
+        'X-API-Key': loginForm.password
+      }
+    })
+
+    if (loginResponse.ok) {
+      const loginData = await loginResponse.json()
+      
+      if (loginData.success) {
+        // 保存用户输入的密钥作为API Key
+        userStore.login(loginForm.password)
+        
+        // 保存服务器信息
+        userStore.setServerInfo(serverInfo.value)
+        
+        // 登录成功后跳转到仪表盘
+        router.push('/dashboard')
+      } else {
+        errorMessage.value = loginData.error || '登录失败'
+      }
+    } else if (loginResponse.status === 401 || loginResponse.status === 403) {
+      // API Key 验证失败
+      errorMessage.value = '密码错误，请检查后重试'
+    } else {
+      errorMessage.value = `服务器错误: ${loginResponse.status}`
+    }
+  } catch (error) {
+    console.error('Login error:', error)
+    errorMessage.value = '连接服务器失败，请确保Bot已启动且插件正常运行'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -317,11 +391,19 @@ const handleLogin = async () => {
   justify-content: center;
 }
 
-.social-button:hover {
-  border-color: var(--primary-blue);
-  transform: scale(1.1);
+.register-link:hover {
+  text-decoration: underline;
 }
 
+.error-message {
+  color: #ff4d4f;
+  font-size: 10px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-family: 'Press Start 2P', sans-serif;
+}
+
+/* 响应式设计 */
 /* 注册提示 */
 .register-prompt {
   text-align: center;

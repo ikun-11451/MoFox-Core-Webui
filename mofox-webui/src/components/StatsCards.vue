@@ -41,16 +41,64 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const stats = ref({
-  totalRequests: 17,
-  onlineTime: '28分钟',
-  totalTokens: '2,287',
-  totalCost: '0.023'
+  totalRequests: 0,
+  onlineTime: '计算中...',
+  totalTokens: '0',
+  totalCost: '0.00'
 })
 
+const loading = ref(true)
+
+// 格式化运行时间
+const formatUptime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${Math.floor(seconds)}秒`
+  } else if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}分钟`
+  } else if (seconds < 86400) {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return `${hours}小时${minutes}分钟`
+  } else {
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    return `${days}天${hours}小时`
+  }
+}
+
+// 从API获取统计数据
+const fetchStats = async () => {
+  try {
+    loading.value = true
+    const response = await userStore.authFetch('/dashboard/stats')
+    
+    if (response.ok) {
+      const data = await response.json()
+      stats.value = {
+        totalRequests: data.total_messages || 0,
+        onlineTime: formatUptime(data.uptime_seconds || 0),
+        totalTokens: '0', // 需要从其他API获取
+        totalCost: '0.00' // 需要从其他API获取
+      }
+    } else {
+      console.error('获取统计数据失败:', response.status)
+    }
+  } catch (error) {
+    console.error('获取统计数据出错:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(() => {
-  // TODO: 从API获取实时数据
+  fetchStats()
+  // 每30秒刷新一次数据
+  setInterval(fetchStats, 30000)
 })
 </script>
 
