@@ -402,16 +402,33 @@
             <p>{{ task.description }}</p>
           </div>
           <div class="task-config">
-            <select 
-              class="input"
-              :value="getTaskModel(taskKey)"
-              @change="updateTaskModel(taskKey, ($event.target as HTMLSelectElement).value)"
-            >
-              <option value="">未配置</option>
-              <option v-for="model in models" :key="model.name" :value="model.name">
-                {{ model.name }}
-              </option>
-            </select>
+            <div class="task-config-row">
+              <select 
+                class="input"
+                :value="getTaskModel(taskKey)"
+                @change="updateTaskModel(taskKey, ($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">未配置</option>
+                <option v-for="model in models" :key="model.name" :value="model.name">
+                  {{ model.name }}
+                </option>
+              </select>
+              <div class="concurrency-config">
+                <label title="模型并发请求数量">
+                  <Icon icon="lucide:layers" />
+                  并发
+                </label>
+                <input 
+                  type="number" 
+                  class="input concurrency-input"
+                  :value="getTaskConcurrency(taskKey)"
+                  @input="updateTaskConcurrency(taskKey, Number(($event.target as HTMLInputElement).value))"
+                  min="1"
+                  max="100"
+                  placeholder="1"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -530,6 +547,45 @@
               <input v-model.number="newModel.price_out" type="number" class="input" step="0.1" min="0" />
             </div>
           </div>
+
+          <!-- 高级参数 -->
+          <div class="divider">
+            <span>高级参数 (可选)</span>
+          </div>
+          
+          <div class="config-field-row">
+            <div class="config-field">
+              <label>
+                最大输出 Token
+                <span class="field-hint">留空使用默认值</span>
+              </label>
+              <input v-model.number="newModel.max_tokens" type="number" class="input" min="1" placeholder="例如: 4096" />
+            </div>
+            <div class="config-field">
+              <label>
+                温度 (temperature)
+                <span class="field-hint">0-2，留空使用默认值</span>
+              </label>
+              <input v-model.number="newModel.temperature" type="number" class="input" step="0.1" min="0" max="2" placeholder="例如: 0.7" />
+            </div>
+          </div>
+
+          <div class="config-field-row">
+            <div class="config-field checkbox-field">
+              <label>
+                <input v-model="newModel.anti_truncation" type="checkbox" />
+                <span>反截断</span>
+                <span class="field-hint">防止模型输出被截断</span>
+              </label>
+            </div>
+            <div class="config-field checkbox-field">
+              <label>
+                <input v-model="newModel.enable_prompt_perturbation" type="checkbox" />
+                <span>内容混淆</span>
+                <span class="field-hint">对提示词进行微扰动，增加输出多样性</span>
+              </label>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showAddModelModal = false">取消</button>
@@ -606,7 +662,12 @@ const newModel = ref({
   name: '',
   api_provider: '',
   price_in: 0,
-  price_out: 0
+  price_out: 0,
+  // 高级参数
+  max_tokens: undefined as number | undefined,
+  temperature: undefined as number | undefined,
+  anti_truncation: false,
+  enable_prompt_perturbation: false
 })
 
 // 计算 API 提供商列表
@@ -751,18 +812,52 @@ function removeProvider(index: number) {
 function confirmAddModel() {
   if (!newModel.value.model_identifier || !newModel.value.name) return
   
-  const newModels = [...models.value, {
+  // 构建新模型对象
+  const modelData: Model = {
     model_identifier: newModel.value.model_identifier,
     name: newModel.value.name,
     api_provider: newModel.value.api_provider,
     price_in: newModel.value.price_in,
     price_out: newModel.value.price_out
-  }]
+  }
+  
+  // 添加高级参数到 extra_params
+  const extraParams: Record<string, unknown> = {}
+  if (newModel.value.max_tokens !== undefined && newModel.value.max_tokens > 0) {
+    extraParams.max_tokens = newModel.value.max_tokens
+  }
+  if (newModel.value.temperature !== undefined && newModel.value.temperature >= 0) {
+    extraParams.temperature = newModel.value.temperature
+  }
+  
+  if (Object.keys(extraParams).length > 0) {
+    modelData.extra_params = extraParams
+  }
+  
+  // 添加反截断和内容混淆选项
+  if (newModel.value.anti_truncation) {
+    modelData.anti_truncation = true
+  }
+  if (newModel.value.enable_prompt_perturbation) {
+    modelData.enable_prompt_perturbation = true
+  }
+  
+  const newModels = [...models.value, modelData]
   
   emit('update', 'models', newModels)
   
   showAddModelModal.value = false
-  newModel.value = { model_identifier: '', name: '', api_provider: '', price_in: 0, price_out: 0 }
+  newModel.value = { 
+    model_identifier: '', 
+    name: '', 
+    api_provider: '', 
+    price_in: 0, 
+    price_out: 0,
+    max_tokens: undefined,
+    temperature: undefined,
+    anti_truncation: false,
+    enable_prompt_perturbation: false
+  }
   
   // 展开新添加的模型
   expandedModel.value = newModels.length - 1
@@ -791,6 +886,23 @@ function getTaskModel(taskKey: string): string {
 
 function updateTaskModel(taskKey: string, modelName: string) {
   emit('update', `model_task_config.${taskKey}.model_list`, modelName ? [modelName] : [])
+}
+
+// 获取任务并发数
+function getTaskConcurrency(taskKey: string): number {
+  const data = props.parsedData
+  const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
+  if (!taskConfig || !taskConfig[taskKey]) return 1
+  
+  const concurrency = taskConfig[taskKey].concurrency_count as number | undefined
+  return concurrency ?? 1
+}
+
+// 更新任务并发数
+function updateTaskConcurrency(taskKey: string, count: number) {
+  if (count < 1) count = 1
+  if (count > 100) count = 100
+  emit('update', `model_task_config.${taskKey}.concurrency_count`, count)
 }
 
 // 初始化
@@ -1517,6 +1629,28 @@ select.input {
   gap: 16px;
 }
 
+.config-field.checkbox-field label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.config-field.checkbox-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.config-field.checkbox-field span {
+  font-weight: 500;
+}
+
+.config-field.checkbox-field .field-hint {
+  margin-left: auto;
+}
+
 .config-field.inline {
   flex-direction: row;
   align-items: center;
@@ -1631,12 +1765,44 @@ select.input {
 
 .task-config {
   flex-shrink: 0;
-  width: 200px;
+  width: 300px;
 }
 
 .task-config .input {
   font-size: 13px;
   padding: 8px 12px;
+}
+
+.task-config-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.task-config-row select.input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.concurrency-config {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.concurrency-config label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.concurrency-input {
+  width: 60px !important;
+  text-align: center;
+  padding: 6px 8px !important;
 }
 
 /* 预设按钮激活状态 */

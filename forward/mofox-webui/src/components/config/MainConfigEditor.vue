@@ -33,6 +33,15 @@
           <Icon icon="lucide:settings-2" />
           {{ showAdvanced ? '隐藏高级选项' : '显示高级选项' }}
         </button>
+        <label class="filter-btn expert-toggle" :class="{ active: showExpert }">
+          <input 
+            type="checkbox" 
+            v-model="showExpert"
+            class="expert-checkbox"
+          />
+          <Icon icon="lucide:flask-conical" />
+          专家模式
+        </label>
       </div>
     </div>
 
@@ -42,12 +51,16 @@
         v-for="group in filteredGroups" 
         :key="group.key" 
         class="config-group"
-        :class="{ collapsed: collapsedGroups[group.key] }"
+        :class="{ 
+          collapsed: collapsedGroups[group.key],
+          'expert-group': group.expert
+        }"
       >
         <div class="group-header" @click="toggleGroup(group.key)">
           <div class="group-title">
             <Icon :icon="group.icon" />
             <h3>{{ group.name }}</h3>
+            <span v-if="group.expert" class="expert-badge">专家</span>
           </div>
           <div class="group-meta">
             <span class="group-hint">{{ group.description }}</span>
@@ -57,11 +70,33 @@
         
         <div v-show="!collapsedGroups[group.key]" class="group-content">
           <template v-for="field in getVisibleFields(group)" :key="field.key">
+            <!-- 特殊编辑器 -->
+            <div v-if="field.specialEditor" class="field-card special-editor-card">
+              <MasterUsersEditor 
+                v-if="field.specialEditor === 'master_users'"
+                :value="getFieldValue(field.key)"
+                @update="(v: unknown) => emit('update', field.key, v)"
+              />
+              <ExpressionRulesEditor 
+                v-else-if="field.specialEditor === 'expression_rules'"
+                :value="getFieldValue(field.key)"
+                @update="(v: unknown) => emit('update', field.key, v)"
+              />
+              <ReactionRulesEditor 
+                v-else-if="field.specialEditor === 'reaction_rules'"
+                :value="getFieldValue(field.key)"
+                @update="(v: unknown) => emit('update', field.key, v)"
+              />
+            </div>
+            
+            <!-- 普通字段 -->
             <div 
+              v-else
               class="field-card"
               :class="{ 
                 inline: field.type === 'boolean',
-                advanced: field.advanced
+                advanced: field.advanced,
+                expert: field.expert
               }"
             >
               <!-- Boolean 类型 -->
@@ -70,6 +105,7 @@
                   <div class="field-header">
                     <span class="field-name">{{ field.name }}</span>
                     <span v-if="field.advanced" class="advanced-badge">高级</span>
+                    <span v-if="field.expert" class="expert-badge">专家</span>
                   </div>
                   <div class="field-description">{{ field.description }}</div>
                 </div>
@@ -89,6 +125,7 @@
                   <span class="field-name">{{ field.name }}</span>
                   <span class="field-key">{{ field.key }}</span>
                   <span v-if="field.advanced" class="advanced-badge">高级</span>
+                  <span v-if="field.expert" class="expert-badge">专家</span>
                 </div>
                 <div class="field-description">{{ field.description }}</div>
                 
@@ -258,6 +295,9 @@ import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ConfigSection } from '@/api'
 import FieldEditor from './FieldEditor.vue'
+import MasterUsersEditor from './special/MasterUsersEditor.vue'
+import ExpressionRulesEditor from './special/ExpressionRulesEditor.vue'
+import ReactionRulesEditor from './special/ReactionRulesEditor.vue'
 import { botConfigGroups, type ConfigGroupDef, type ConfigFieldDef } from '@/config/configDescriptions'
 
 const props = defineProps<{
@@ -273,17 +313,25 @@ const emit = defineEmits<{
 // 状态
 const searchQuery = ref('')
 const showAdvanced = ref(false)
+const showExpert = ref(false)
 const showPasswords = ref<Record<string, boolean>>({})
 const collapsedGroups = ref<Record<string, boolean>>({})
 
 // 过滤后的配置分组
 const filteredGroups = computed(() => {
+  let groups = botConfigGroups
+  
+  // 专家模式过滤
+  if (!showExpert.value) {
+    groups = groups.filter(group => !group.expert)
+  }
+  
   if (!searchQuery.value) {
-    return botConfigGroups
+    return groups
   }
   
   const query = searchQuery.value.toLowerCase()
-  return botConfigGroups.filter(group => {
+  return groups.filter(group => {
     // 检查分组名称
     if (group.name.toLowerCase().includes(query)) return true
     // 检查字段
@@ -295,7 +343,7 @@ const filteredGroups = computed(() => {
   })
 })
 
-// 获取可见字段（考虑高级选项过滤）
+// 获取可见字段（考虑高级选项和专家选项过滤）
 function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
   let fields = group.fields
   
@@ -312,6 +360,11 @@ function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
   // 高级选项过滤
   if (!showAdvanced.value) {
     fields = fields.filter(field => !field.advanced)
+  }
+  
+  // 专家选项过滤
+  if (!showExpert.value) {
+    fields = fields.filter(field => !field.expert)
   }
   
   return fields
@@ -497,6 +550,33 @@ function parseArrayValue(value: string): string[] {
   color: var(--primary);
 }
 
+/* 专家模式切换 */
+.expert-toggle {
+  position: relative;
+}
+
+.expert-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.expert-toggle.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #f59e0b;
+  color: white;
+}
+
+.expert-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  margin-left: 8px;
+}
+
 /* 配置分组 */
 .config-groups {
   display: flex;
@@ -511,6 +591,15 @@ function parseArrayValue(value: string): string[] {
   overflow: hidden;
 }
 
+.config-group.expert-group {
+  border-color: #f59e0b;
+  border-width: 2px;
+}
+
+.config-group.expert-group .group-header {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05));
+}
+
 .group-header {
   display: flex;
   align-items: center;
@@ -521,6 +610,7 @@ function parseArrayValue(value: string): string[] {
   cursor: pointer;
   transition: background var(--transition-fast);
 }
+
 
 .group-header:hover {
   background: var(--bg-hover);
@@ -594,6 +684,16 @@ function parseArrayValue(value: string): string[] {
 
 .field-card.advanced {
   border-left: 3px solid var(--warning);
+}
+
+.field-card.expert {
+  border-left: 3px solid #f59e0b;
+}
+
+.field-card.special-editor-card {
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .field-left {

@@ -7,6 +7,9 @@
 // 配置字段类型
 export type FieldType = 'string' | 'number' | 'boolean' | 'array' | 'object' | 'password' | 'select' | 'textarea'
 
+// 配置字段类型扩展
+export type SpecialEditorType = 'master_users' | 'expression_rules' | 'reaction_rules' | 'model_extra_params'
+
 // 配置字段定义
 export interface ConfigFieldDef {
   key: string              // 配置键名
@@ -19,7 +22,9 @@ export interface ConfigFieldDef {
   min?: number             // 最小值（用于 number 类型）
   max?: number             // 最大值（用于 number 类型）
   step?: number            // 步进值（用于 number 类型）
-  advanced?: boolean       // 是否为高级选项
+  advanced?: boolean       // 是否为高级选项（显示高级选项时显示）
+  expert?: boolean         // 是否为专家选项（需要打勾专家模式才显示）
+  specialEditor?: SpecialEditorType  // 特殊编辑器类型
 }
 
 // 配置分组定义
@@ -29,6 +34,8 @@ export interface ConfigGroupDef {
   icon: string             // 图标
   description: string      // 分组描述
   fields: ConfigFieldDef[] // 字段列表
+  expert?: boolean         // 整个分组是否为专家模式（需要打勾专家模式才显示）
+  hasSpecialEditor?: boolean  // 是否包含特殊编辑器
 }
 
 // ==================== Bot 配置描述 ====================
@@ -597,53 +604,99 @@ export const botConfigGroups: ConfigGroupDef[] = [
     key: 'web_search',
     name: '网络搜索',
     icon: 'lucide:search',
-    description: '配置联网搜索功能',
+    description: '配置联网搜索功能，支持多种搜索引擎',
     fields: [
       {
         key: 'web_search.enable_web_search_tool',
         name: '启用联网搜索',
-        description: '是否启用联网搜索工具',
+        description: '是否启用联网搜索工具，允许机器人在需要时搜索网络信息',
         type: 'boolean',
         default: true
       },
       {
         key: 'web_search.enable_url_tool',
         name: '启用 URL 解析',
-        description: '是否启用 URL 解析工具',
+        description: '是否启用 URL 解析工具，允许机器人解析和获取网页内容',
         type: 'boolean',
         default: true
       },
       {
         key: 'web_search.enabled_engines',
         name: '启用的搜索引擎',
-        description: '启用的搜索引擎列表',
+        description: '启用的搜索引擎列表，可同时启用多个',
         type: 'array',
         default: ['ddg'],
         placeholder: '可选: exa, tavily, ddg, bing, metaso, serper'
       },
       {
+        key: 'web_search.search_strategy',
+        name: '搜索策略',
+        description: '多引擎搜索时的执行策略',
+        type: 'select',
+        default: 'single',
+        options: [
+          { value: 'single', label: '单引擎（使用第一个可用引擎）' },
+          { value: 'parallel', label: '并行（同时使用所有启用的引擎）' },
+          { value: 'fallback', label: '降级（按顺序尝试，失败则下一个）' }
+        ]
+      },
+      {
         key: 'web_search.tavily_api_keys',
         name: 'Tavily API 密钥',
-        description: 'Tavily API 密钥列表，支持轮询机制',
+        description: 'Tavily搜索引擎API密钥列表，支持多密钥轮询',
         type: 'array',
-        advanced: true
+        advanced: true,
+        placeholder: '添加Tavily API密钥...'
       },
       {
         key: 'web_search.exa_api_keys',
         name: 'EXA API 密钥',
-        description: 'EXA API 密钥列表，支持轮询机制',
+        description: 'EXA搜索引擎API密钥列表，支持多密钥轮询',
         type: 'array',
-        advanced: true
+        advanced: true,
+        placeholder: '添加EXA API密钥...'
+      },
+      {
+        key: 'web_search.metaso_api_keys',
+        name: 'Metaso API 密钥',
+        description: 'Metaso搜索引擎API密钥列表，支持多密钥轮询',
+        type: 'array',
+        advanced: true,
+        placeholder: '添加Metaso API密钥...'
+      },
+      {
+        key: 'web_search.serper_api_keys',
+        name: 'Serper API 密钥',
+        description: 'Serper搜索引擎API密钥列表，支持多密钥轮询',
+        type: 'array',
+        advanced: true,
+        placeholder: '添加Serper API密钥...'
+      },
+      {
+        key: 'web_search.searxng_instances',
+        name: 'SearXNG 实例',
+        description: 'SearXNG实例URL列表',
+        type: 'array',
+        advanced: true,
+        placeholder: '添加SearXNG实例URL...'
+      },
+      {
+        key: 'web_search.searxng_api_keys',
+        name: 'SearXNG API 密钥',
+        description: 'SearXNG实例API密钥列表',
+        type: 'array',
+        advanced: true,
+        placeholder: '添加SearXNG API密钥...'
       }
     ]
   },
 
-  // 视频分析配置
+  // 视频分析配置（简单模式）
   {
     key: 'video_analysis',
     name: '视频分析',
     icon: 'lucide:video',
-    description: '配置视频分析功能',
+    description: '配置视频分析功能，高级选项请在专家模式中配置',
     fields: [
       {
         key: 'video_analysis.enable',
@@ -651,6 +704,13 @@ export const botConfigGroups: ConfigGroupDef[] = [
         description: '是否启用视频分析功能',
         type: 'boolean',
         default: true
+      },
+      {
+        key: 'video_analysis.ffmpeg_path',
+        name: 'FFmpeg 路径',
+        description: 'FFmpeg可执行文件路径，用于视频处理',
+        type: 'string',
+        placeholder: '例如: /usr/bin/ffmpeg 或 C:/ffmpeg/bin/ffmpeg.exe'
       },
       {
         key: 'video_analysis.analysis_mode',
@@ -928,13 +988,15 @@ export const botConfigGroups: ConfigGroupDef[] = [
     name: '权限配置',
     icon: 'lucide:shield',
     description: '配置用户权限和主人身份',
+    hasSpecialEditor: true,
     fields: [
       {
         key: 'permission.master_users',
         name: '主人用户',
-        description: '拥有最高权限的用户列表，格式: [["platform", "user_id"], ...]',
+        description: '拥有最高权限的用户列表，无视所有权限节点。格式为二维数组: [[平台, 用户ID], ...]',
         type: 'array',
-        placeholder: '例如: [["qq", "123456"]]'
+        placeholder: '例如: [["qq", "123456"]]',
+        specialEditor: 'master_users'
       },
       {
         key: 'permission.master_prompt.enable',
@@ -973,6 +1035,799 @@ export const botConfigGroups: ConfigGroupDef[] = [
         description: '是否显示 prompt 内容，用于调试',
         type: 'boolean',
         default: false
+      }
+    ]
+  },
+
+  // ==================== 以下为新增配置组 ====================
+
+  // 表达学习系统
+  {
+    key: 'expression',
+    name: '表达学习系统',
+    icon: 'lucide:sparkles',
+    description: '配置机器人学习和使用表达方式的行为',
+    hasSpecialEditor: true,
+    fields: [
+      {
+        key: 'expression.mode',
+        name: '表达模式',
+        description: '表达方式模式选择',
+        type: 'select',
+        default: 'exp_model',
+        options: [
+          { value: 'classic', label: '经典模式（随机抽样 + LLM选择）' },
+          { value: 'exp_model', label: '表达模型模式（机器学习预测）' }
+        ]
+      },
+      {
+        key: 'expression.expiration_days',
+        name: '过期天数',
+        description: '表达方式过期天数，超过此天数未激活的表达方式将被清理',
+        type: 'number',
+        default: 1,
+        min: 1,
+        max: 30
+      },
+      {
+        key: 'expression.rules',
+        name: '表达规则',
+        description: '表达学习规则列表，可为不同聊天流配置独立的学习规则',
+        type: 'array',
+        specialEditor: 'expression_rules'
+      }
+    ]
+  },
+
+  // 反应规则系统
+  {
+    key: 'reaction',
+    name: '反应规则系统',
+    icon: 'lucide:zap',
+    description: '基于关键词或正则表达式的自动回复规则',
+    hasSpecialEditor: true,
+    fields: [
+      {
+        key: 'reaction.rules',
+        name: '反应规则',
+        description: '自动回复规则列表，支持关键词匹配和正则表达式匹配',
+        type: 'array',
+        specialEditor: 'reaction_rules'
+      }
+    ]
+  },
+
+  // 插件HTTP端点系统
+  {
+    key: 'plugin_http_system',
+    name: '插件HTTP端点',
+    icon: 'lucide:plug',
+    description: '配置插件的HTTP端点功能和安全设置',
+    fields: [
+      {
+        key: 'plugin_http_system.enable_plugin_http_endpoints',
+        name: '启用HTTP端点',
+        description: '总开关，用于启用或禁用所有插件的HTTP端点功能',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'plugin_http_system.plugin_api_rate_limit_enable',
+        name: '启用速率限制',
+        description: '是否为插件暴露的API启用全局速率限制',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'plugin_http_system.plugin_api_rate_limit_default',
+        name: '默认速率限制',
+        description: '默认的速率限制策略，格式: "次数/时间单位"（如100/minute）',
+        type: 'string',
+        default: '100/minute',
+        placeholder: '例如: 100/minute, 1000/hour'
+      },
+      {
+        key: 'plugin_http_system.plugin_api_valid_keys',
+        name: 'API认证密钥',
+        description: '用于访问需要认证的插件API的有效密钥列表',
+        type: 'array',
+        placeholder: '添加API密钥...'
+      }
+    ]
+  },
+
+  // KFC心流聊天器
+  {
+    key: 'kokoro_flow_chatter',
+    name: 'KFC 心流聊天器',
+    icon: 'lucide:heart-handshake',
+    description: '专为私聊设计的深度情感交互处理器，复用全局人设和情感框架',
+    fields: [
+      {
+        key: 'kokoro_flow_chatter.enable',
+        name: '启用KFC',
+        description: '开启后KFC将接管所有私聊消息；关闭后私聊将由AFC处理',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'kokoro_flow_chatter.mode',
+        name: '工作模式',
+        description: '统一模式响应更快，分离模式控制更精细',
+        type: 'select',
+        default: 'split',
+        options: [
+          { value: 'unified', label: '统一模式（单次LLM调用，响应快）' },
+          { value: 'split', label: '分离模式（Planner+Replyer，控制精细）' }
+        ]
+      },
+      {
+        key: 'kokoro_flow_chatter.max_wait_seconds_default',
+        name: '默认等待时间',
+        description: 'AI发送消息后愿意等待用户回复的时间（秒）',
+        type: 'number',
+        default: 300,
+        min: 60,
+        max: 3600
+      },
+      {
+        key: 'kokoro_flow_chatter.enable_continuous_thinking',
+        name: '持续心理活动',
+        description: '是否在等待期间启用心理活动更新',
+        type: 'boolean',
+        default: true
+      },
+      // KFC主动思考子配置
+      {
+        key: 'kokoro_flow_chatter.proactive_thinking.enabled',
+        name: 'KFC主动思考',
+        description: '是否启用KFC的私聊主动思考（想一想要不要联系对方）',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'kokoro_flow_chatter.proactive_thinking.silence_threshold_seconds',
+        name: '沉默触发阈值',
+        description: '用户沉默超过此时长（秒）可能触发主动思考',
+        type: 'number',
+        default: 7200,
+        min: 300,
+        max: 86400
+      },
+      {
+        key: 'kokoro_flow_chatter.proactive_thinking.min_affinity_for_proactive',
+        name: '最低好感度',
+        description: '需要达到的最低好感度才会开始主动关心',
+        type: 'number',
+        default: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.1
+      },
+      {
+        key: 'kokoro_flow_chatter.proactive_thinking.min_interval_between_proactive',
+        name: '主动间隔',
+        description: '两次主动思考之间的最小间隔（秒）',
+        type: 'number',
+        default: 1800,
+        min: 300,
+        max: 86400
+      },
+      {
+        key: 'kokoro_flow_chatter.proactive_thinking.quiet_hours_start',
+        name: '勿扰开始时间',
+        description: '勿扰开始时间，格式: HH:MM',
+        type: 'string',
+        default: '23:00',
+        placeholder: '23:00'
+      },
+      {
+        key: 'kokoro_flow_chatter.proactive_thinking.quiet_hours_end',
+        name: '勿扰结束时间',
+        description: '勿扰结束时间，格式: HH:MM',
+        type: 'string',
+        default: '07:00',
+        placeholder: '07:00'
+      },
+      {
+        key: 'kokoro_flow_chatter.proactive_thinking.trigger_probability',
+        name: '触发概率',
+        description: '每次检查时主动发起的概率（0-1），避免过于频繁打扰',
+        type: 'number',
+        default: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.1
+      }
+    ]
+  },
+
+  // 跨群上下文
+  {
+    key: 'cross_context',
+    name: '跨群上下文',
+    icon: 'lucide:share-2',
+    description: '跨群聊/私聊上下文共享配置，基于用户中心检索',
+    fields: [
+      {
+        key: 'cross_context.enable',
+        name: '启用跨群上下文',
+        description: '总开关，用于一键启用或禁用此功能',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'cross_context.s4u_mode',
+        name: 'S4U模式',
+        description: '用户中心上下文检索模式',
+        type: 'select',
+        default: 'whitelist',
+        options: [
+          { value: 'whitelist', label: '白名单模式' },
+          { value: 'blacklist', label: '黑名单模式' }
+        ]
+      },
+      {
+        key: 'cross_context.s4u_limit',
+        name: '消息条数',
+        description: 'S4U模式下从每个聊天中获取目标用户的消息条数',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50
+      },
+      {
+        key: 'cross_context.s4u_stream_limit',
+        name: '聊天流数量',
+        description: 'S4U模式下最多检索多少个不同的聊天流',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 20
+      },
+      {
+        key: 'cross_context.s4u_whitelist_chats',
+        name: '白名单',
+        description: '白名单列表，格式: ["platform:type:id", ...]',
+        type: 'array',
+        placeholder: '例如: qq:group:123456'
+      },
+      {
+        key: 'cross_context.s4u_blacklist_chats',
+        name: '黑名单',
+        description: '黑名单列表，格式: ["platform:type:id", ...]',
+        type: 'array',
+        placeholder: '例如: qq:private:789'
+      }
+    ]
+  },
+
+  // 兴趣流系统
+  {
+    key: 'affinity_flow',
+    name: '兴趣流系统',
+    icon: 'lucide:activity',
+    description: '配置机器人的兴趣评分和回复决策系统',
+    fields: [
+      {
+        key: 'affinity_flow.enable_normal_mode',
+        name: '启用Normal模式',
+        description: '启用后在专注模式回复后会自动切换，根据兴趣度决定是否回复',
+        type: 'boolean',
+        default: false
+      },
+      {
+        key: 'affinity_flow.reply_action_interest_threshold',
+        name: '回复兴趣阈值',
+        description: '回复动作的兴趣阈值',
+        type: 'number',
+        default: 0.75,
+        min: 0,
+        max: 1,
+        step: 0.05
+      },
+      {
+        key: 'affinity_flow.non_reply_action_interest_threshold',
+        name: '非回复兴趣阈值',
+        description: '非回复动作的兴趣阈值',
+        type: 'number',
+        default: 0.65,
+        min: 0,
+        max: 1,
+        step: 0.05
+      },
+      {
+        key: 'affinity_flow.enable_post_reply_boost',
+        name: '回复后连续对话',
+        description: '启用回复后阈值降低机制，使bot更容易进行连续对话',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'affinity_flow.post_reply_threshold_reduction',
+        name: '阈值降低值',
+        description: '回复后初始阈值降低值',
+        type: 'number',
+        default: 0.1,
+        min: 0,
+        max: 0.5,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.strong_mention_interest_score',
+        name: '强提及分数',
+        description: '被@、被回复、私聊时的兴趣分',
+        type: 'number',
+        default: 2.0,
+        min: 0,
+        max: 5,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.weak_mention_interest_score',
+        name: '弱提及分数',
+        description: '文本匹配bot名字或别名时的兴趣分',
+        type: 'number',
+        default: 0.8,
+        min: 0,
+        max: 2,
+        step: 0.1,
+        advanced: true
+      }
+    ]
+  },
+
+  // 主动思考（群聊）
+  {
+    key: 'proactive_thinking',
+    name: '主动思考',
+    icon: 'lucide:lightbulb',
+    description: '主动发起对话功能配置，用于群聊和私聊（当KFC关闭时）',
+    fields: [
+      {
+        key: 'proactive_thinking.enable',
+        name: '启用主动思考',
+        description: '是否启用主动发起对话功能',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'proactive_thinking.base_interval',
+        name: '基础间隔',
+        description: '基础触发间隔（秒）',
+        type: 'number',
+        default: 1800,
+        min: 60,
+        max: 86400
+      },
+      {
+        key: 'proactive_thinking.min_interval',
+        name: '最小间隔',
+        description: '最小触发间隔（秒），兴趣分数高时会接近此值',
+        type: 'number',
+        default: 600,
+        min: 60,
+        max: 3600
+      },
+      {
+        key: 'proactive_thinking.max_interval',
+        name: '最大间隔',
+        description: '最大触发间隔（秒），兴趣分数低时会接近此值',
+        type: 'number',
+        default: 7200,
+        min: 1800,
+        max: 86400
+      },
+      {
+        key: 'proactive_thinking.use_interest_score',
+        name: '动态调整',
+        description: '是否根据兴趣分数动态调整间隔',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'proactive_thinking.enable_time_strategy',
+        name: '时间策略',
+        description: '是否启用时间策略（根据时段调整频率）',
+        type: 'boolean',
+        default: false,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.quiet_hours_start',
+        name: '安静时段开始',
+        description: '安静时段开始时间，格式: HH:MM',
+        type: 'string',
+        default: '00:00',
+        placeholder: '00:00',
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.quiet_hours_end',
+        name: '安静时段结束',
+        description: '安静时段结束时间，格式: HH:MM',
+        type: 'string',
+        default: '07:00',
+        placeholder: '07:00',
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.max_daily_proactive',
+        name: '每日最大次数',
+        description: '每个聊天流每天最多主动发言次数，0表示不限制',
+        type: 'number',
+        default: 0,
+        min: 0,
+        max: 100,
+        advanced: true
+      }
+    ]
+  },
+
+  // 自定义提示词
+  {
+    key: 'custom_prompt',
+    name: '自定义提示词',
+    icon: 'lucide:message-square-text',
+    description: '自定义部分提示词内容',
+    fields: [
+      {
+        key: 'custom_prompt.image_prompt',
+        name: '图片描述提示词',
+        description: '用于描述图片内容的提示词',
+        type: 'textarea',
+        placeholder: '请用中文描述这张图片的内容...'
+      },
+      {
+        key: 'custom_prompt.planner_custom_prompt_content',
+        name: 'AFC决策器提示词',
+        description: 'AFC决策器自定义提示词内容，留空则不生效',
+        type: 'textarea',
+        placeholder: '例如: 请在聊天中多用一些EMOJI_ACTION'
+      }
+    ]
+  },
+
+  // 依赖管理
+  {
+    key: 'dependency_management',
+    name: '依赖管理',
+    icon: 'lucide:package',
+    description: '插件Python依赖管理配置',
+    fields: [
+      {
+        key: 'dependency_management.auto_install',
+        name: '自动安装',
+        description: '是否启用自动安装Python依赖包',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'dependency_management.auto_install_timeout',
+        name: '安装超时',
+        description: '安装超时时间（秒）',
+        type: 'number',
+        default: 300,
+        min: 60,
+        max: 1800
+      },
+      {
+        key: 'dependency_management.use_mirror',
+        name: '使用镜像源',
+        description: '是否使用PyPI镜像源（推荐，可加速下载）',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'dependency_management.mirror_url',
+        name: '镜像源URL',
+        description: 'PyPI镜像源URL',
+        type: 'string',
+        default: 'https://pypi.tuna.tsinghua.edu.cn/simple',
+        placeholder: 'https://pypi.tuna.tsinghua.edu.cn/simple'
+      }
+    ]
+  },
+
+  // ==================== 专家模式配置组 ====================
+
+  // LPMM知识库（专家模式）
+  {
+    key: 'lpmm_knowledge',
+    name: 'LPMM知识库',
+    icon: 'lucide:book-open',
+    description: 'LPMM知识库配置，包含各种阈值和TopK参数',
+    expert: true,
+    fields: [
+      {
+        key: 'lpmm_knowledge.enable',
+        name: '启用知识库',
+        description: '是否启用LPMM知识库',
+        type: 'boolean',
+        default: false
+      },
+      {
+        key: 'lpmm_knowledge.enable_summary',
+        name: '启用总结',
+        description: '是否启用知识库总结功能',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'lpmm_knowledge.rag_synonym_search_top_k',
+        name: '同义词TopK',
+        description: '同义词搜索返回的最大数量',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50
+      },
+      {
+        key: 'lpmm_knowledge.rag_synonym_threshold',
+        name: '同义词阈值',
+        description: '同义词相似度阈值（高于此值的词语会被认为是同义词）',
+        type: 'number',
+        default: 0.8,
+        min: 0,
+        max: 1,
+        step: 0.05
+      },
+      {
+        key: 'lpmm_knowledge.info_extraction_workers',
+        name: '提取线程数',
+        description: '实体提取同时执行线程数，非Pro模型不要设置超过5',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 10
+      },
+      {
+        key: 'lpmm_knowledge.qa_relation_search_top_k',
+        name: '关系搜索TopK',
+        description: '关系搜索返回的最大数量',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50
+      },
+      {
+        key: 'lpmm_knowledge.qa_relation_threshold',
+        name: '关系阈值',
+        description: '关系相似度阈值',
+        type: 'number',
+        default: 0.5,
+        min: 0,
+        max: 1,
+        step: 0.05
+      },
+      {
+        key: 'lpmm_knowledge.qa_paragraph_search_top_k',
+        name: '段落搜索TopK',
+        description: '段落搜索返回的最大数量（不能过小）',
+        type: 'number',
+        default: 1000,
+        min: 100,
+        max: 5000
+      },
+      {
+        key: 'lpmm_knowledge.qa_paragraph_threshold',
+        name: '段落阈值',
+        description: '段落相似度阈值',
+        type: 'number',
+        default: 0.4,
+        min: 0,
+        max: 1,
+        step: 0.05
+      },
+      {
+        key: 'lpmm_knowledge.qa_paragraph_node_weight',
+        name: '段落节点权重',
+        description: '段落节点在图搜索&PPR计算中的权重',
+        type: 'number',
+        default: 0.05,
+        min: 0,
+        max: 1,
+        step: 0.01
+      },
+      {
+        key: 'lpmm_knowledge.qa_ent_filter_top_k',
+        name: '实体过滤TopK',
+        description: '实体过滤返回的最大数量',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50
+      },
+      {
+        key: 'lpmm_knowledge.qa_ppr_damping',
+        name: 'PPR阻尼系数',
+        description: 'PageRank阻尼系数',
+        type: 'number',
+        default: 0.8,
+        min: 0,
+        max: 1,
+        step: 0.05
+      },
+      {
+        key: 'lpmm_knowledge.qa_res_top_k',
+        name: '结果TopK',
+        description: '最终提供的文段数量',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 20
+      },
+      {
+        key: 'lpmm_knowledge.embedding_dimension',
+        name: '嵌入维度',
+        description: '嵌入向量维度，应该与模型的输出维度一致',
+        type: 'number',
+        default: 1024,
+        min: 256,
+        max: 4096
+      }
+    ]
+  },
+
+  // 视频分析高级配置（专家模式，基础配置在简单模式）
+  {
+    key: 'video_analysis_expert',
+    name: '视频分析高级配置',
+    icon: 'lucide:video',
+    description: '视频分析的高级配置选项',
+    expert: true,
+    fields: [
+      {
+        key: 'video_analysis.frame_interval_seconds',
+        name: '抽帧间隔',
+        description: '按时间间隔抽帧的秒数（仅在time_interval模式下生效）',
+        type: 'number',
+        default: 2.0,
+        min: 0.5,
+        max: 30,
+        step: 0.5
+      },
+      {
+        key: 'video_analysis.frame_quality',
+        name: '帧图像质量',
+        description: '帧图像JPEG质量（1-100）',
+        type: 'number',
+        default: 80,
+        min: 1,
+        max: 100
+      },
+      {
+        key: 'video_analysis.max_image_size',
+        name: '最大图像尺寸',
+        description: '单帧最大图像尺寸（像素）',
+        type: 'number',
+        default: 800,
+        min: 200,
+        max: 2000
+      },
+      {
+        key: 'video_analysis.enable_frame_timing',
+        name: '帧时间信息',
+        description: '是否在分析中包含帧的时间信息',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'video_analysis.rust_keyframe_threshold',
+        name: '关键帧检测阈值',
+        description: '关键帧检测阈值，值越大关键帧越少',
+        type: 'number',
+        default: 2.0,
+        min: 0.5,
+        max: 10,
+        step: 0.5
+      },
+      {
+        key: 'video_analysis.rust_use_simd',
+        name: '启用SIMD',
+        description: '启用SIMD优化（推荐）',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'video_analysis.rust_block_size',
+        name: '处理块大小',
+        description: '处理块大小，较大值可能提高高分辨率视频性能',
+        type: 'number',
+        default: 8192,
+        min: 1024,
+        max: 65536
+      },
+      {
+        key: 'video_analysis.rust_threads',
+        name: '线程数',
+        description: '线程数，0表示自动检测',
+        type: 'number',
+        default: 0,
+        min: 0,
+        max: 32
+      },
+      {
+        key: 'video_analysis.batch_analysis_prompt',
+        name: '批量分析提示词',
+        description: '批量分析时使用的提示词模板',
+        type: 'textarea'
+      }
+    ]
+  },
+
+  // 消息总线（专家模式）
+  {
+    key: 'message_bus',
+    name: '消息总线',
+    icon: 'lucide:network',
+    description: '消息总线高级网络配置，用于自定义服务器设置',
+    expert: true,
+    fields: [
+      {
+        key: 'message_bus.auth_token',
+        name: '认证令牌',
+        description: '认证令牌，用于API验证，为空则不启用验证',
+        type: 'array',
+        placeholder: '添加认证令牌...'
+      },
+      {
+        key: 'message_bus.use_custom',
+        name: '使用自定义服务器',
+        description: '是否启用自定义的message_bus服务器，需要设置新端口',
+        type: 'boolean',
+        default: false
+      },
+      {
+        key: 'message_bus.host',
+        name: '主机地址',
+        description: '消息总线服务器主机地址',
+        type: 'string',
+        default: '127.0.0.1',
+        placeholder: '127.0.0.1'
+      },
+      {
+        key: 'message_bus.port',
+        name: '端口',
+        description: '消息总线服务器端口，不能与.env重复',
+        type: 'number',
+        default: 8090,
+        min: 1024,
+        max: 65535
+      },
+      {
+        key: 'message_bus.mode',
+        name: '模式',
+        description: '连接模式',
+        type: 'select',
+        default: 'ws',
+        options: [
+          { value: 'ws', label: 'WebSocket' },
+          { value: 'tcp', label: 'TCP' }
+        ]
+      },
+      {
+        key: 'message_bus.use_wss',
+        name: '使用WSS',
+        description: '是否使用WSS安全连接（仅支持ws模式）',
+        type: 'boolean',
+        default: false
+      },
+      {
+        key: 'message_bus.cert_file',
+        name: 'SSL证书路径',
+        description: 'SSL证书文件路径，仅在use_wss=true时有效',
+        type: 'string',
+        placeholder: '/path/to/cert.pem'
+      },
+      {
+        key: 'message_bus.key_file',
+        name: 'SSL密钥路径',
+        description: 'SSL密钥文件路径，仅在use_wss=true时有效',
+        type: 'string',
+        placeholder: '/path/to/key.pem'
       }
     ]
   }
