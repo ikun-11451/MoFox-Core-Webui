@@ -41,6 +41,23 @@ export interface ConfigGroupDef {
 // ==================== Bot 配置描述 ====================
 
 export const botConfigGroups: ConfigGroupDef[] = [
+  // 内部配置（版本信息）
+  {
+    key: 'inner',
+    name: '版本信息',
+    icon: 'lucide:info',
+    description: '配置文件版本信息（只读）',
+    fields: [
+      {
+        key: 'inner.version',
+        name: '配置版本',
+        description: '配置文件版本号，格式：主版本号.次版本号.修订号',
+        type: 'string',
+        placeholder: '例如: 7.9.6'
+      }
+    ]
+  },
+
   // 机器人基础配置
   {
     key: 'bot',
@@ -237,6 +254,27 @@ export const botConfigGroups: ConfigGroupDef[] = [
         advanced: true
       },
       {
+        key: 'chat.interruption_max_limit',
+        name: '最大打断次数',
+        description: '每个聊天流的最大打断次数',
+        type: 'number',
+        default: 5,
+        min: 1,
+        max: 20,
+        advanced: true
+      },
+      {
+        key: 'chat.interruption_min_probability',
+        name: '最低打断概率',
+        description: '最低打断概率（反比例函数趋近的下限值）',
+        type: 'number',
+        default: 0.05,
+        min: 0,
+        max: 1,
+        step: 0.01,
+        advanced: true
+      },
+      {
         key: 'chat.dynamic_distribution_enabled',
         name: '动态消息分发',
         description: '是否启用动态消息分发周期调整',
@@ -245,11 +283,96 @@ export const botConfigGroups: ConfigGroupDef[] = [
         advanced: true
       },
       {
+        key: 'chat.dynamic_distribution_base_interval',
+        name: '基础分发间隔',
+        description: '基础分发间隔（秒）',
+        type: 'number',
+        default: 5.0,
+        min: 1,
+        max: 60,
+        step: 0.5,
+        advanced: true
+      },
+      {
+        key: 'chat.dynamic_distribution_min_interval',
+        name: '最小分发间隔',
+        description: '最小分发间隔（秒）',
+        type: 'number',
+        default: 1.0,
+        min: 0.1,
+        max: 10,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'chat.dynamic_distribution_max_interval',
+        name: '最大分发间隔',
+        description: '最大分发间隔（秒）',
+        type: 'number',
+        default: 30.0,
+        min: 10,
+        max: 120,
+        step: 1,
+        advanced: true
+      },
+      {
+        key: 'chat.dynamic_distribution_jitter_factor',
+        name: '分发扰动因子',
+        description: '分发间隔随机扰动因子',
+        type: 'number',
+        default: 0.2,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'chat.max_concurrent_distributions',
+        name: '最大并发数',
+        description: '最大并发处理的消息流数量',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50,
+        advanced: true
+      },
+      {
+        key: 'chat.enable_decision_history',
+        name: '启用决策历史',
+        description: '是否启用决策历史功能',
+        type: 'boolean',
+        default: true,
+        advanced: true
+      },
+      {
+        key: 'chat.decision_history_length',
+        name: '决策历史长度',
+        description: '决策历史记录的长度，用于增强上下文连续性',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 10,
+        advanced: true
+      },
+      {
         key: 'chat.enable_multiple_replies',
         name: '允许多重回复',
         description: '是否允许多个回复动作',
         type: 'boolean',
         default: false,
+        advanced: true
+      },
+      {
+        key: 'chat.multiple_replies_strategy',
+        name: '多重回复策略',
+        description: '多重回复处理策略',
+        type: 'select',
+        default: 'keep_first',
+        options: [
+          { value: 'keep_first', label: '保留第一个' },
+          { value: 'keep_best', label: '保留最佳' },
+          { value: 'keep_last', label: '保留最后一个' }
+        ],
         advanced: true
       },
       {
@@ -360,11 +483,158 @@ export const botConfigGroups: ConfigGroupDef[] = [
         advanced: true
       },
       {
+        key: 'database.postgresql_schema',
+        name: 'PostgreSQL 模式名',
+        description: 'PostgreSQL 模式名（schema）',
+        type: 'string',
+        default: 'public',
+        advanced: true
+      },
+      {
+        key: 'database.postgresql_ssl_mode',
+        name: 'PostgreSQL SSL 模式',
+        description: 'SSL模式: disable, allow, prefer, require, verify-ca, verify-full',
+        type: 'select',
+        default: 'prefer',
+        options: [
+          { value: 'disable', label: '禁用' },
+          { value: 'allow', label: '允许' },
+          { value: 'prefer', label: '优先使用' },
+          { value: 'require', label: '必需' },
+          { value: 'verify-ca', label: '验证CA' },
+          { value: 'verify-full', label: '完全验证' }
+        ],
+        advanced: true
+      },
+      {
+        key: 'database.postgresql_ssl_ca',
+        name: 'SSL CA证书路径',
+        description: 'SSL CA证书路径',
+        type: 'string',
+        placeholder: '/path/to/ca.pem',
+        advanced: true
+      },
+      {
+        key: 'database.postgresql_ssl_cert',
+        name: 'SSL客户端证书路径',
+        description: 'SSL客户端证书路径',
+        type: 'string',
+        placeholder: '/path/to/cert.pem',
+        advanced: true
+      },
+      {
+        key: 'database.postgresql_ssl_key',
+        name: 'SSL客户端密钥路径',
+        description: 'SSL客户端密钥路径',
+        type: 'string',
+        placeholder: '/path/to/key.pem',
+        advanced: true
+      },
+      {
+        key: 'database.connection_pool_size',
+        name: '连接池大小',
+        description: '数据库连接池大小（PostgreSQL 有效）',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 100,
+        advanced: true
+      },
+      {
+        key: 'database.connection_timeout',
+        name: '连接超时时间',
+        description: '数据库连接超时时间（秒）',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 120,
+        advanced: true
+      },
+      {
+        key: 'database.batch_action_storage_enabled',
+        name: '批量动作记录存储',
+        description: '启用后将多个动作一次性写入数据库，提升性能',
+        type: 'boolean',
+        default: true,
+        advanced: true
+      },
+      {
         key: 'database.enable_database_cache',
         name: '启用数据库缓存',
         description: '启用数据库查询缓存系统，防止内存溢出',
         type: 'boolean',
         default: true,
+        advanced: true
+      },
+      {
+        key: 'database.cache_l1_max_size',
+        name: 'L1缓存最大条目数',
+        description: 'L1缓存最大条目数（热数据，内存占用约1-5MB）',
+        type: 'number',
+        default: 1000,
+        min: 100,
+        max: 10000,
+        advanced: true
+      },
+      {
+        key: 'database.cache_l1_ttl',
+        name: 'L1缓存生存时间',
+        description: 'L1缓存生存时间（秒）',
+        type: 'number',
+        default: 300,
+        min: 60,
+        max: 3600,
+        advanced: true
+      },
+      {
+        key: 'database.cache_l2_max_size',
+        name: 'L2缓存最大条目数',
+        description: 'L2缓存最大条目数（温数据，内存占用约10-50MB）',
+        type: 'number',
+        default: 10000,
+        min: 1000,
+        max: 100000,
+        advanced: true
+      },
+      {
+        key: 'database.cache_l2_ttl',
+        name: 'L2缓存生存时间',
+        description: 'L2缓存生存时间（秒）',
+        type: 'number',
+        default: 1800,
+        min: 300,
+        max: 7200,
+        advanced: true
+      },
+      {
+        key: 'database.cache_cleanup_interval',
+        name: '缓存清理间隔',
+        description: '缓存清理任务执行间隔（秒）',
+        type: 'number',
+        default: 60,
+        min: 10,
+        max: 600,
+        advanced: true
+      },
+      {
+        key: 'database.cache_max_memory_mb',
+        name: '缓存最大内存占用',
+        description: '缓存最大内存占用（MB），超过此值将触发强制清理',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 100,
+        advanced: true
+      },
+      {
+        key: 'database.cache_max_item_size_mb',
+        name: '单条目最大大小',
+        description: '单个缓存条目最大大小（MB），超过此值将不缓存',
+        type: 'number',
+        default: 1,
+        min: 0.1,
+        max: 10,
+        step: 0.1,
         advanced: true
       }
     ]
@@ -408,6 +678,22 @@ export const botConfigGroups: ConfigGroupDef[] = [
         max: 500
       },
       {
+        key: 'emoji.do_replace',
+        name: '替换表情包',
+        description: '开启则在达到最大数量时删除（替换）表情包',
+        type: 'boolean',
+        default: true
+      },
+      {
+        key: 'emoji.check_interval',
+        name: '检查间隔',
+        description: '检查表情包（注册，破损，删除）的时间间隔（分钟）',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 60
+      },
+      {
         key: 'emoji.steal_emoji',
         name: '偷取表情包',
         description: '是否偷取表情包，让机器人可以将一些表情包据为己有',
@@ -447,6 +733,16 @@ export const botConfigGroups: ConfigGroupDef[] = [
           { value: 'emotion', label: '情感标签' },
           { value: 'description', label: '详细描述' }
         ],
+        advanced: true
+      },
+      {
+        key: 'emoji.max_context_emojis',
+        name: '上下文表情包数量',
+        description: '每次随机传递给LLM的表情包详细描述的最大数量，0为全部',
+        type: 'number',
+        default: 30,
+        min: 0,
+        max: 100,
         advanced: true
       }
     ]
@@ -523,6 +819,376 @@ export const botConfigGroups: ConfigGroupDef[] = [
         description: '是否启用自动遗忘机制',
         type: 'boolean',
         default: true,
+        advanced: true
+      },
+      {
+        key: 'memory.vector_collection_name',
+        name: '向量集合名称',
+        description: '向量集合名称',
+        type: 'string',
+        default: 'memory_nodes',
+        advanced: true
+      },
+      {
+        key: 'memory.vector_db_path',
+        name: '向量数据库路径',
+        description: '向量数据库路径（使用独立的chromadb实例）',
+        type: 'string',
+        default: 'data/memory_graph/chroma_db',
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_max_hops',
+        name: '路径扩展最大跳数',
+        description: '路径扩展最大跳数（建议1-3）',
+        type: 'number',
+        default: 2,
+        min: 1,
+        max: 5,
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_damping_factor',
+        name: '路径分数衰减因子',
+        description: '路径分数衰减因子（PageRank风格，0.85推荐）',
+        type: 'number',
+        default: 0.85,
+        min: 0.5,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.enable_memory_deduplication',
+        name: '记忆去重',
+        description: '启用检索结果去重（合并相似记忆）',
+        type: 'boolean',
+        default: true,
+        advanced: true
+      },
+      {
+        key: 'memory.memory_deduplication_threshold',
+        name: '记忆去重阈值',
+        description: '记忆相似度阈值（0.85表示85%相似即合并）',
+        type: 'number',
+        default: 0.85,
+        min: 0.5,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.forgetting_activation_threshold',
+        name: '激活度阈值',
+        description: '激活度阈值（低于此值的记忆会被遗忘）',
+        type: 'number',
+        default: 0.1,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.forgetting_min_importance',
+        name: '最小保护重要性',
+        description: '最小保护重要性（高于此值的记忆不会被遗忘）',
+        type: 'number',
+        default: 0.8,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.activation_decay_rate',
+        name: '激活度衰减率',
+        description: '激活度衰减率（每天衰减10%）',
+        type: 'number',
+        default: 0.9,
+        min: 0.5,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.perceptual_max_blocks',
+        name: '感知记忆最大容量',
+        description: '记忆堆最大容量（全局）',
+        type: 'number',
+        default: 50,
+        min: 10,
+        max: 200,
+        advanced: true
+      },
+      {
+        key: 'memory.perceptual_block_size',
+        name: '记忆块消息数',
+        description: '每个记忆块包含的消息数量',
+        type: 'number',
+        default: 5,
+        min: 1,
+        max: 20,
+        advanced: true
+      },
+      {
+        key: 'memory.short_term_max_memories',
+        name: '短期记忆最大数量',
+        description: '短期记忆最大数量',
+        type: 'number',
+        default: 30,
+        min: 10,
+        max: 100,
+        advanced: true
+      },
+      {
+        key: 'memory.short_term_transfer_threshold',
+        name: '短期转移阈值',
+        description: '转移到长期记忆的重要性阈值',
+        type: 'number',
+        default: 0.6,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.long_term_auto_transfer_interval',
+        name: '自动转移间隔',
+        description: '自动转移间隔（秒）',
+        type: 'number',
+        default: 180,
+        min: 60,
+        max: 600,
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_max_branches',
+        name: '每节点最大分叉数',
+        description: '每节点最大分叉数（控制探索广度）',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50,
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_merge_strategy',
+        name: '路径合并策略',
+        description: '路径合并策略',
+        type: 'select',
+        default: 'weighted_geometric',
+        options: [
+          { value: 'weighted_geometric', label: '加权几何平均' },
+          { value: 'max_bonus', label: '最大值加成' }
+        ],
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_pruning_threshold',
+        name: '路径剪枝阈值',
+        description: '路径剪枝阈值（新路径分数需达到已有路径的百分比）',
+        type: 'number',
+        default: 0.9,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_path_score_weight',
+        name: '路径分数权重',
+        description: '路径分数在最终评分中的权重',
+        type: 'number',
+        default: 0.5,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_importance_weight',
+        name: '重要性权重',
+        description: '重要性在最终评分中的权重',
+        type: 'number',
+        default: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.path_expansion_recency_weight',
+        name: '时效性权重',
+        description: '时效性在最终评分中的权重',
+        type: 'number',
+        default: 0.2,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.activation_propagation_strength',
+        name: '激活传播强度',
+        description: '激活传播强度（传播到相关记忆的激活度比例）',
+        type: 'number',
+        default: 0.5,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'memory.activation_propagation_depth',
+        name: '激活传播深度',
+        description: '激活传播深度（最多传播几层，建议1-2）',
+        type: 'number',
+        default: 1,
+        min: 1,
+        max: 5,
+        advanced: true
+      },
+      {
+        key: 'memory.auto_activate_base_strength',
+        name: '自动激活基础强度',
+        description: '记忆被检索时自动激活的基础强度',
+        type: 'number',
+        default: 0.1,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.auto_activate_max_count',
+        name: '自动激活最大数量',
+        description: '单次搜索最多自动激活的记忆数量',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50,
+        advanced: true
+      },
+      {
+        key: 'memory.perceptual_similarity_threshold',
+        name: '感知相似度阈值',
+        description: '感知记忆相似度阈值（0-1）',
+        type: 'number',
+        default: 0.55,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.perceptual_topk',
+        name: '感知TopK召回',
+        description: '感知记忆TopK召回数量',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 20,
+        advanced: true
+      },
+      {
+        key: 'memory.perceptual_activation_threshold',
+        name: '感知激活阈值',
+        description: '激活阈值（召回次数→短期）',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 10,
+        advanced: true
+      },
+      {
+        key: 'memory.short_term_search_top_k',
+        name: '短期记忆搜索TopK',
+        description: '短期记忆搜索时返回的最大数量',
+        type: 'number',
+        default: 5,
+        min: 1,
+        max: 20,
+        advanced: true
+      },
+      {
+        key: 'memory.short_term_decay_factor',
+        name: '短期衰减因子',
+        description: '短期记忆衰减因子',
+        type: 'number',
+        default: 0.98,
+        min: 0.9,
+        max: 1,
+        step: 0.01,
+        advanced: true
+      },
+      {
+        key: 'memory.long_term_batch_size',
+        name: '长期批量转移大小',
+        description: '长期记忆批量转移大小',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50,
+        advanced: true
+      },
+      {
+        key: 'memory.long_term_decay_factor',
+        name: '长期衰减因子',
+        description: '长期记忆衰减因子',
+        type: 'number',
+        default: 0.95,
+        min: 0.8,
+        max: 1,
+        step: 0.01,
+        advanced: true
+      },
+      {
+        key: 'memory.node_merger_similarity_threshold',
+        name: '节点去重相似度阈值',
+        description: '节点去重相似度阈值',
+        type: 'number',
+        default: 0.85,
+        min: 0.5,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'memory.node_merger_context_match_required',
+        name: '节点合并要求上下文匹配',
+        description: '节点合并是否要求上下文匹配',
+        type: 'boolean',
+        default: true,
+        advanced: true
+      },
+      {
+        key: 'memory.node_merger_merge_batch_size',
+        name: '节点合并批量大小',
+        description: '节点合并批量处理大小',
+        type: 'number',
+        default: 50,
+        min: 10,
+        max: 200,
+        advanced: true
+      },
+      {
+        key: 'memory.max_memory_nodes_per_memory',
+        name: '每条记忆最大节点数',
+        description: '每条记忆最多包含的节点数',
+        type: 'number',
+        default: 10,
+        min: 1,
+        max: 50,
+        advanced: true
+      },
+      {
+        key: 'memory.max_related_memories',
+        name: '最大相关记忆数',
+        description: '激活传播时最多影响的相关记忆数',
+        type: 'number',
+        default: 5,
+        min: 1,
+        max: 20,
         advanced: true
       }
     ]
@@ -790,6 +1456,27 @@ export const botConfigGroups: ConfigGroupDef[] = [
         step: 0.001
       },
       {
+        key: 'chinese_typo.min_freq',
+        name: '最小字频阈值',
+        description: '最小字频阈值',
+        type: 'number',
+        default: 9,
+        min: 1,
+        max: 100,
+        advanced: true
+      },
+      {
+        key: 'chinese_typo.tone_error_rate',
+        name: '声调错误概率',
+        description: '声调错误概率',
+        type: 'number',
+        default: 0.005,
+        min: 0,
+        max: 0.1,
+        step: 0.001,
+        advanced: true
+      },
+      {
         key: 'chinese_typo.word_replace_rate',
         name: '整词替换概率',
         description: '整词替换概率',
@@ -844,6 +1531,14 @@ export const botConfigGroups: ConfigGroupDef[] = [
         default: 8,
         min: 1,
         max: 20
+      },
+      {
+        key: 'response_splitter.enable_kaomoji_protection',
+        name: '颜文字保护',
+        description: '是否启用颜文字保护，避免颜文字被错误分割',
+        type: 'boolean',
+        default: true,
+        advanced: true
       }
     ]
   },
@@ -905,6 +1600,57 @@ export const botConfigGroups: ConfigGroupDef[] = [
         default: 30,
         min: -1,
         max: 365
+      },
+      {
+        key: 'log.date_style',
+        name: '日期格式',
+        description: '日志日期格式',
+        type: 'string',
+        default: 'm-d H:i:s',
+        placeholder: 'm-d H:i:s',
+        advanced: true
+      },
+      {
+        key: 'log.log_level_style',
+        name: '日志级别样式',
+        description: '日志级别样式',
+        type: 'select',
+        default: 'lite',
+        options: [
+          { value: 'FULL', label: '完整' },
+          { value: 'compact', label: '紧凑' },
+          { value: 'lite', label: '精简' }
+        ],
+        advanced: true
+      },
+      {
+        key: 'log.color_text',
+        name: '日志文本颜色',
+        description: '日志文本颜色',
+        type: 'select',
+        default: 'full',
+        options: [
+          { value: 'none', label: '无颜色' },
+          { value: 'title', label: '仅标题' },
+          { value: 'full', label: '全部' }
+        ],
+        advanced: true
+      },
+      {
+        key: 'log.suppress_libraries',
+        name: '屏蔽库列表',
+        description: '完全屏蔽的第三方库日志列表',
+        type: 'array',
+        placeholder: '例如: faiss, httpx, urllib3',
+        advanced: true
+      },
+      {
+        key: 'log.library_log_levels',
+        name: '库日志级别',
+        description: '设置特定库的日志级别，格式为对象 { "库名": "日志级别" }',
+        type: 'object',
+        placeholder: '例如: { "aiohttp": "WARNING" }',
+        advanced: true
       }
     ]
   },
@@ -945,6 +1691,33 @@ export const botConfigGroups: ConfigGroupDef[] = [
         default: 10,
         min: 1,
         max: 50
+      },
+      {
+        key: 'planning_system.monthly_plan_guidelines',
+        name: '月度计划指南',
+        description: '月度计划生成的指导原则',
+        type: 'textarea',
+        advanced: true
+      },
+      {
+        key: 'planning_system.avoid_repetition_days',
+        name: '避免重复天数',
+        description: '避免在多少天内重复使用同一个月度计划',
+        type: 'number',
+        default: 7,
+        min: 1,
+        max: 30,
+        advanced: true
+      },
+      {
+        key: 'planning_system.completion_threshold',
+        name: '完成阈值',
+        description: '一个月度计划被使用多少次后算作完成',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 10,
+        advanced: true
       }
     ]
   },
@@ -978,6 +1751,36 @@ export const botConfigGroups: ConfigGroupDef[] = [
         default: 5,
         min: 1,
         max: 20
+      },
+      {
+        key: 'notice.notice_time_window',
+        name: '时间窗口',
+        description: 'notice时间窗口（秒），只有这个时间范围内的notice会在提示词中展示',
+        type: 'number',
+        default: 1800,
+        min: 60,
+        max: 7200,
+        advanced: true
+      },
+      {
+        key: 'notice.max_notices_per_chat',
+        name: '每个聊天保留数量',
+        description: '每个聊天保留的notice数量上限',
+        type: 'number',
+        default: 30,
+        min: 5,
+        max: 100,
+        advanced: true
+      },
+      {
+        key: 'notice.notice_retention_time',
+        name: '保留时间',
+        description: 'notice保留时间（秒）',
+        type: 'number',
+        default: 3600,
+        min: 300,
+        max: 86400,
+        advanced: true
       }
     ]
   },
@@ -1314,7 +2117,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: '启用Normal模式',
         description: '启用后在专注模式回复后会自动切换，根据兴趣度决定是否回复',
         type: 'boolean',
-        default: false
+        default: true
       },
       {
         key: 'affinity_flow.reply_action_interest_threshold',
@@ -1337,6 +2140,103 @@ export const botConfigGroups: ConfigGroupDef[] = [
         step: 0.05
       },
       {
+        key: 'affinity_flow.high_match_interest_threshold',
+        name: '高匹配兴趣阈值',
+        description: '高匹配兴趣阈值',
+        type: 'number',
+        default: 0.6,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.medium_match_interest_threshold',
+        name: '中匹配兴趣阈值',
+        description: '中匹配兴趣阈值',
+        type: 'number',
+        default: 0.4,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.low_match_interest_threshold',
+        name: '低匹配兴趣阈值',
+        description: '低匹配兴趣阈值',
+        type: 'number',
+        default: 0.2,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.high_match_keyword_multiplier',
+        name: '高匹配关键词倍率',
+        description: '高匹配关键词兴趣倍率',
+        type: 'number',
+        default: 4,
+        min: 1,
+        max: 10,
+        step: 0.5,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.medium_match_keyword_multiplier',
+        name: '中匹配关键词倍率',
+        description: '中匹配关键词兴趣倍率',
+        type: 'number',
+        default: 2.5,
+        min: 1,
+        max: 10,
+        step: 0.5,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.low_match_keyword_multiplier',
+        name: '低匹配关键词倍率',
+        description: '低匹配关键词兴趣倍率',
+        type: 'number',
+        default: 1.15,
+        min: 1,
+        max: 10,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.no_reply_threshold_adjustment',
+        name: '不回复阈值调整值',
+        description: '不回复兴趣阈值调整值',
+        type: 'number',
+        default: 0.02,
+        min: 0,
+        max: 0.2,
+        step: 0.01,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.reply_cooldown_reduction',
+        name: '回复冷却减少',
+        description: '回复后减少的不回复计数',
+        type: 'number',
+        default: 2,
+        min: 1,
+        max: 10,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.max_no_reply_count',
+        name: '最大不回复次数',
+        description: '最大不回复计数次数',
+        type: 'number',
+        default: 5,
+        min: 1,
+        max: 20,
+        advanced: true
+      },
+      {
         key: 'affinity_flow.enable_post_reply_boost',
         name: '回复后连续对话',
         description: '启用回复后阈值降低机制，使bot更容易进行连续对话',
@@ -1352,6 +2252,60 @@ export const botConfigGroups: ConfigGroupDef[] = [
         min: 0,
         max: 0.5,
         step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.post_reply_boost_max_count',
+        name: '阈值降低持续次数',
+        description: '回复后阈值降低的最大持续次数',
+        type: 'number',
+        default: 3,
+        min: 1,
+        max: 10,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.post_reply_boost_decay_rate',
+        name: '阈值降低衰减率',
+        description: '每次回复后阈值降低衰减率（0-1，越小衰减越快）',
+        type: 'number',
+        default: 0.5,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.keyword_match_weight',
+        name: '关键词匹配权重',
+        description: '兴趣关键词匹配度权重',
+        type: 'number',
+        default: 0.5,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.mention_bot_weight',
+        name: '提及bot权重',
+        description: '提及bot分数权重',
+        type: 'number',
+        default: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.relationship_weight',
+        name: '人物关系权重',
+        description: '人物关系分数权重',
+        type: 'number',
+        default: 0.2,
+        min: 0,
+        max: 1,
+        step: 0.1,
         advanced: true
       },
       {
@@ -1373,6 +2327,50 @@ export const botConfigGroups: ConfigGroupDef[] = [
         default: 0.8,
         min: 0,
         max: 2,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.base_relationship_score',
+        name: '基础关系分',
+        description: '基础人物关系分',
+        type: 'number',
+        default: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.match_count_bonus',
+        name: '匹配数加成值',
+        description: '匹配数关键词加成值',
+        type: 'number',
+        default: 0.01,
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.max_match_bonus',
+        name: '最大匹配加成值',
+        description: '最大匹配数加成值',
+        type: 'number',
+        default: 0.1,
+        min: 0,
+        max: 1,
+        step: 0.05,
+        advanced: true
+      },
+      {
+        key: 'affinity_flow.mention_bot_adjustment_threshold',
+        name: '提及bot调整阈值',
+        description: '提及bot后的调整阈值',
+        type: 'number',
+        default: 0.5,
+        min: 0,
+        max: 1,
         step: 0.1,
         advanced: true
       }
@@ -1462,6 +2460,165 @@ export const botConfigGroups: ConfigGroupDef[] = [
         min: 0,
         max: 100,
         advanced: true
+      },
+      {
+        key: 'proactive_thinking.whitelist_mode',
+        name: '启用白名单模式',
+        description: '启用后只对白名单中的聊天流生效',
+        type: 'boolean',
+        default: false,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.blacklist_mode',
+        name: '启用黑名单模式',
+        description: '启用后排除黑名单中的聊天流',
+        type: 'boolean',
+        default: false,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.whitelist_private',
+        name: '私聊白名单',
+        description: '私聊白名单，格式: ["qq:12345:private"]',
+        type: 'array',
+        placeholder: 'qq:12345:private',
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.whitelist_group',
+        name: '群聊白名单',
+        description: '群聊白名单，格式: ["qq:123456:group"]',
+        type: 'array',
+        placeholder: 'qq:123456:group',
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.blacklist_private',
+        name: '私聊黑名单',
+        description: '私聊黑名单，格式: ["qq:12345:private"]',
+        type: 'array',
+        placeholder: 'qq:12345:private',
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.blacklist_group',
+        name: '群聊黑名单',
+        description: '群聊黑名单，格式: ["qq:999999:group"]',
+        type: 'array',
+        placeholder: 'qq:999999:group',
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.min_interest_score',
+        name: '最低兴趣分数',
+        description: '最低兴趣分数阈值，低于此值不会主动思考',
+        type: 'number',
+        default: 0.0,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.max_interest_score',
+        name: '最高兴趣分数',
+        description: '最高兴趣分数阈值，高于此值不会主动思考',
+        type: 'number',
+        default: 1.0,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.interest_score_factor',
+        name: '兴趣分数影响因子',
+        description: '兴趣分数影响因子（1.0-3.0）',
+        type: 'number',
+        default: 2.0,
+        min: 1,
+        max: 3,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.active_hours_multiplier',
+        name: '活跃时段间隔倍数',
+        description: '活跃时段间隔倍数，<1表示更频繁，>1表示更稀疏',
+        type: 'number',
+        default: 0.7,
+        min: 0.1,
+        max: 3,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.reply_reset_enabled',
+        name: '回复后重置计时器',
+        description: 'bot回复后是否重置定时器',
+        type: 'boolean',
+        default: true,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.topic_throw_cooldown',
+        name: '主动发言冷却时间',
+        description: '主动发言后的冷却时间（秒），期间暂停主动思考，0表示不暂停',
+        type: 'number',
+        default: 3600,
+        min: 0,
+        max: 86400,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.do_nothing_weight',
+        name: '无操作权重',
+        description: 'do_nothing动作的基础权重',
+        type: 'number',
+        default: 0.4,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.simple_bubble_weight',
+        name: '简单冒泡权重',
+        description: 'simple_bubble动作的基础权重',
+        type: 'number',
+        default: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.throw_topic_weight',
+        name: '抛出话题权重',
+        description: 'throw_topic动作的基础权重',
+        type: 'number',
+        default: 0.3,
+        min: 0,
+        max: 1,
+        step: 0.1,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.enable_statistics',
+        name: '启用统计',
+        description: '是否启用统计功能',
+        type: 'boolean',
+        default: true,
+        advanced: true
+      },
+      {
+        key: 'proactive_thinking.log_decisions',
+        name: '记录决策日志',
+        description: '是否记录每次决策的详细日志',
+        type: 'boolean',
+        default: false,
+        advanced: true
       }
     ]
   },
@@ -1527,6 +2684,20 @@ export const botConfigGroups: ConfigGroupDef[] = [
         type: 'string',
         default: 'https://pypi.tuna.tsinghua.edu.cn/simple',
         placeholder: 'https://pypi.tuna.tsinghua.edu.cn/simple'
+      },
+      {
+        key: 'dependency_management.install_log_level',
+        name: '安装日志级别',
+        description: '依赖安装日志级别',
+        type: 'select',
+        default: 'INFO',
+        options: [
+          { value: 'DEBUG', label: 'DEBUG' },
+          { value: 'INFO', label: 'INFO' },
+          { value: 'WARNING', label: 'WARNING' },
+          { value: 'ERROR', label: 'ERROR' }
+        ],
+        advanced: true
       }
     ]
   },

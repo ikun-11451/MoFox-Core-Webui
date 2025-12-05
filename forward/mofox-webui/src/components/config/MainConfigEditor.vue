@@ -373,19 +373,37 @@ function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
 // 自定义配置（未在描述中定义的）
 const customSections = computed(() => {
   const definedKeys = new Set<string>()
+  const objectTypeKeys = new Set<string>() // 对象类型的键，用于匹配嵌套属性
+  
   botConfigGroups.forEach(group => {
     group.fields.forEach(field => {
       definedKeys.add(field.key)
+      // 如果字段类型是 object，记录下来用于匹配子属性
+      if (field.type === 'object') {
+        objectTypeKeys.add(field.key)
+      }
     })
   })
+  
+  // 检查一个键是否已被定义（包括作为对象类型的子属性）
+  function isKeyDefined(fullKey: string): boolean {
+    if (definedKeys.has(fullKey)) return true
+    // 检查是否是某个对象类型配置的子属性
+    for (const objKey of objectTypeKeys) {
+      if (fullKey.startsWith(objKey + '.')) {
+        return true
+      }
+    }
+    return false
+  }
   
   // 过滤出未定义的配置节
   return props.configSchema.filter(section => {
     // 检查是否有任何字段不在定义中
-    return section.fields.some(field => !definedKeys.has(field.full_key))
+    return section.fields.some(field => !isKeyDefined(field.full_key))
   }).map(section => ({
     ...section,
-    fields: section.fields.filter(field => !definedKeys.has(field.full_key))
+    fields: section.fields.filter(field => !isKeyDefined(field.full_key))
   }))
 })
 

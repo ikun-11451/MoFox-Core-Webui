@@ -3,19 +3,69 @@
  * 统一管理所有 API 请求
  */
 
-// API 基础配置
-const API_BASE_URL = `http://${window.location.hostname}:3001`
+// 发现服务器配置（固定端口，用于获取主程序信息）
+const DISCOVERY_SERVER_PORT = 12138
+const DISCOVERY_SERVER_URL = `http://${window.location.hostname}:${DISCOVERY_SERVER_PORT}`
+
+// 插件 API 路径
 const PLUGIN_BASE_PATH = '/plugins/webui_backend'
+
+// 缓存的服务器信息
+let cachedServerInfo: { host: string; port: number } | null = null
+
+/**
+ * 服务器信息接口
+ */
+interface ServerInfo {
+  host: string
+  port: number
+}
+
+/**
+ * 从发现服务器获取主程序信息
+ */
+export async function getServerInfo(): Promise<ServerInfo> {
+  // 如果有缓存，直接返回
+  if (cachedServerInfo) {
+    return cachedServerInfo
+  }
+
+  try {
+    const response = await fetch(`${DISCOVERY_SERVER_URL}/server-info`)
+    if (!response.ok) {
+      throw new Error(`发现服务器请求失败: ${response.status}`)
+    }
+    const data = await response.json()
+    cachedServerInfo = { host: data.host, port: data.port }
+    return cachedServerInfo
+  } catch (error) {
+    console.error('无法连接到发现服务器:', error)
+    throw error
+  }
+}
+
+/**
+ * 清除服务器信息缓存（用于重新获取）
+ */
+export function clearServerInfoCache() {
+  cachedServerInfo = null
+}
+
+/**
+ * 获取 API 基础 URL（从发现服务器获取的主程序地址）
+ */
+export async function getApiBaseUrl(): Promise<string> {
+  const serverInfo = await getServerInfo()
+  return `http://${serverInfo.host}:${serverInfo.port}`
+}
 
 /**
  * API 请求类
  */
 class ApiClient {
-  private baseUrl: string
   private token: string | null = null
 
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl
+  constructor() {
     this.token = localStorage.getItem('mofox_token')
   }
 
@@ -42,10 +92,11 @@ class ApiClient {
    * 构建完整的 API URL
    * @param endpoint - API 端点，如 'auth/login'
    */
-  private buildUrl(endpoint: string): string {
+  private async buildUrl(endpoint: string): Promise<string> {
+    const baseUrl = await getApiBaseUrl()
     // 移除开头的斜杠（如果有）
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
-    return `${this.baseUrl}${PLUGIN_BASE_PATH}/${cleanEndpoint}`
+    return `${baseUrl}${PLUGIN_BASE_PATH}/${cleanEndpoint}`
   }
 
   /**
@@ -57,7 +108,7 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<{ success: boolean; data?: T; error?: string; status: number }> {
-    const url = this.buildUrl(endpoint)
+    const url = await this.buildUrl(endpoint)
     
     const headers = new Headers(options.headers)
     
