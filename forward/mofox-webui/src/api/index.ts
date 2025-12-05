@@ -1,0 +1,159 @@
+/**
+ * API 请求模块
+ * 统一管理所有 API 请求
+ */
+
+// API 基础配置
+const API_BASE_URL = `http://${window.location.hostname}:3001`
+const PLUGIN_BASE_PATH = '/plugins/webui_auth'
+
+/**
+ * API 请求类
+ */
+class ApiClient {
+  private baseUrl: string
+  private token: string | null = null
+
+  constructor(baseUrl: string = API_BASE_URL) {
+    this.baseUrl = baseUrl
+    this.token = localStorage.getItem('mofox_token')
+  }
+
+  /**
+   * 设置 API Token
+   */
+  setToken(token: string | null) {
+    this.token = token
+    if (token) {
+      localStorage.setItem('mofox_token', token)
+    } else {
+      localStorage.removeItem('mofox_token')
+    }
+  }
+
+  /**
+   * 获取当前 Token
+   */
+  getToken(): string | null {
+    return this.token
+  }
+
+  /**
+   * 构建完整的 API URL
+   * @param endpoint - API 端点，如 'auth/login'
+   */
+  private buildUrl(endpoint: string): string {
+    // 移除开头的斜杠（如果有）
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
+    return `${this.baseUrl}${PLUGIN_BASE_PATH}/${cleanEndpoint}`
+  }
+
+  /**
+   * 通用请求方法
+   * @param endpoint - API 端点，如 'auth/login'
+   * @param options - fetch 请求选项
+   */
+  async request<T = unknown>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<{ success: boolean; data?: T; error?: string; status: number }> {
+    const url = this.buildUrl(endpoint)
+    
+    const headers = new Headers(options.headers)
+    
+    // 添加认证头
+    if (this.token) {
+      headers.set('X-API-Key', this.token)
+    }
+    
+    // 设置默认 Content-Type
+    if (!headers.has('Content-Type') && options.body) {
+      headers.set('Content-Type', 'application/json')
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers
+      })
+
+      const status = response.status
+
+      // 尝试解析 JSON 响应
+      let data: T | undefined
+      try {
+        data = await response.json()
+      } catch {
+        // 响应不是 JSON 格式
+      }
+
+      if (response.ok) {
+        return { success: true, data, status }
+      } else {
+        return { 
+          success: false, 
+          error: (data as Record<string, unknown>)?.error as string || `请求失败: ${status}`,
+          status 
+        }
+      }
+    } catch (error) {
+      console.error('API 请求错误:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : '网络请求失败',
+        status: 0 
+      }
+    }
+  }
+
+  /**
+   * GET 请求
+   */
+  async get<T = unknown>(endpoint: string, options: RequestInit = {}) {
+    return this.request<T>(endpoint, { ...options, method: 'GET' })
+  }
+
+  /**
+   * POST 请求
+   */
+  async post<T = unknown>(endpoint: string, body?: unknown, options: RequestInit = {}) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined
+    })
+  }
+
+  /**
+   * PUT 请求
+   */
+  async put<T = unknown>(endpoint: string, body?: unknown, options: RequestInit = {}) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined
+    })
+  }
+
+  /**
+   * DELETE 请求
+   */
+  async delete<T = unknown>(endpoint: string, options: RequestInit = {}) {
+    return this.request<T>(endpoint, { ...options, method: 'DELETE' })
+  }
+}
+
+// 导出单例实例
+export const api = new ApiClient()
+
+// 导出类以便需要时创建新实例
+export { ApiClient }
+
+// 常用 API 端点
+export const API_ENDPOINTS = {
+  AUTH: {
+    LOGIN: 'auth/login',
+    LOGOUT: 'auth/logout',
+    VERIFY: 'auth/verify'
+  }
+} as const

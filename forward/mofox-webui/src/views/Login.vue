@@ -79,11 +79,12 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useThemeStore } from '@/stores/theme'
 import { Icon } from '@iconify/vue'
+import { api, API_ENDPOINTS } from '@/api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -91,30 +92,10 @@ const themeStore = useThemeStore()
 const loading = ref(false)
 const errorMessage = ref('')
 const showPassword = ref(false)
-const serverInfo = ref<{ host: string; port: number; api_base_url: string } | null>(null)
-
-const DISCOVERY_PORT = 12138
 
 const loginForm = reactive({
   password: '',
   remember: false
-})
-
-const fetchServerInfo = async () => {
-  try {
-    const hostname = window.location.hostname
-    const response = await fetch(`http://${hostname}:${DISCOVERY_PORT}/server-info`)
-    if (response.ok) {
-      serverInfo.value = await response.json()
-      console.log('服务器信息:', serverInfo.value)
-    }
-  } catch (error) {
-    console.warn('获取服务器信息失败，将使用发现服务器进行登录:', error)
-  }
-}
-
-onMounted(() => {
-  fetchServerInfo()
 })
 
 const handleLogin = async () => {
@@ -122,43 +103,27 @@ const handleLogin = async () => {
   errorMessage.value = ''
   
   try {
-    if (!serverInfo.value) {
-      await fetchServerInfo()
-    }
+    // 先设置 token 用于请求
+    api.setToken(loginForm.password)
     
-    if (!serverInfo.value) {
-      errorMessage.value = '无法获取服务器信息，请确保Bot已启动'
-      return
-    }
-    
-    userStore.setServerInfo(serverInfo.value)
-    
-    const loginUrl = `http://${serverInfo.value.host}:${serverInfo.value.port}/plugin-api/webui_auth/auth/login`
-    
-    const loginResponse = await fetch(loginUrl, {
-      method: 'GET',
-      headers: {
-        'X-API-Key': loginForm.password
-      }
-    })
+    // 调用登录 API
+    const result = await api.get<{ success: boolean; error?: string }>(API_ENDPOINTS.AUTH.LOGIN)
 
-    if (loginResponse.ok) {
-      const loginData = await loginResponse.json()
-      
-      if (loginData.success) {
-        userStore.login(loginForm.password)
-        userStore.setServerInfo(serverInfo.value)
-        router.push('/dashboard')
-      } else {
-        errorMessage.value = loginData.error || '登录失败'
-      }
-    } else if (loginResponse.status === 401 || loginResponse.status === 403) {
+    if (result.success && result.data?.success) {
+      // 登录成功，保存到 store
+      userStore.login(loginForm.password)
+      router.push('/dashboard')
+    } else if (result.status === 401 || result.status === 403) {
+      // 清除无效的 token
+      api.setToken(null)
       errorMessage.value = '密钥错误，请检查后重试'
     } else {
-      errorMessage.value = `服务器错误: ${loginResponse.status}`
+      api.setToken(null)
+      errorMessage.value = result.error || '登录失败'
     }
   } catch (error) {
     console.error('Login error:', error)
+    api.setToken(null)
     errorMessage.value = '连接服务器失败，请确保Bot已启动且插件正常运行'
   } finally {
     loading.value = false
