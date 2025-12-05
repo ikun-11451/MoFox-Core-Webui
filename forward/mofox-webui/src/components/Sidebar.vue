@@ -85,6 +85,7 @@ const isCollapsed = ref(false)
 
 const menuItems = [
   { name: '仪表盘', path: '/dashboard', icon: 'lucide:layout-dashboard' },
+  { name: '配置管理', path: '/dashboard/config', icon: 'lucide:settings-2' },
 ]
 
 const toggleSidebar = () => {
@@ -95,7 +96,7 @@ const isActive = (path: string) => {
   if (path === '/dashboard') {
     return route.path === '/dashboard' || route.path === '/dashboard/'
   }
-  return route.path.startsWith(path)
+  return route.path === path || route.path.startsWith(path + '/')
 }
 </script>
 

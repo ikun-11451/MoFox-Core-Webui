@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Login from '@/views/Login.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import DashboardHome from '@/views/DashboardHome.vue'
+import ConfigManager from '@/views/ConfigManager.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -23,6 +24,11 @@ const routes: Array<RouteRecordRaw> = [
         path: '',
         name: 'DashboardHome',
         component: DashboardHome
+      },
+      {
+        path: 'config',
+        name: 'ConfigManager',
+        component: ConfigManager
       }
     ]
   }

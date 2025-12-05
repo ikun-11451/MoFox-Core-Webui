@@ -168,6 +168,16 @@ export const API_ENDPOINTS = {
     MONTHLY_PLANS: 'stats/monthly-plans',
     LLM_STATS: 'stats/llm-stats',
     MESSAGE_STATS: 'stats/message-stats'
+  },
+  CONFIG: {
+    LIST: 'config/list',
+    CONTENT: (path: string) => `config/content/${path}`,
+    SCHEMA: (path: string) => `config/schema/${path}`,
+    SAVE: (path: string) => `config/save/${path}`,
+    UPDATE: (path: string) => `config/update/${path}`,
+    BACKUPS: (path: string) => `config/backups/${path}`,
+    RESTORE: (path: string) => `config/restore/${path}`,
+    VALIDATE: 'config/validate'
   }
 } as const
 
@@ -401,4 +411,154 @@ export async function getPluginsByStatus() {
 export async function getComponentsByType(componentType: string, enabledOnly: boolean = false) {
   const endpoint = `${API_ENDPOINTS.STATS.COMPONENTS_BY_TYPE(componentType)}?enabled_only=${enabledOnly}`
   return api.get<ComponentsByTypeResponse>(endpoint)
+}
+
+// ==================== 配置管理相关类型 ====================
+
+/** 配置文件信息 */
+export interface ConfigFileInfo {
+  name: string
+  display_name: string
+  path: string
+  type: 'main' | 'model' | 'plugin'
+  plugin_name?: string
+  description?: string
+  last_modified?: string
+}
+
+/** 配置文件列表响应 */
+export interface ConfigListResponse {
+  configs: ConfigFileInfo[]
+  total: number
+}
+
+/** 配置文件内容响应 */
+export interface ConfigContentResponse {
+  success: boolean
+  path: string
+  content?: string
+  parsed?: Record<string, unknown>
+  error?: string
+}
+
+/** 配置字段 */
+export interface ConfigSchemaField {
+  key: string
+  full_key: string
+  type: string
+  value: unknown
+  description?: string
+  items_count?: number
+}
+
+/** 配置 Section */
+export interface ConfigSection {
+  name: string
+  display_name: string
+  fields: ConfigSchemaField[]
+}
+
+/** 配置模式响应 */
+export interface ConfigSchemaResponse {
+  success: boolean
+  path: string
+  sections: ConfigSection[]
+  error?: string
+}
+
+/** 保存配置响应 */
+export interface SaveConfigResponse {
+  success: boolean
+  message?: string
+  backup_path?: string
+  error?: string
+}
+
+/** 配置备份信息 */
+export interface ConfigBackupInfo {
+  name: string
+  path: string
+  created_at: string
+  size: number
+}
+
+/** 配置备份列表响应 */
+export interface ConfigBackupsResponse {
+  success: boolean
+  backups: ConfigBackupInfo[]
+  error?: string
+}
+
+/** 验证 TOML 响应 */
+export interface ValidateTomlResponse {
+  success: boolean
+  valid?: boolean
+  message?: string
+  line?: number
+  col?: number
+  error?: string
+}
+
+// ==================== 配置管理 API 方法 ====================
+
+/**
+ * 获取配置文件列表
+ */
+export async function getConfigList() {
+  return api.get<ConfigListResponse>(API_ENDPOINTS.CONFIG.LIST)
+}
+
+/**
+ * 获取配置文件内容
+ */
+export async function getConfigContent(path: string) {
+  return api.get<ConfigContentResponse>(API_ENDPOINTS.CONFIG.CONTENT(path))
+}
+
+/**
+ * 获取配置文件结构（用于可视化编辑）
+ */
+export async function getConfigSchema(path: string) {
+  return api.get<ConfigSchemaResponse>(API_ENDPOINTS.CONFIG.SCHEMA(path))
+}
+
+/**
+ * 保存配置文件（原始 TOML）
+ */
+export async function saveConfig(path: string, content: string, createBackup: boolean = true) {
+  return api.post<SaveConfigResponse>(API_ENDPOINTS.CONFIG.SAVE(path), {
+    content,
+    create_backup: createBackup
+  })
+}
+
+/**
+ * 更新配置文件（可视化编辑）
+ */
+export async function updateConfig(path: string, updates: Record<string, unknown>, createBackup: boolean = true) {
+  return api.post<SaveConfigResponse>(API_ENDPOINTS.CONFIG.UPDATE(path), {
+    updates,
+    create_backup: createBackup
+  })
+}
+
+/**
+ * 获取配置备份列表
+ */
+export async function getConfigBackups(path: string) {
+  return api.get<ConfigBackupsResponse>(API_ENDPOINTS.CONFIG.BACKUPS(path))
+}
+
+/**
+ * 从备份恢复配置
+ */
+export async function restoreConfigBackup(path: string, backupName: string) {
+  return api.post<SaveConfigResponse>(`${API_ENDPOINTS.CONFIG.RESTORE(path)}?backup_name=${encodeURIComponent(backupName)}`)
+}
+
+/**
+ * 验证 TOML 内容
+ */
+export async function validateToml(content: string) {
+  return api.post<ValidateTomlResponse>(API_ENDPOINTS.CONFIG.VALIDATE, content)
 }
