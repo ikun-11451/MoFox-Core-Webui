@@ -996,6 +996,8 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-header {
@@ -1023,11 +1025,15 @@ onMounted(() => {
 
 .card-body {
   padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 月度计划固定高度 */
 .plans-body {
-  max-height: 280px;
+  flex: 1;
   overflow-y: auto;
 }
 
@@ -1068,6 +1074,14 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
+  align-items: stretch;
+}
+
+/* 日程和月度计划卡片等高 */
+.content-grid > .card {
+  height: 500px;
+  min-height: 400px;
+  max-height: 500px;
 }
 
 /* 合并的统计卡片区 */
@@ -1403,7 +1417,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 300px;
+  flex: 1;
   overflow-y: auto;
 }
 

@@ -4,15 +4,18 @@
 """
 
 import time
-from typing import Any
+from datetime import datetime, timedelta
+from typing import Any, Literal, Optional
 
 import psutil
 from pydantic import BaseModel
 
+from src.chat.utils.statistic import StatisticOutputTask
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
 from src.plugin_system import BaseRouterComponent
-from src.plugin_system.apis import chat_api, plugin_info_api
+from src.plugin_system.apis import chat_api, plugin_info_api, schedule_api
+from src.plugin_system.base.component_types import ComponentType
 
 logger = get_logger("WebUIAuth.StatsRouter")
 
@@ -76,6 +79,84 @@ class PluginListResponse(BaseModel):
     """插件列表响应"""
     plugins: list[PluginDetailResponse]
     total: int
+
+
+class ScheduleActivityResponse(BaseModel):
+    """日程活动响应"""
+    time_range: str
+    activity: str
+
+
+class ScheduleResponse(BaseModel):
+    """日程响应"""
+    date: str
+    activities: list[ScheduleActivityResponse]
+    current_activity: Optional[ScheduleActivityResponse] = None
+
+
+class MonthlyPlanResponse(BaseModel):
+    """月度计划响应"""
+    plans: list[str]
+    total: int
+    month: str
+
+
+class LLMStatsResponse(BaseModel):
+    """LLM 统计响应"""
+    total_requests: int
+    total_cost: float
+    total_tokens: int
+    input_tokens: int
+    output_tokens: int
+
+
+class MessageStatsDataPoint(BaseModel):
+    """消息统计数据点"""
+    timestamp: str
+    received: int
+    sent: int
+
+
+class MessageStatsResponse(BaseModel):
+    """消息统计响应"""
+    data_points: list[MessageStatsDataPoint]
+    total_received: int
+    total_sent: int
+    period: str
+
+
+class PluginListItemResponse(BaseModel):
+    """插件列表项响应"""
+    name: str
+    display_name: str
+    version: str
+    author: str
+    enabled: bool
+    components_count: int
+    error: Optional[str] = None
+
+
+class PluginsByStatusResponse(BaseModel):
+    """按状态分组的插件列表响应"""
+    loaded: list[PluginListItemResponse]
+    failed: list[PluginListItemResponse]
+
+
+class ComponentItemResponse(BaseModel):
+    """组件项响应"""
+    name: str
+    plugin_name: str
+    description: str
+    enabled: bool
+
+
+class ComponentsByTypeResponse(BaseModel):
+    """按类型分组的组件列表响应"""
+    component_type: str
+    components: list[ComponentItemResponse]
+    total: int
+    enabled: int
+    disabled: int
 
 
 # ==================== HTTP路由组件 ====================
@@ -218,6 +299,343 @@ class WebUIStatsRouter(BaseRouterComponent):
                     "cpu_percent": 0,
                     "threads": 0,
                 }
+        
+        @self.router.get("/schedule", summary="获取今日日程")
+        async def get_today_schedule(date: Optional[str] = None, _=VerifiedDep):
+            """
+            获取指定日期的日程安排
+            
+            Args:
+                date: 日期字符串，格式为 YYYY-MM-DD，默认为今天
+            """
+            try:
+                target_date = date or datetime.now().strftime("%Y-%m-%d")
+                
+                # 获取日程数据
+                schedule_data = await schedule_api.ScheduleAPI.get_schedule(date=target_date)
+                
+                # 获取当前活动
+                current = await schedule_api.ScheduleAPI.get_current_activity()
+                
+                activities = []
+                if schedule_data:
+                    for item in schedule_data:
+                        activities.append(ScheduleActivityResponse(
+                            time_range=item.get("time_range", ""),
+                            activity=item.get("activity", "")
+                        ))
+                
+                current_activity = None
+                if current:
+                    current_activity = ScheduleActivityResponse(
+                        time_range=current.get("time_range", ""),
+                        activity=current.get("activity", "")
+                    )
+                
+                return ScheduleResponse(
+                    date=target_date,
+                    activities=activities,
+                    current_activity=current_activity
+                )
+            except Exception as e:
+                logger.error(f"获取日程失败: {e}")
+                return ScheduleResponse(
+                    date=date or datetime.now().strftime("%Y-%m-%d"),
+                    activities=[],
+                    current_activity=None
+                )
+        
+        @self.router.get("/monthly-plans", summary="获取月度计划")
+        async def get_monthly_plans(month: Optional[str] = None, limit: int = 10, _=VerifiedDep):
+            """
+            获取月度计划
+            
+            Args:
+                month: 月份字符串，格式为 YYYY-MM，默认为当月
+                limit: 返回数量限制，默认10条
+            """
+            try:
+                target_month = month or datetime.now().strftime("%Y-%m")
+                
+                # 获取月度计划数量
+                plan_count = await schedule_api.ScheduleAPI.count_monthly_plans()
+                
+                # 获取月度计划列表
+                plans_data = await schedule_api.ScheduleAPI.get_monthly_plans(random_count=limit)
+                
+                plans = []
+                if plans_data:
+                    for plan in plans_data:
+                        if hasattr(plan, 'plan_text'):
+                            plans.append(plan.plan_text)
+                        elif isinstance(plan, str):
+                            plans.append(plan)
+                
+                return MonthlyPlanResponse(
+                    plans=plans,
+                    total=plan_count or 0,
+                    month=target_month
+                )
+            except Exception as e:
+                logger.error(f"获取月度计划失败: {e}")
+                return MonthlyPlanResponse(
+                    plans=[],
+                    total=0,
+                    month=month or datetime.now().strftime("%Y-%m")
+                )
+        
+        @self.router.get("/llm-stats", summary="获取LLM使用统计")
+        async def get_llm_stats(
+            period: Literal["last_hour", "last_24_hours", "last_7_days", "last_30_days"] = "last_24_hours",
+            _=VerifiedDep
+        ):
+            """
+            获取LLM使用统计
+            
+            Args:
+                period: 时间段，支持 last_hour, last_24_hours, last_7_days, last_30_days
+            """
+            try:
+                now = datetime.now()
+                period_map = {
+                    "last_hour": timedelta(hours=1),
+                    "last_24_hours": timedelta(days=1),
+                    "last_7_days": timedelta(days=7),
+                    "last_30_days": timedelta(days=30),
+                }
+                start_time = now - period_map.get(period, timedelta(days=1))
+                
+                stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
+                period_stats = stats_data.get("custom", {})
+                
+                if not period_stats:
+                    return LLMStatsResponse(
+                        total_requests=0,
+                        total_cost=0.0,
+                        total_tokens=0,
+                        input_tokens=0,
+                        output_tokens=0
+                    )
+                
+                # 计算总的 token 数
+                total_tokens = 0
+                input_tokens = 0
+                output_tokens = 0
+                
+                tokens_by_model = period_stats.get("tokens_by_model", {})
+                in_tokens_by_model = period_stats.get("in_tokens_by_model", {})
+                out_tokens_by_model = period_stats.get("out_tokens_by_model", {})
+                
+                for model_tokens in tokens_by_model.values():
+                    total_tokens += model_tokens
+                for model_tokens in in_tokens_by_model.values():
+                    input_tokens += model_tokens
+                for model_tokens in out_tokens_by_model.values():
+                    output_tokens += model_tokens
+                
+                return LLMStatsResponse(
+                    total_requests=period_stats.get("total_requests", 0),
+                    total_cost=round(period_stats.get("total_cost", 0.0), 4),
+                    total_tokens=total_tokens,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens
+                )
+            except Exception as e:
+                logger.error(f"获取LLM统计失败: {e}")
+                return LLMStatsResponse(
+                    total_requests=0,
+                    total_cost=0.0,
+                    total_tokens=0,
+                    input_tokens=0,
+                    output_tokens=0
+                )
+        
+        @self.router.get("/message-stats", summary="获取消息收发统计")
+        async def get_message_stats(
+            period: Literal["last_hour", "last_24_hours", "last_7_days", "last_30_days"] = "last_24_hours",
+            _=VerifiedDep
+        ):
+            """
+            获取消息收发统计（按时间分组）
+            
+            Args:
+                period: 时间段，支持 last_hour, last_24_hours, last_7_days, last_30_days
+            """
+            try:
+                from src.common.database.api.query import QueryBuilder
+                from src.common.database.core.models import Messages
+                from src.config.config import global_config
+                
+                now = datetime.now()
+                period_map = {
+                    "last_hour": (timedelta(hours=1), timedelta(minutes=5), "%H:%M"),
+                    "last_24_hours": (timedelta(days=1), timedelta(hours=1), "%m-%d %H:00"),
+                    "last_7_days": (timedelta(days=7), timedelta(days=1), "%m-%d"),
+                    "last_30_days": (timedelta(days=30), timedelta(days=1), "%m-%d"),
+                }
+                
+                time_delta, interval, time_format = period_map.get(
+                    period, 
+                    (timedelta(days=1), timedelta(hours=1), "%m-%d %H:00")
+                )
+                start_time = now - time_delta
+                
+                # 初始化时间桶
+                data_points = {}
+                current = start_time
+                while current <= now:
+                    key = current.strftime(time_format)
+                    data_points[key] = {"received": 0, "sent": 0}
+                    current += interval
+                
+                bot_user_id = str(global_config.bot.qq_account)
+                
+                # 查询消息
+                query_builder = (
+                    QueryBuilder(Messages)
+                    .no_cache()
+                    .filter(time__gte=start_time.timestamp())
+                    .order_by("time")
+                )
+                
+                total_received = 0
+                total_sent = 0
+                
+                async for batch in query_builder.iter_batches(batch_size=1000, as_dict=True):
+                    for msg in batch:
+                        if not isinstance(msg, dict):
+                            continue
+                        msg_time = msg.get("time")
+                        if not msg_time:
+                            continue
+                        
+                        msg_datetime = datetime.fromtimestamp(msg_time)
+                        time_key = msg_datetime.strftime(time_format)
+                        
+                        if time_key not in data_points:
+                            continue
+                        
+                        user_id = str(msg.get("user_id", ""))
+                        if user_id == bot_user_id:
+                            data_points[time_key]["sent"] += 1
+                            total_sent += 1
+                        else:
+                            data_points[time_key]["received"] += 1
+                            total_received += 1
+                
+                # 转换为列表
+                result_points = [
+                    MessageStatsDataPoint(
+                        timestamp=ts,
+                        received=counts["received"],
+                        sent=counts["sent"]
+                    )
+                    for ts, counts in sorted(data_points.items())
+                ]
+                
+                return MessageStatsResponse(
+                    data_points=result_points,
+                    total_received=total_received,
+                    total_sent=total_sent,
+                    period=period
+                )
+            except Exception as e:
+                logger.error(f"获取消息统计失败: {e}")
+                return MessageStatsResponse(
+                    data_points=[],
+                    total_received=0,
+                    total_sent=0,
+                    period=period
+                )
+        
+        @self.router.get("/plugins-by-status", summary="按状态获取插件列表")
+        def get_plugins_by_status(_=VerifiedDep):
+            """
+            获取按状态分组的插件列表（已加载和加载失败）
+            """
+            try:
+                from src.plugin_system.core.plugin_manager import plugin_manager
+                from src.plugin_system.core.component_registry import component_registry
+                
+                loaded_plugins = []
+                failed_plugins = []
+                
+                # 获取已加载的插件
+                for name in plugin_manager.list_loaded_plugins():
+                    plugin_info = component_registry.get_plugin_info(name)
+                    plugin_instance = plugin_manager.get_plugin_instance(name)
+                    
+                    loaded_plugins.append(PluginListItemResponse(
+                        name=name,
+                        display_name=plugin_info.display_name if plugin_info else name,
+                        version=plugin_info.version if plugin_info else "unknown",
+                        author=plugin_info.author if plugin_info else "unknown",
+                        enabled=plugin_instance.enable_plugin if plugin_instance else False,
+                        components_count=len(plugin_info.components) if plugin_info else 0,
+                    ))
+                
+                # 获取加载失败的插件
+                for name, error in plugin_manager.failed_plugins.items():
+                    failed_plugins.append(PluginListItemResponse(
+                        name=name,
+                        display_name=name,
+                        version="unknown",
+                        author="unknown",
+                        enabled=False,
+                        components_count=0,
+                        error=str(error) if error else "加载失败",
+                    ))
+                
+                return PluginsByStatusResponse(
+                    loaded=loaded_plugins,
+                    failed=failed_plugins,
+                )
+            except Exception as e:
+                logger.error(f"获取插件列表失败: {e}")
+                return PluginsByStatusResponse(loaded=[], failed=[])
+        
+        @self.router.get("/components-by-type/{component_type}", summary="按类型获取组件列表")
+        def get_components_by_type(component_type: str, enabled_only: bool = False, _=VerifiedDep):
+            """
+            获取指定类型的组件列表
+            
+            Args:
+                component_type: 组件类型名称
+                enabled_only: 是否只返回已启用的组件
+            """
+            try:
+                # 将字符串转换为 ComponentType 枚举
+                try:
+                    comp_type = ComponentType(component_type.lower())
+                except ValueError:
+                    return {"success": False, "error": f"未知的组件类型: {component_type}"}
+                
+                # 获取组件列表
+                components_list = plugin_info_api.list_components(comp_type, enabled_only=enabled_only)
+                
+                # 统计数量
+                total = len(components_list)
+                enabled = sum(1 for c in components_list if c.get("enabled", False))
+                disabled = total - enabled
+                
+                return ComponentsByTypeResponse(
+                    component_type=component_type,
+                    components=[
+                        ComponentItemResponse(
+                            name=c.get("name", ""),
+                            plugin_name=c.get("plugin_name", ""),
+                            description=c.get("description", ""),
+                            enabled=c.get("enabled", False),
+                        )
+                        for c in components_list
+                    ],
+                    total=total,
+                    enabled=enabled,
+                    disabled=disabled,
+                )
+            except Exception as e:
+                logger.error(f"获取组件列表失败: {e}")
+                return {"success": False, "error": str(e)}
 
 
 def _format_uptime(seconds: float) -> str:
