@@ -43,7 +43,7 @@ npm install
 npm run dev
 ```
 
-访问 http://localhost:3000 即可查看项目。
+访问 http://localhost:11451 即可查看项目。
 
 ### 3. 构建生产版本
 
