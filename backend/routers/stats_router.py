@@ -321,6 +321,63 @@ class WebUIStatsRouter(BaseRouterComponent):
                     "threads": 0,
                 }
 
+        @self.router.post("/system/restart", summary="重启Bot")
+        async def restart_bot(_=VerifiedDep):
+            """
+            重启 Bot 进程
+            """
+            try:
+                import asyncio
+                import os
+                import sys
+
+                logger.warning("收到重启请求，准备重启 Bot...")
+
+                # 异步执行重启，给前端时间接收响应
+                async def do_restart():
+                    await asyncio.sleep(1)  # 给前端一点时间接收响应
+                    logger.info("正在重启 Bot...")
+                    
+                    # 使用 os.execv 重启当前进程
+                    python = sys.executable
+                    os.execv(python, [python] + sys.argv)
+
+                # 创建后台任务执行重启
+                asyncio.create_task(do_restart())
+                
+                return {"success": True, "message": "Bot 将在 1 秒后重启"}
+            except Exception as e:
+                logger.error(f"重启 Bot 失败: {e}")
+                return {"success": False, "error": str(e)}
+
+        @self.router.post("/system/shutdown", summary="关闭Bot")
+        async def shutdown_bot(_=VerifiedDep):
+            """
+            优雅关闭 Bot 进程
+            """
+            try:
+                import asyncio
+                import os
+                import signal
+
+                logger.warning("收到关闭请求，准备关闭 Bot...")
+
+                # 异步执行关闭，给前端时间接收响应
+                async def do_shutdown():
+                    await asyncio.sleep(1)  # 给前端一点时间接收响应
+                    logger.info("正在关闭 Bot...")
+                    
+                    # 发送 SIGTERM 信号优雅关闭
+                    os.kill(os.getpid(), signal.SIGTERM)
+
+                # 创建后台任务执行关闭
+                asyncio.create_task(do_shutdown())
+                
+                return {"success": True, "message": "Bot 将在 1 秒后关闭"}
+            except Exception as e:
+                logger.error(f"关闭 Bot 失败: {e}")
+                return {"success": False, "error": str(e)}
+
         @self.router.get("/schedule", summary="获取今日日程")
         async def get_today_schedule(date: Optional[str] = None, _=VerifiedDep):
             """

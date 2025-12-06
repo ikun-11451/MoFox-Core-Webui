@@ -215,6 +215,8 @@ export const API_ENDPOINTS = {
     PLUGIN_DETAIL: (name: string) => `stats/plugins/${name}`,
     COMPONENTS_BY_TYPE: (type: string) => `stats/components-by-type/${type}`,
     SYSTEM: 'stats/system',
+    SYSTEM_RESTART: 'stats/system/restart',
+    SYSTEM_SHUTDOWN: 'stats/system/shutdown',
     SCHEDULE: 'stats/schedule',
     MONTHLY_PLANS: 'stats/monthly-plans',
     LLM_STATS: 'stats/llm-stats',
@@ -428,6 +430,24 @@ export async function getPluginDetailForStats(pluginName: string) {
  */
 export async function getSystemStatus() {
   return api.get<SystemStatusResponse>(API_ENDPOINTS.STATS.SYSTEM)
+}
+
+/**
+ * 重启 Bot
+ */
+export async function restartBot() {
+  return api.post<{ success: boolean; message?: string; error?: string }>(
+    API_ENDPOINTS.STATS.SYSTEM_RESTART
+  )
+}
+
+/**
+ * 关闭 Bot
+ */
+export async function shutdownBot() {
+  return api.post<{ success: boolean; message?: string; error?: string }>(
+    API_ENDPOINTS.STATS.SYSTEM_SHUTDOWN
+  )
 }
 
 /**
