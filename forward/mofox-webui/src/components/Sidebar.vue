@@ -19,27 +19,79 @@
           <span v-if="!isCollapsed" class="nav-section-title">菜单</span>
         </Transition>
         
-        <router-link 
-          v-for="item in menuItems" 
-          :key="item.path"
-          :to="item.path" 
-          class="nav-item"
-          :class="{ active: isActive(item.path) }"
-          v-slot="{ navigate }"
-          custom
-        >
-          <div class="nav-item-content" @click="navigate" :title="item.name">
-            <div class="nav-icon-wrapper">
-              <Icon :icon="item.icon" class="nav-icon" />
+        <!-- 普通菜单项 -->
+        <template v-for="item in menuItems" :key="item.path">
+          <!-- 有子菜单的项目 -->
+          <div v-if="item.children && item.key" class="nav-group">
+            <div 
+              class="nav-item-content nav-group-header"
+              :class="{ active: isGroupActive(item), expanded: expandedGroups[item.key] }"
+              @click="toggleGroup(item.key)"
+              :title="item.name"
+            >
+              <div class="nav-icon-wrapper">
+                <Icon :icon="item.icon" class="nav-icon" />
+              </div>
+              <Transition name="slide-fade">
+                <span v-if="!isCollapsed" class="nav-text">{{ item.name }}</span>
+              </Transition>
+              <Transition name="fade">
+                <Icon 
+                  v-if="!isCollapsed" 
+                  :icon="expandedGroups[item.key] ? 'lucide:chevron-down' : 'lucide:chevron-right'" 
+                  class="nav-arrow"
+                />
+              </Transition>
             </div>
-            <Transition name="slide-fade">
-              <span v-if="!isCollapsed" class="nav-text">{{ item.name }}</span>
-            </Transition>
-            <Transition name="fade">
-              <div v-if="isActive(item.path)" class="active-indicator"></div>
+            
+            <!-- 子菜单列表 -->
+            <Transition name="expand">
+              <div v-if="expandedGroups[item.key] && !isCollapsed" class="nav-children">
+                <router-link 
+                  v-for="child in item.children" 
+                  :key="child.path"
+                  :to="child.path" 
+                  class="nav-item nav-child-item"
+                  :class="{ active: isActive(child.path) }"
+                  v-slot="{ navigate }"
+                  custom
+                >
+                  <div class="nav-item-content" @click="navigate" :title="child.name">
+                    <div class="nav-icon-wrapper">
+                      <Icon :icon="child.icon" class="nav-icon" />
+                    </div>
+                    <span class="nav-text">{{ child.name }}</span>
+                    <Transition name="fade">
+                      <div v-if="isActive(child.path)" class="active-indicator"></div>
+                    </Transition>
+                  </div>
+                </router-link>
+              </div>
             </Transition>
           </div>
-        </router-link>
+          
+          <!-- 普通菜单项 -->
+          <router-link 
+            v-else
+            :to="item.path" 
+            class="nav-item"
+            :class="{ active: isActive(item.path) }"
+            v-slot="{ navigate }"
+            custom
+          >
+            <div class="nav-item-content" @click="navigate" :title="item.name">
+              <div class="nav-icon-wrapper">
+                <Icon :icon="item.icon" class="nav-icon" />
+              </div>
+              <Transition name="slide-fade">
+                <span v-if="!isCollapsed" class="nav-text">{{ item.name }}</span>
+              </Transition>
+              <Transition name="fade">
+                <div v-if="isActive(item.path)" class="active-indicator"></div>
+              </Transition>
+            </div>
+          </router-link>
+        </template>
       </div>
     </nav>
     
@@ -73,23 +125,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useThemeStore } from '@/stores/theme'
+
+interface MenuItem {
+  name: string
+  path: string
+  icon: string
+  key?: string
+  children?: MenuItem[]
+}
 
 const route = useRoute()
 const themeStore = useThemeStore()
 
 const isCollapsed = ref(false)
 
-const menuItems = [
+// 可折叠组的展开状态
+const expandedGroups = reactive<Record<string, boolean>>({
+  config: true  // 默认展开配置组
+})
+
+const menuItems: MenuItem[] = [
   { name: '仪表盘', path: '/dashboard', icon: 'lucide:layout-dashboard' },
-  { name: '配置管理', path: '/dashboard/config', icon: 'lucide:settings-2' },
+  { 
+    name: '配置管理', 
+    path: '/dashboard/config', 
+    icon: 'lucide:settings',
+    key: 'config',
+    children: [
+      { name: '机器人配置', path: '/dashboard/bot-config', icon: 'lucide:bot' },
+      { name: '模型配置', path: '/dashboard/model-config', icon: 'lucide:brain' },
+      { name: '插件配置', path: '/dashboard/plugin-config', icon: 'lucide:puzzle' },
+    ]
+  },
 ]
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
+}
+
+const toggleGroup = (key: string) => {
+  if (isCollapsed.value) {
+    // 如果侧边栏已折叠，先展开侧边栏
+    isCollapsed.value = false
+    expandedGroups[key] = true
+  } else {
+    expandedGroups[key] = !expandedGroups[key]
+  }
 }
 
 const isActive = (path: string) => {
@@ -97,6 +182,13 @@ const isActive = (path: string) => {
     return route.path === '/dashboard' || route.path === '/dashboard/'
   }
   return route.path === path || route.path.startsWith(path + '/')
+}
+
+const isGroupActive = (item: MenuItem) => {
+  if (item.children) {
+    return item.children.some(child => isActive(child.path))
+  }
+  return isActive(item.path)
 }
 </script>
 
@@ -249,6 +341,70 @@ const isActive = (path: string) => {
   border-radius: 0 var(--radius-full) var(--radius-full) 0;
 }
 
+/* 导航组样式 */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-group-header {
+  user-select: none;
+}
+
+.nav-group-header.active .nav-icon {
+  color: var(--primary);
+}
+
+.nav-group-header.active .nav-text {
+  color: var(--primary);
+}
+
+.nav-group-header.expanded {
+  background: var(--bg-hover);
+}
+
+.nav-arrow {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--text-tertiary);
+  transition: transform var(--transition);
+}
+
+.nav-group-header.expanded .nav-arrow {
+  color: var(--primary);
+}
+
+/* 子菜单样式 */
+.nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 12px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.nav-child-item .nav-item-content {
+  padding: 10px 12px;
+}
+
+.nav-child-item .nav-icon {
+  font-size: 16px;
+}
+
+.nav-child-item .nav-text {
+  font-size: 13px;
+}
+
+.nav-child-item.active .nav-item-content {
+  background: var(--primary-bg);
+}
+
+.nav-child-item.active .nav-icon,
+.nav-child-item.active .nav-text {
+  color: var(--primary);
+}
+
 /* 侧边栏底部 */
 .sidebar-footer {
   padding: 12px;
@@ -309,6 +465,27 @@ const isActive = (path: string) => {
 .slide-fade-leave-to {
   opacity: 0;
   transform: translateX(-10px);
+}
+
+/* 展开动画 */
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  opacity: 1;
+  max-height: 200px;
+  margin-top: 4px;
 }
 
 /* 折叠状态下的样式调整 */

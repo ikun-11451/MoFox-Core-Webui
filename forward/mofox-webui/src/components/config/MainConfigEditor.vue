@@ -1,20 +1,36 @@
 <template>
   <div class="main-config-editor">
-    <!-- 配置概览 -->
-    <div class="config-overview">
-      <div class="overview-card">
-        <div class="overview-icon bot">
-          <Icon icon="lucide:bot" />
-        </div>
-        <div class="overview-info">
-          <h4>机器人配置</h4>
-          <p>管理机器人的基础设置和行为参数</p>
-        </div>
+    <!-- 顶部导航栏 -->
+    <div class="config-nav-bar">
+      <div class="nav-tabs">
+        <button
+          v-for="tab in navTabs"
+          :key="tab.key"
+          class="nav-tab"
+          :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
+        >
+          {{ tab.name }}
+        </button>
       </div>
     </div>
 
-    <!-- 搜索和筛选 -->
-    <div class="config-toolbar">
+    <!-- 当前标签页标题和描述 -->
+    <div class="tab-header">
+      <h3 class="tab-title">{{ currentTabInfo?.name }}</h3>
+      <p class="tab-description">{{ currentTabInfo?.description }}</p>
+      <button 
+        v-if="hasAdvancedFieldsInCurrentTab"
+        class="add-rule-btn"
+        @click="showAdvanced = !showAdvanced"
+      >
+        <Icon :icon="showAdvanced ? 'lucide:eye-off' : 'lucide:eye'" />
+        {{ showAdvanced ? '隐藏高级选项' : '显示高级选项' }}
+      </button>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="config-toolbar" v-if="currentTabGroups.length > 1">
       <div class="search-box">
         <Icon icon="lucide:search" />
         <input 
@@ -24,39 +40,26 @@
           class="search-input"
         />
       </div>
-      <div class="filter-buttons">
-        <button 
-          class="filter-btn" 
-          :class="{ active: showAdvanced }"
-          @click="showAdvanced = !showAdvanced"
-        >
-          <Icon icon="lucide:settings-2" />
-          {{ showAdvanced ? '隐藏高级选项' : '显示高级选项' }}
-        </button>
-        <label class="filter-btn expert-toggle" :class="{ active: showExpert }">
-          <input 
-            type="checkbox" 
-            v-model="showExpert"
-            class="expert-checkbox"
-          />
-          <Icon icon="lucide:flask-conical" />
-          专家模式
-        </label>
-      </div>
     </div>
 
-    <!-- 配置分组 -->
-    <div class="config-groups">
+    <!-- 配置内容 -->
+    <div class="config-content">
       <div 
-        v-for="group in filteredGroups" 
+        v-for="group in filteredCurrentTabGroups" 
         :key="group.key" 
         class="config-group"
         :class="{ 
           collapsed: collapsedGroups[group.key],
-          'expert-group': group.expert
+          'expert-group': group.expert,
+          'single-group': currentTabGroups.length === 1
         }"
       >
-        <div class="group-header" @click="toggleGroup(group.key)">
+        <!-- 当只有一个分组时不显示分组头部 -->
+        <div 
+          v-if="currentTabGroups.length > 1" 
+          class="group-header" 
+          @click="toggleGroup(group.key)"
+        >
           <div class="group-title">
             <Icon :icon="group.icon" />
             <h3>{{ group.name }}</h3>
@@ -68,7 +71,7 @@
           </div>
         </div>
         
-        <div v-show="!collapsedGroups[group.key]" class="group-content">
+        <div v-show="currentTabGroups.length === 1 || !collapsedGroups[group.key]" class="group-content">
           <template v-for="field in getVisibleFields(group)" :key="field.key">
             <!-- 特殊编辑器 -->
             <div v-if="field.specialEditor" class="field-card special-editor-card">
@@ -87,6 +90,13 @@
                 :value="getFieldValue(field.key)"
                 @update="(v: unknown) => emit('update', field.key, v)"
               />
+              <WebSearchEnginesEditor 
+                v-else-if="field.specialEditor === 'web_search_engines'"
+                :value="getFieldValue(field.key)"
+                :configData="parsedData"
+                @update="(v: unknown) => emit('update', field.key, v)"
+                @updateConfig="(key: string, v: unknown) => emit('update', key, v)"
+              />
             </div>
             
             <!-- 普通字段 -->
@@ -96,9 +106,13 @@
               :class="{ 
                 inline: field.type === 'boolean',
                 advanced: field.advanced,
-                expert: field.expert
+                expert: field.expert,
+                readonly: field.readonly
               }"
             >
+              <!-- 只读标签 -->
+              <span v-if="field.readonly" class="readonly-badge">只读</span>
+              
               <!-- Boolean 类型 -->
               <template v-if="field.type === 'boolean'">
                 <div class="field-left">
@@ -109,10 +123,11 @@
                   </div>
                   <div class="field-description">{{ field.description }}</div>
                 </div>
-                <label class="toggle-switch">
+                <label class="toggle-switch" :class="{ disabled: field.readonly }">
                   <input 
                     type="checkbox" 
                     :checked="Boolean(getFieldValue(field.key))"
+                    :disabled="field.readonly"
                     @change="emit('update', field.key, ($event.target as HTMLInputElement).checked)"
                   />
                   <span class="toggle-slider"></span>
@@ -135,6 +150,7 @@
                     v-if="field.type === 'select'"
                     class="input"
                     :value="getFieldValue(field.key) ?? field.default"
+                    :disabled="field.readonly"
                     @change="emit('update', field.key, ($event.target as HTMLSelectElement).value)"
                   >
                     <option 
@@ -152,6 +168,8 @@
                     class="input textarea"
                     :value="String(getFieldValue(field.key) ?? field.default ?? '')"
                     :placeholder="field.placeholder"
+                    :disabled="field.readonly"
+                    :readonly="field.readonly"
                     @input="emit('update', field.key, ($event.target as HTMLTextAreaElement).value)"
                     rows="3"
                   ></textarea>
@@ -163,11 +181,14 @@
                       class="input"
                       :value="getFieldValue(field.key) ?? ''"
                       :placeholder="field.placeholder"
+                      :disabled="field.readonly"
+                      :readonly="field.readonly"
                       @input="emit('update', field.key, ($event.target as HTMLInputElement).value)"
                     />
                     <button 
                       class="toggle-visibility" 
                       type="button"
+                      :disabled="field.readonly"
                       @click="showPasswords[field.key] = !showPasswords[field.key]"
                     >
                       <Icon :icon="showPasswords[field.key] ? 'lucide:eye-off' : 'lucide:eye'" />
@@ -183,6 +204,7 @@
                         :max="field.max"
                         :step="field.step ?? 1"
                         :value="getFieldValue(field.key) ?? field.default ?? field.min"
+                        :disabled="field.readonly"
                         @input="emit('update', field.key, parseFloat(($event.target as HTMLInputElement).value))"
                       />
                       <span class="slider-value">{{ getFieldValue(field.key) ?? field.default ?? field.min }}</span>
@@ -196,6 +218,8 @@
                       :step="field.step"
                       :value="getFieldValue(field.key) ?? field.default ?? ''"
                       :placeholder="field.placeholder"
+                      :disabled="field.readonly"
+                      :readonly="field.readonly"
                       @input="emit('update', field.key, parseFloat(($event.target as HTMLInputElement).value) || 0)"
                     />
                   </template>
@@ -207,6 +231,8 @@
                       class="input"
                       :value="formatArrayValue(getFieldValue(field.key))"
                       :placeholder="field.placeholder"
+                      :disabled="field.readonly"
+                      :readonly="field.readonly"
                       @input="emit('update', field.key, parseArrayValue(($event.target as HTMLInputElement).value))"
                     />
                     <span class="input-hint">多个值用逗号分隔</span>
@@ -219,6 +245,8 @@
                     class="input"
                     :value="getFieldValue(field.key) ?? field.default ?? ''"
                     :placeholder="field.placeholder"
+                    :disabled="field.readonly"
+                    :readonly="field.readonly"
                     @input="emit('update', field.key, ($event.target as HTMLInputElement).value)"
                   />
                 </div>
@@ -229,60 +257,62 @@
       </div>
     </div>
 
-    <!-- 自定义配置区域（显示未在描述文件中定义的配置） -->
-    <div v-if="customSections.length > 0" class="config-group custom-section">
-      <div class="group-header" @click="toggleGroup('__custom__')">
-        <div class="group-title">
-          <Icon icon="lucide:file-json" />
-          <h3>其他配置</h3>
+    <!-- 自定义配置区域（显示未在描述文件中定义的配置），仅在"其他"标签页显示 -->
+    <div v-if="activeTab === 'other' && customSections.length > 0" class="config-content">
+      <div class="config-group custom-section">
+        <div class="group-header" @click="toggleGroup('__custom__')">
+          <div class="group-title">
+            <Icon icon="lucide:file-json" />
+            <h3>未分类配置</h3>
+          </div>
+          <div class="group-meta">
+            <span class="group-hint">配置文件中未注释的配置项</span>
+            <Icon :icon="collapsedGroups['__custom__'] ? 'lucide:chevron-down' : 'lucide:chevron-up'" />
+          </div>
         </div>
-        <div class="group-meta">
-          <span class="group-hint">未分类的配置项</span>
-          <Icon :icon="collapsedGroups['__custom__'] ? 'lucide:chevron-down' : 'lucide:chevron-up'" />
-        </div>
-      </div>
-      <div v-show="!collapsedGroups['__custom__']" class="group-content">
-        <div v-for="section in customSections" :key="section.name" class="custom-subsection">
-          <h4 class="subsection-title">{{ section.display_name }}</h4>
-          <div 
-            v-for="field in section.fields" 
-            :key="field.full_key" 
-            class="field-card"
-            :class="{ inline: field.type === 'boolean' }"
-          >
-            <div class="field-left" v-if="field.type === 'boolean'">
-              <div class="field-header">
-                <span class="field-name">{{ field.key }}</span>
+        <div v-show="!collapsedGroups['__custom__']" class="group-content">
+          <div v-for="section in customSections" :key="section.name" class="custom-subsection">
+            <h4 class="subsection-title">{{ section.display_name }}</h4>
+            <div 
+              v-for="field in section.fields" 
+              :key="field.full_key" 
+              class="field-card"
+              :class="{ inline: field.type === 'boolean' }"
+            >
+              <div class="field-left" v-if="field.type === 'boolean'">
+                <div class="field-header">
+                  <span class="field-name">{{ field.key }}</span>
+                </div>
+                <div v-if="field.description" class="field-description">
+                  {{ field.description }}
+                </div>
               </div>
-              <div v-if="field.description" class="field-description">
-                {{ field.description }}
+              <template v-else>
+                <div class="field-header">
+                  <span class="field-name">{{ field.key }}</span>
+                  <span class="field-key">{{ field.full_key }}</span>
+                </div>
+                <div v-if="field.description" class="field-description">
+                  {{ field.description }}
+                </div>
+              </template>
+              
+              <div class="field-input" v-if="field.type !== 'boolean'">
+                <FieldEditor 
+                  :field="field"
+                  :value="getFieldValue(field.full_key)"
+                  @update="(v) => emit('update', field.full_key, v)"
+                />
               </div>
+              <label v-else class="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  :checked="Boolean(getFieldValue(field.full_key))"
+                  @change="emit('update', field.full_key, ($event.target as HTMLInputElement).checked)"
+                />
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <template v-else>
-              <div class="field-header">
-                <span class="field-name">{{ field.key }}</span>
-                <span class="field-key">{{ field.full_key }}</span>
-              </div>
-              <div v-if="field.description" class="field-description">
-                {{ field.description }}
-              </div>
-            </template>
-            
-            <div class="field-input" v-if="field.type !== 'boolean'">
-              <FieldEditor 
-                :field="field"
-                :value="getFieldValue(field.full_key)"
-                @update="(v) => emit('update', field.full_key, v)"
-              />
-            </div>
-            <label v-else class="toggle-switch">
-              <input 
-                type="checkbox" 
-                :checked="Boolean(getFieldValue(field.full_key))"
-                @change="emit('update', field.full_key, ($event.target as HTMLInputElement).checked)"
-              />
-              <span class="toggle-slider"></span>
-            </label>
           </div>
         </div>
       </div>
@@ -298,6 +328,7 @@ import FieldEditor from './FieldEditor.vue'
 import MasterUsersEditor from './special/MasterUsersEditor.vue'
 import ExpressionRulesEditor from './special/ExpressionRulesEditor.vue'
 import ReactionRulesEditor from './special/ReactionRulesEditor.vue'
+import WebSearchEnginesEditor from './special/WebSearchEnginesEditor.vue'
 import { botConfigGroups, type ConfigGroupDef, type ConfigFieldDef } from '@/config/configDescriptions'
 
 const props = defineProps<{
@@ -310,21 +341,99 @@ const emit = defineEmits<{
   (e: 'update', key: string, value: unknown): void
 }>()
 
+// 导航栏标签页定义
+interface NavTab {
+  key: string
+  name: string
+  description: string
+  groupKeys: string[]  // 该标签页包含的配置组 key
+}
+
+const navTabs: NavTab[] = [
+  {
+    key: 'basic',
+    name: '基本信息',
+    description: '配置机器人的基础信息和账号设置',
+    groupKeys: ['inner', 'bot', 'command', 'permission']
+  },
+  {
+    key: 'personality',
+    name: '人格',
+    description: '配置机器人的性格特点和身份设定',
+    groupKeys: ['personality']
+  },
+  {
+    key: 'chat',
+    name: '聊天',
+    description: '配置机器人的聊天行为、私聊和群聊模式',
+    groupKeys: ['chat', 'message_receive', 'kokoro_flow_chatter', 'cross_context', 'affinity_flow', 'proactive_thinking']
+  },
+  {
+    key: 'expression',
+    name: '表达',
+    description: '配置机器人学习和使用表达方式',
+    groupKeys: ['expression', 'reaction']
+  },
+  {
+    key: 'function',
+    name: '功能',
+    description: '配置机器人的各项功能模块',
+    groupKeys: ['tool', 'voice', 'web_search', 'video_analysis', 'planning_system', 'notice', 'plugin_http_system']
+  },
+  {
+    key: 'process',
+    name: '处理',
+    description: '配置回复的后处理和优化',
+    groupKeys: ['response_post_process', 'chinese_typo', 'response_splitter']
+  },
+  {
+    key: 'emotion',
+    name: '情绪',
+    description: '配置机器人的情绪系统和表情包',
+    groupKeys: ['mood', 'emoji']
+  },
+  {
+    key: 'memory',
+    name: '知识库',
+    description: '配置记忆系统和向量数据库',
+    groupKeys: ['memory', 'database', 'lpmm_knowledge']
+  },
+  {
+    key: 'advanced',
+    name: '高级',
+    description: '高级配置选项，包括视频分析、消息总线等',
+    groupKeys: ['video_analysis_expert', 'message_bus', 'custom_prompt', 'dependency_management']
+  },
+  {
+    key: 'other',
+    name: '其他',
+    description: '日志、调试等其他配置',
+    groupKeys: ['log', 'debug']
+  }
+]
+
 // 状态
+const activeTab = ref('basic')
 const searchQuery = ref('')
 const showAdvanced = ref(false)
-const showExpert = ref(false)
 const showPasswords = ref<Record<string, boolean>>({})
 const collapsedGroups = ref<Record<string, boolean>>({})
 
-// 过滤后的配置分组
-const filteredGroups = computed(() => {
-  let groups = botConfigGroups
-  
-  // 专家模式过滤
-  if (!showExpert.value) {
-    groups = groups.filter(group => !group.expert)
-  }
+// 获取当前标签页信息
+const currentTabInfo = computed(() => {
+  const tab = navTabs.find(t => t.key === activeTab.value)
+  return tab ?? navTabs[0]
+})
+
+// 获取当前标签页的配置组（原始）
+const currentTabGroups = computed(() => {
+  const tab = currentTabInfo.value
+  return botConfigGroups.filter(group => tab?.groupKeys.includes(group.key))
+})
+
+// 获取当前标签页的过滤后配置组
+const filteredCurrentTabGroups = computed(() => {
+  let groups = currentTabGroups.value
   
   if (!searchQuery.value) {
     return groups
@@ -343,9 +452,19 @@ const filteredGroups = computed(() => {
   })
 })
 
-// 获取可见字段（考虑高级选项和专家选项过滤）
+// 检查当前标签页是否有高级字段
+const hasAdvancedFieldsInCurrentTab = computed(() => {
+  return currentTabGroups.value.some(group => 
+    group.fields.some(field => field.advanced)
+  )
+})
+
+// 获取可见字段（考虑高级选项过滤）
 function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
   let fields = group.fields
+  
+  // 过滤隐藏字段（由特殊编辑器管理的字段）
+  fields = fields.filter(field => !field.hidden)
   
   // 搜索过滤
   if (searchQuery.value) {
@@ -360,11 +479,6 @@ function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
   // 高级选项过滤
   if (!showAdvanced.value) {
     fields = fields.filter(field => !field.advanced)
-  }
-  
-  // 专家选项过滤
-  if (!showExpert.value) {
-    fields = fields.filter(field => !field.expert)
   }
   
   return fields
@@ -450,52 +564,156 @@ function parseArrayValue(value: string): string[] {
 .main-config-editor {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-/* 配置概览 */
-.config-overview {
-  display: flex;
-  gap: 16px;
-}
-
-.overview-card {
-  flex: 1;
+/* 顶部导航栏 */
+.config-nav-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: linear-gradient(135deg, var(--primary-bg), rgba(59, 130, 246, 0.2));
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
 }
 
-.overview-icon {
-  width: 56px;
-  height: 56px;
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.nav-tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-tab.active {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+
+.nav-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+}
+
+/* 专家模式勾选框 */
+.expert-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
   border-radius: var(--radius);
-  font-size: 28px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
 }
 
-.overview-icon.bot {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: white;
+.expert-checkbox-wrapper:hover {
+  background: var(--bg-hover);
 }
 
-.overview-info h4 {
+.expert-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-mark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.expert-checkbox:checked + .checkbox-mark {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-color: #f59e0b;
+}
+
+.expert-checkbox:checked + .checkbox-mark::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.expert-checkbox:checked ~ .checkbox-label {
+  color: #f59e0b;
+}
+
+/* 标签页标题 */
+.tab-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.tab-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 4px 0;
+  margin: 0;
 }
 
-.overview-info p {
+.tab-description {
+  flex: 1;
   font-size: 13px;
   color: var(--text-tertiary);
   margin: 0;
+}
+
+.add-rule-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-rule-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* 工具栏 */
@@ -503,7 +721,7 @@ function parseArrayValue(value: string): string[] {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px;
+  padding: 12px 16px;
   background: var(--bg-primary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
@@ -538,52 +756,11 @@ function parseArrayValue(value: string): string[] {
   color: var(--text-tertiary);
 }
 
-.filter-buttons {
+/* 配置内容区域 */
+.config-content {
   display: flex;
-  gap: 8px;
-}
-
-.filter-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.filter-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.filter-btn.active {
-  background: var(--primary-bg);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-/* 专家模式切换 */
-.expert-toggle {
-  position: relative;
-}
-
-.expert-checkbox {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.expert-toggle.active {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  border-color: #f59e0b;
-  color: white;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .expert-badge {
@@ -596,17 +773,20 @@ function parseArrayValue(value: string): string[] {
 }
 
 /* 配置分组 */
-.config-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
 .config-group {
   background: var(--bg-primary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   overflow: hidden;
+}
+
+.config-group.single-group {
+  border: none;
+  background: transparent;
+}
+
+.config-group.single-group .group-content {
+  padding: 0;
 }
 
 .config-group.expert-group {
@@ -628,7 +808,6 @@ function parseArrayValue(value: string): string[] {
   cursor: pointer;
   transition: background var(--transition-fast);
 }
-
 
 .group-header:hover {
   background: var(--bg-hover);
@@ -688,6 +867,7 @@ function parseArrayValue(value: string): string[] {
   border-radius: var(--radius);
   border: 1px solid transparent;
   transition: all var(--transition-fast);
+  position: relative;
 }
 
 .field-card:hover {
@@ -708,10 +888,31 @@ function parseArrayValue(value: string): string[] {
   border-left: 3px solid #f59e0b;
 }
 
+.field-card.readonly {
+  opacity: 0.8;
+  background: var(--bg-tertiary);
+}
+
 .field-card.special-editor-card {
   padding: 0;
   background: transparent;
   border: none;
+}
+
+/* 只读标签 */
+.readonly-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 10px;
+  color: var(--text-tertiary);
 }
 
 .field-left {
@@ -779,6 +980,19 @@ function parseArrayValue(value: string): string[] {
   box-shadow: 0 0 0 3px var(--primary-bg);
 }
 
+.input:disabled,
+.input:read-only {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.input:disabled:focus,
+.input:read-only:focus {
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
 .input.textarea {
   resize: vertical;
   min-height: 80px;
@@ -787,6 +1001,10 @@ function parseArrayValue(value: string): string[] {
 
 select.input {
   cursor: pointer;
+}
+
+select.input:disabled {
+  cursor: not-allowed;
 }
 
 /* 密码输入 */
@@ -828,6 +1046,11 @@ select.input {
   align-items: center;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.toggle-switch.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .toggle-switch input {

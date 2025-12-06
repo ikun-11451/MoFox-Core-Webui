@@ -1,10 +1,17 @@
 <template>
-  <div class="field-editor">
+  <div class="field-editor" :class="{ 'is-readonly': field.readonly }">
+    <!-- 只读提示 -->
+    <div v-if="field.readonly" class="readonly-badge">
+      <Icon icon="lucide:lock" />
+      只读
+    </div>
+    
     <!-- 布尔值 -->
     <label v-if="field.type === 'boolean'" class="toggle-switch">
       <input 
         type="checkbox" 
         :checked="Boolean(value)"
+        :disabled="field.readonly"
         @change="emit('update', ($event.target as HTMLInputElement).checked)"
       />
       <span class="toggle-slider"></span>
@@ -17,6 +24,8 @@
       type="number"
       class="input"
       :value="value"
+      :readonly="field.readonly"
+      :disabled="field.readonly"
       @input="emit('update', parseNumber(($event.target as HTMLInputElement).value, field.type))"
     />
     
@@ -139,7 +148,7 @@
     
     <!-- 对象 -->
     <div v-else-if="field.type === 'object'" class="object-field">
-      <button class="btn btn-sm btn-ghost" @click="openObjectEditor">
+      <button class="btn btn-sm btn-ghost" @click="openObjectEditor" :disabled="field.readonly">
         <Icon icon="lucide:edit-3" />
         编辑对象
       </button>
@@ -149,7 +158,9 @@
     <textarea 
       v-else-if="isMultilineText"
       class="input textarea"
-      :value="value"
+      :value="value as string"
+      :readonly="field.readonly"
+      :disabled="field.readonly"
       @input="emit('update', ($event.target as HTMLInputElement).value)"
     ></textarea>
     
@@ -158,7 +169,9 @@
       v-else
       type="text"
       class="input"
-      :value="value"
+      :value="value as string"
+      :readonly="field.readonly"
+      :disabled="field.readonly"
       @input="emit('update', ($event.target as HTMLInputElement).value)"
     />
   </div>
@@ -316,6 +329,30 @@ function openObjectEditor() {
 <style scoped>
 .field-editor {
   width: 100%;
+  position: relative;
+}
+
+.field-editor.is-readonly {
+  opacity: 0.8;
+}
+
+.readonly-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  z-index: 1;
+}
+
+.readonly-badge svg {
+  font-size: 12px;
 }
 
 .input {
@@ -333,6 +370,13 @@ function openObjectEditor() {
 .input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+.input:disabled,
+.input:read-only {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: not-allowed;
 }
 
 .textarea {

@@ -500,6 +500,7 @@ export interface ConfigSchemaField {
   value: unknown
   description?: string
   items_count?: number
+  readonly?: boolean
 }
 
 /** 配置 Section */

@@ -5,10 +5,10 @@
  */
 
 // 配置字段类型
-export type FieldType = 'string' | 'number' | 'boolean' | 'array' | 'object' | 'password' | 'select' | 'textarea'
+export type FieldType = 'string' | 'number' | 'boolean' | 'array' | 'object' | 'password' | 'select' | 'textarea' 
 
 // 配置字段类型扩展
-export type SpecialEditorType = 'master_users' | 'expression_rules' | 'reaction_rules' | 'model_extra_params'
+export type SpecialEditorType = 'master_users' | 'expression_rules' | 'reaction_rules' | 'model_extra_params' | 'web_search_engines'
 
 // 配置字段定义
 export interface ConfigFieldDef {
@@ -25,6 +25,8 @@ export interface ConfigFieldDef {
   advanced?: boolean       // 是否为高级选项（显示高级选项时显示）
   expert?: boolean         // 是否为专家选项（需要打勾专家模式才显示）
   specialEditor?: SpecialEditorType  // 特殊编辑器类型
+  hidden?: boolean         // 是否隐藏（由特殊编辑器管理）
+  readonly?: boolean       // 是否只读（不允许修改）
 }
 
 // 配置分组定义
@@ -36,6 +38,7 @@ export interface ConfigGroupDef {
   fields: ConfigFieldDef[] // 字段列表
   expert?: boolean         // 整个分组是否为专家模式（需要打勾专家模式才显示）
   hasSpecialEditor?: boolean  // 是否包含特殊编辑器
+  hidden?: boolean         // 是否隐藏（由特殊编辑器管理）
 }
 
 // ==================== Bot 配置描述 ====================
@@ -53,7 +56,8 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: '配置版本',
         description: '配置文件版本号，格式：主版本号.次版本号.修订号',
         type: 'string',
-        placeholder: '例如: 7.9.6'
+        readonly: true,
+        placeholder: '例如: 7.9.6',
       }
     ]
   },
@@ -1271,6 +1275,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
     name: '网络搜索',
     icon: 'lucide:search',
     description: '配置联网搜索功能，支持多种搜索引擎',
+    hasSpecialEditor: true,
     fields: [
       {
         key: 'web_search.enable_web_search_tool',
@@ -1289,10 +1294,10 @@ export const botConfigGroups: ConfigGroupDef[] = [
       {
         key: 'web_search.enabled_engines',
         name: '启用的搜索引擎',
-        description: '启用的搜索引擎列表，可同时启用多个',
+        description: '选择要启用的搜索引擎',
         type: 'array',
         default: ['ddg'],
-        placeholder: '可选: exa, tavily, ddg, bing, metaso, serper'
+        specialEditor: 'web_search_engines'
       },
       {
         key: 'web_search.search_strategy',
@@ -1311,7 +1316,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: 'Tavily API 密钥',
         description: 'Tavily搜索引擎API密钥列表，支持多密钥轮询',
         type: 'array',
-        advanced: true,
+        hidden: true,
         placeholder: '添加Tavily API密钥...'
       },
       {
@@ -1319,7 +1324,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: 'EXA API 密钥',
         description: 'EXA搜索引擎API密钥列表，支持多密钥轮询',
         type: 'array',
-        advanced: true,
+        hidden: true,
         placeholder: '添加EXA API密钥...'
       },
       {
@@ -1327,7 +1332,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: 'Metaso API 密钥',
         description: 'Metaso搜索引擎API密钥列表，支持多密钥轮询',
         type: 'array',
-        advanced: true,
+        hidden: true,
         placeholder: '添加Metaso API密钥...'
       },
       {
@@ -1335,7 +1340,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: 'Serper API 密钥',
         description: 'Serper搜索引擎API密钥列表，支持多密钥轮询',
         type: 'array',
-        advanced: true,
+        hidden: true,
         placeholder: '添加Serper API密钥...'
       },
       {
@@ -1343,7 +1348,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: 'SearXNG 实例',
         description: 'SearXNG实例URL列表',
         type: 'array',
-        advanced: true,
+        hidden: true,
         placeholder: '添加SearXNG实例URL...'
       },
       {
@@ -1351,7 +1356,7 @@ export const botConfigGroups: ConfigGroupDef[] = [
         name: 'SearXNG API 密钥',
         description: 'SearXNG实例API密钥列表',
         type: 'array',
-        advanced: true,
+        hidden: true,
         placeholder: '添加SearXNG API密钥...'
       }
     ]

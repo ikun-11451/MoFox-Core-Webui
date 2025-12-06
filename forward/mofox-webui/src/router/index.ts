@@ -2,7 +2,10 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Login from '@/views/Login.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import DashboardHome from '@/views/DashboardHome.vue'
-import ConfigManager from '@/views/ConfigManager.vue'
+import BotConfigView from '@/views/BotConfigView.vue'
+import ModelConfigView from '@/views/ModelConfigView.vue'
+import PluginConfigList from '@/views/PluginConfigList.vue'
+import PluginConfigView from '@/views/PluginConfigView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -26,9 +29,25 @@ const routes: Array<RouteRecordRaw> = [
         component: DashboardHome
       },
       {
-        path: 'config',
-        name: 'ConfigManager',
-        component: ConfigManager
+        path: 'bot-config',
+        name: 'BotConfig',
+        component: BotConfigView
+      },
+      {
+        path: 'model-config',
+        name: 'ModelConfig',
+        component: ModelConfigView
+      },
+      {
+        path: 'plugin-config',
+        name: 'PluginConfigList',
+        component: PluginConfigList
+      },
+      {
+        path: 'plugin-config/:pluginPath',
+        name: 'PluginConfigView',
+        component: PluginConfigView,
+        props: true
       }
     ]
   }
