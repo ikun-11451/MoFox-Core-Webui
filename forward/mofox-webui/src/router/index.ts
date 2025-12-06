@@ -6,6 +6,8 @@ import BotConfigView from '@/views/BotConfigView.vue'
 import ModelConfigView from '@/views/ModelConfigView.vue'
 import PluginConfigList from '@/views/PluginConfigList.vue'
 import PluginConfigView from '@/views/PluginConfigView.vue'
+import PluginManageView from '@/views/PluginManageView.vue'
+import PluginDetailView from '@/views/PluginDetailView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -47,6 +49,17 @@ const routes: Array<RouteRecordRaw> = [
         path: 'plugin-config/:pluginPath',
         name: 'PluginConfigView',
         component: PluginConfigView,
+        props: true
+      },
+      {
+        path: 'plugin-manage',
+        name: 'PluginManage',
+        component: PluginManageView
+      },
+      {
+        path: 'plugin-manage/:pluginName',
+        name: 'PluginDetail',
+        component: PluginDetailView,
         props: true
       }
     ]

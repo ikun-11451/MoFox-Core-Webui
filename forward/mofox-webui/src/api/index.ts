@@ -229,6 +229,26 @@ export const API_ENDPOINTS = {
     BACKUPS: (path: string) => `config/backups/${path}`,
     RESTORE: (path: string) => `config/restore/${path}`,
     VALIDATE: 'config/validate'
+  },
+  PLUGIN: {
+    LIST: 'plugin_manager/plugins',
+    DETAIL: (name: string) => `plugin_manager/plugins/${name}`,
+    STATUS: (name: string) => `plugin_manager/plugins/${name}/status`,
+    ENABLE: (name: string) => `plugin_manager/plugins/${name}/enable`,
+    DISABLE: (name: string) => `plugin_manager/plugins/${name}/disable`,
+    RELOAD: (name: string) => `plugin_manager/plugins/${name}/reload`,
+    UNLOAD: (name: string) => `plugin_manager/plugins/${name}/unload`,
+    LOAD: (name: string) => `plugin_manager/plugins/${name}/load`,
+    COMPONENTS: (name: string) => `plugin_manager/plugins/${name}/components`,
+    COMPONENT_ENABLE: (pluginName: string, componentName: string, type: string) => 
+      `plugin_manager/plugins/${pluginName}/components/${componentName}/enable?component_type=${type}`,
+    COMPONENT_DISABLE: (pluginName: string, componentName: string, type: string) => 
+      `plugin_manager/plugins/${pluginName}/components/${componentName}/disable?component_type=${type}`,
+    SCAN: 'plugin_manager/plugins/scan',
+    RELOAD_ALL: 'plugin_manager/plugins/reload-all',
+    BATCH_ENABLE: 'plugin_manager/plugins/batch/enable',
+    BATCH_DISABLE: 'plugin_manager/plugins/batch/disable',
+    BATCH_RELOAD: 'plugin_manager/plugins/batch/reload'
   }
 } as const
 
@@ -388,16 +408,16 @@ export async function getDashboardOverview() {
 }
 
 /**
- * 获取插件列表
+ * 获取插件列表（按状态分组，用于仪表盘）
  */
-export async function getPluginList() {
-  return api.get<PluginListResponse>(API_ENDPOINTS.STATS.PLUGINS)
+export async function getPluginsByStatus() {
+  return api.get<PluginsByStatusResponse>(API_ENDPOINTS.STATS.PLUGINS_BY_STATUS)
 }
 
 /**
- * 获取插件详情
+ * 获取插件详情（Stats API，用于仪表盘）
  */
-export async function getPluginDetail(pluginName: string) {
+export async function getPluginDetailForStats(pluginName: string) {
   return api.get<{ success: boolean; plugin?: Record<string, unknown>; error?: string }>(
     API_ENDPOINTS.STATS.PLUGIN_DETAIL(pluginName)
   )
@@ -447,13 +467,6 @@ export async function getLLMStats(period: 'last_hour' | 'last_24_hours' | 'last_
 export async function getMessageStats(period: 'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days' = 'last_24_hours') {
   const endpoint = `${API_ENDPOINTS.STATS.MESSAGE_STATS}?period=${period}`
   return api.get<MessageStatsResponse>(endpoint)
-}
-
-/**
- * 获取按状态分组的插件列表
- */
-export async function getPluginsByStatus() {
-  return api.get<PluginsByStatusResponse>(API_ENDPOINTS.STATS.PLUGINS_BY_STATUS)
 }
 
 /**
@@ -591,6 +604,234 @@ export async function updateConfig(path: string, updates: Record<string, unknown
   return api.post<SaveConfigResponse>(API_ENDPOINTS.CONFIG.UPDATE(path), {
     updates,
     create_backup: createBackup
+  })
+}
+
+// ==================== 插件管理类型定义 ====================
+
+/** 插件项 */
+export interface PluginItem {
+  name: string
+  display_name: string
+  version: string
+  author: string
+  description?: string
+  enabled: boolean
+  loaded: boolean
+  components_count: number
+  last_updated?: string
+  config_path?: string
+  error?: string
+}
+
+/** 插件管理列表响应 */
+export interface PluginManageListResponse {
+  success: boolean
+  plugins: PluginItem[]
+  total: number
+  loaded: number
+  enabled: number
+  failed: number
+  error?: string
+}
+
+/** 组件项 */
+export interface PluginComponent {
+  name: string
+  type: string
+  description?: string
+  enabled: boolean
+  plugin_name: string
+  details?: Record<string, unknown>
+}
+
+/** 组件列表响应 */
+export interface ComponentsResponse {
+  success: boolean
+  plugin_name: string
+  components: PluginComponent[]
+  total: number
+  enabled: number
+  disabled: number
+  error?: string
+}
+
+/** 插件详细信息 */
+export interface PluginDetailInfo {
+  name: string
+  display_name: string
+  version: string
+  author: string
+  description?: string
+  enabled: boolean
+  loaded: boolean
+  components: PluginComponent[]
+  components_count: number
+  config: {
+    path: string
+    exists: boolean
+  }
+  metadata?: Record<string, unknown>
+}
+
+/** 插件详情响应 */
+export interface PluginDetailResponse {
+  success: boolean
+  plugin?: PluginDetailInfo
+  error?: string
+}
+
+/** 操作响应 */
+export interface OperationResponse {
+  success: boolean
+  message?: string
+  error?: string
+}
+
+/** 扫描结果响应 */
+export interface ScanResultResponse {
+  success: boolean
+  registered: number
+  loaded: number
+  failed: number
+  new_plugins: string[]
+  error?: string
+}
+
+/** 批量操作响应 */
+export interface BatchOperationResponse {
+  success: boolean
+  results: Record<string, { success: boolean; message?: string; error?: string }>
+  total: number
+  succeeded: number
+  failed: number
+}
+
+// ==================== 插件管理 API 方法 ====================
+
+/**
+ * 获取所有插件列表
+ */
+export async function getPluginList() {
+  return api.get<PluginManageListResponse>(API_ENDPOINTS.PLUGIN.LIST)
+}
+
+/**
+ * 获取插件详情
+ */
+export async function getPluginDetail(pluginName: string) {
+  return api.get<PluginDetailResponse>(API_ENDPOINTS.PLUGIN.DETAIL(pluginName))
+}
+
+/**
+ * 获取插件状态
+ */
+export async function getPluginStatus(pluginName: string) {
+  return api.get<{ success: boolean; plugin_name: string; loaded: boolean; enabled: boolean }>(
+    API_ENDPOINTS.PLUGIN.STATUS(pluginName)
+  )
+}
+
+/**
+ * 启用插件
+ */
+export async function enablePlugin(pluginName: string) {
+  return api.post<OperationResponse>(API_ENDPOINTS.PLUGIN.ENABLE(pluginName))
+}
+
+/**
+ * 禁用插件
+ */
+export async function disablePlugin(pluginName: string) {
+  return api.post<OperationResponse>(API_ENDPOINTS.PLUGIN.DISABLE(pluginName))
+}
+
+/**
+ * 重载插件
+ */
+export async function reloadPlugin(pluginName: string) {
+  return api.post<OperationResponse>(API_ENDPOINTS.PLUGIN.RELOAD(pluginName))
+}
+
+/**
+ * 卸载插件
+ */
+export async function unloadPlugin(pluginName: string) {
+  return api.post<OperationResponse>(API_ENDPOINTS.PLUGIN.UNLOAD(pluginName))
+}
+
+/**
+ * 加载插件
+ */
+export async function loadPlugin(pluginName: string) {
+  return api.post<OperationResponse>(API_ENDPOINTS.PLUGIN.LOAD(pluginName))
+}
+
+/**
+ * 获取插件的所有组件
+ */
+export async function getPluginComponents(pluginName: string) {
+  return api.get<ComponentsResponse>(API_ENDPOINTS.PLUGIN.COMPONENTS(pluginName))
+}
+
+/**
+ * 启用组件
+ */
+export async function enableComponent(pluginName: string, componentName: string, componentType: string) {
+  return api.post<OperationResponse>(
+    API_ENDPOINTS.PLUGIN.COMPONENT_ENABLE(pluginName, componentName, componentType)
+  )
+}
+
+/**
+ * 禁用组件
+ */
+export async function disableComponent(pluginName: string, componentName: string, componentType: string) {
+  return api.post<OperationResponse>(
+    API_ENDPOINTS.PLUGIN.COMPONENT_DISABLE(pluginName, componentName, componentType)
+  )
+}
+
+/**
+ * 扫描新插件
+ */
+export async function scanPlugins(loadAfterRegister: boolean = true) {
+  return api.post<ScanResultResponse>(API_ENDPOINTS.PLUGIN.SCAN, {
+    load_after_register: loadAfterRegister
+  })
+}
+
+/**
+ * 重载所有插件
+ */
+export async function reloadAllPlugins() {
+  return api.post<OperationResponse>(API_ENDPOINTS.PLUGIN.RELOAD_ALL)
+}
+
+/**
+ * 批量启用插件
+ */
+export async function batchEnablePlugins(pluginNames: string[]) {
+  return api.post<BatchOperationResponse>(API_ENDPOINTS.PLUGIN.BATCH_ENABLE, {
+    plugin_names: pluginNames
+  })
+}
+
+/**
+ * 批量禁用插件
+ */
+export async function batchDisablePlugins(pluginNames: string[]) {
+  return api.post<BatchOperationResponse>(API_ENDPOINTS.PLUGIN.BATCH_DISABLE, {
+    plugin_names: pluginNames
+  })
+}
+
+/**
+ * 批量重载插件
+ */
+export async function batchReloadPlugins(pluginNames: string[]) {
+  return api.post<BatchOperationResponse>(API_ENDPOINTS.PLUGIN.BATCH_RELOAD, {
+    plugin_names: pluginNames
   })
 }
 

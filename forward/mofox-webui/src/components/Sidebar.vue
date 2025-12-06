@@ -161,6 +161,7 @@ const menuItems: MenuItem[] = [
       { name: '插件配置', path: '/dashboard/plugin-config', icon: 'lucide:puzzle' },
     ]
   },
+  { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'lucide:package' },
 ]
 
 const toggleSidebar = () => {

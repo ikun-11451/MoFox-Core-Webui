@@ -19,7 +19,7 @@ from src.plugin_system import BasePlugin, ComponentInfo, register_plugin
 from src.plugin_system.base.config_types import ConfigField
 
 from .handlers import WebUIStartupHandler, WebUIShutdownHandler
-from .routers import WebUIAuthRouter, WebUIStatsRouter,WebUIConfigRouter
+from .routers import WebUIAuthRouter, WebUIConfigRouter, WebUIPluginRouter, WebUIStatsRouter
 
 logger = get_logger("WebUIAuth.Plugin")
 
@@ -120,5 +120,6 @@ class WebUIAuthPlugin(BasePlugin):
             # HTTP路由组件
             (WebUIAuthRouter.get_router_info(), WebUIAuthRouter),
             (WebUIConfigRouter.get_router_info(), WebUIConfigRouter),
+            (WebUIPluginRouter.get_router_info(), WebUIPluginRouter),
             (WebUIStatsRouter.get_router_info(), WebUIStatsRouter),
         ]
