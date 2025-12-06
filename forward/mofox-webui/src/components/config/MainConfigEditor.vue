@@ -93,7 +93,7 @@
               <WebSearchEnginesEditor 
                 v-else-if="field.specialEditor === 'web_search_engines'"
                 :value="getFieldValue(field.key)"
-                :configData="parsedData"
+                :configData="mergedConfigData"
                 @update="(v: unknown) => emit('update', field.key, v)"
                 @updateConfig="(key: string, v: unknown) => emit('update', key, v)"
               />
@@ -418,6 +418,35 @@ const searchQuery = ref('')
 const showAdvanced = ref(false)
 const showPasswords = ref<Record<string, boolean>>({})
 const collapsedGroups = ref<Record<string, boolean>>({})
+
+// 合并 parsedData 和 editedValues 的计算属性
+const mergedConfigData = computed(() => {
+  const merged = JSON.parse(JSON.stringify(props.parsedData)) as Record<string, any>
+  
+  // 将 editedValues 中的值合并进去
+  for (const [fullKey, value] of Object.entries(props.editedValues)) {
+    const keys = fullKey.split('.')
+    let current = merged as Record<string, any>
+    
+    // 遍历到倒数第二个键，创建嵌套对象
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i]
+      if (!key) continue
+      if (!current[key] || typeof current[key] !== 'object') {
+        current[key] = {}
+      }
+      current = current[key] as Record<string, any>
+    }
+    
+    // 设置最后一个键的值
+    const lastKey = keys[keys.length - 1]
+    if (lastKey) {
+      current[lastKey] = value
+    }
+  }
+  
+  return merged
+})
 
 // 获取当前标签页信息
 const currentTabInfo = computed(() => {

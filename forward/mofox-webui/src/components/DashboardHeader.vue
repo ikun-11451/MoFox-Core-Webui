@@ -4,7 +4,7 @@
       <!-- 左侧：页面标题 -->
       <div class="header-left">
         <h1 class="page-title">{{ pageTitle }}</h1>
-        <p class="page-subtitle">欢迎回来，一切运行正常</p>
+        <p class="page-subtitle">{{ currentSubtitle }}</p>
       </div>
       
       <!-- 右侧：项目名称、状态、操作 -->
@@ -32,21 +32,36 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { Icon } from '@iconify/vue'
 
 const router = useRouter()
-const route = useRoute()
 const userStore = useUserStore()
 
+// 主标题改为通用名称
 const pageTitle = computed(() => {
-  const titles: Record<string, string> = {
-    '/dashboard': '仪表盘',
-    '/dashboard/': '仪表盘',
-  }
-  return titles[route.path] || '仪表盘'
+  return 'MoFox Bot WebUI'
+})
+
+// 随机副标题
+const subtitles = [
+  '欢迎回来，一切运行正常',
+  '今天也要元气满满哦',
+  '系统运行稳定，请放心使用',
+  '新的一天，新的开始',
+  '愿你有美好的一天',
+  '继续保持，做得很好',
+  '万事顺意，心想事成',
+  '让我们一起创造美好',
+]
+
+const currentSubtitle = ref<string>('')
+
+onMounted(() => {
+  // 随机选择一个副标题
+  currentSubtitle.value = subtitles[Math.floor(Math.random() * subtitles.length)] ?? ''
 })
 
 const handleLogout = () => {

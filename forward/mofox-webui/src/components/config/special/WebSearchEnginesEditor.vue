@@ -221,7 +221,18 @@ function toggleEngine(engineId: string) {
 
 // 获取指定配置的 API 密钥列表
 function getApiKeys(configKey: string): string[] {
-  const value = props.configData?.[configKey]
+  // 处理嵌套的配置键，如 'web_search.exa_api_keys'
+  const keys = configKey.split('.')
+  let value: any = props.configData
+  
+  for (const key of keys) {
+    if (value && typeof value === 'object') {
+      value = value[key]
+    } else {
+      return []
+    }
+  }
+  
   if (Array.isArray(value)) {
     return value as string[]
   }
