@@ -1,124 +1,101 @@
 <template>
   <div class="model-config-editor">
-    <!-- 快速操作栏 -->
-    <div class="quick-actions">
-      <h3>
-        <Icon icon="lucide:zap" />
-        快速操作
-      </h3>
-      <div class="action-buttons">
-        <button class="action-btn" @click="showAddProviderModal = true">
-          <Icon icon="lucide:plus-circle" />
-          <span>添加提供商</span>
-          <small>配置新的 AI 服务提供商</small>
+    <!-- 顶部导航栏 -->
+    <div class="nav-header">
+      <div class="nav-tabs">
+        <button 
+          v-for="tab in tabs" 
+          :key="tab.key"
+          class="nav-tab"
+          :class="{ active: activeTab === tab.key }"
+          @click="activeTab = tab.key"
+        >
+          <Icon :icon="tab.icon" />
+          <span>{{ tab.name }}</span>
+          <span v-if="tab.count !== undefined" class="tab-badge">{{ tab.count }}</span>
         </button>
-        <button class="action-btn" @click="showAddModelModal = true">
-          <Icon icon="lucide:bot" />
-          <span>添加模型</span>
-          <small>配置新的 AI 模型</small>
+      </div>
+      <div class="nav-actions">
+        <div class="search-box" v-if="activeTab !== 'providers'">
+          <Icon icon="lucide:search" />
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            placeholder="搜索..." 
+            class="search-input"
+          />
+          <button v-if="searchQuery" class="clear-search" @click="searchQuery = ''">
+            <Icon icon="lucide:x" />
+          </button>
+        </div>
+        <button 
+          class="add-btn" 
+          @click="activeTab === 'providers' ? showAddProviderModal = true : showAddModelModal = true"
+          :title="activeTab === 'providers' ? '添加提供商' : '添加模型'"
+        >
+          <Icon icon="lucide:plus" />
+          <span>{{ activeTab === 'providers' ? '添加提供商' : activeTab === 'models' ? '添加模型' : '' }}</span>
         </button>
       </div>
     </div>
 
-    <!-- API 提供商列表 -->
-    <div class="providers-section">
-      <div class="section-header">
-        <h3>
-          <Icon icon="lucide:cloud" />
-          API 服务提供商
-        </h3>
-        <span class="provider-count">{{ apiProviders.length }} 个提供商</span>
-      </div>
-      
+    <!-- API 提供商面板 -->
+    <div v-show="activeTab === 'providers'" class="tab-panel">
       <div v-if="apiProviders.length === 0" class="empty-state">
-        <Icon icon="lucide:cloud-off" />
-        <p>暂无配置的提供商</p>
+        <div class="empty-icon">
+          <Icon icon="lucide:cloud-off" />
+        </div>
+        <h3>暂无配置的提供商</h3>
+        <p>添加一个 API 提供商以开始使用 AI 模型</p>
         <button class="btn btn-primary" @click="showAddProviderModal = true">
           <Icon icon="lucide:plus" />
           添加第一个提供商
         </button>
       </div>
       
-      <div v-else class="providers-grid">
+      <div v-else class="provider-list">
         <div 
           v-for="(provider, index) in apiProviders" 
           :key="index" 
-          class="provider-card"
-          :class="{ expanded: expandedProvider === index }"
+          class="provider-item"
+          :class="{ active: selectedProvider === index }"
         >
-          <div class="provider-header" @click="toggleProvider(index)">
+          <div class="provider-row" @click="selectedProvider = selectedProvider === index ? null : index">
             <div class="provider-icon">
               <Icon :icon="getProviderIcon(provider.name || '')" />
             </div>
-            <div class="provider-info">
-              <h4>{{ provider.name || '未命名提供商' }}</h4>
-              <span class="provider-type">{{ getClientTypeLabel(provider.client_type) }}</span>
+            <div class="provider-main">
+              <div class="provider-name">{{ provider.name || '未命名提供商' }}</div>
+              <div class="provider-meta">
+                <span class="meta-tag">{{ getClientTypeLabel(provider.client_type) }}</span>
+                <span class="meta-tag">{{ getProviderModelCount(provider.name) }} 个模型</span>
+              </div>
             </div>
-            <div class="provider-meta">
-              <span class="model-count">{{ getProviderModelCount(provider.name) }} 个模型</span>
-              <Icon :icon="expandedProvider === index ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+            <div class="provider-actions-row">
+              <button class="icon-btn" @click.stop="removeProvider(index)" title="删除">
+                <Icon icon="lucide:trash-2" />
+              </button>
+              <Icon :icon="selectedProvider === index ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="expand-icon" />
             </div>
           </div>
           
-          <div v-show="expandedProvider === index" class="provider-content">
-            <!-- 基础配置 -->
-            <div class="config-group">
-              <h5>
-                <Icon icon="lucide:settings" />
-                基础配置
-              </h5>
-              <div class="config-fields">
-                <div class="config-field">
-                  <label>
-                    提供商名称
-                    <span class="field-hint">API 服务商名称，用于在模型配置中引用</span>
-                  </label>
+          <Transition name="slide">
+            <div v-if="selectedProvider === index" class="provider-detail">
+              <div class="detail-grid">
+                <div class="form-group">
+                  <label>提供商名称</label>
                   <input 
                     type="text" 
-                    class="input" 
+                    class="form-input" 
                     :value="provider.name"
                     @input="updateProvider(index, 'name', ($event.target as HTMLInputElement).value)"
-                    placeholder="例如: DeepSeek, OpenAI, SiliconFlow"
+                    placeholder="例如: DeepSeek"
                   />
                 </div>
-                <div class="config-field">
-                  <label>
-                    API 地址 (Base URL)
-                    <span class="field-hint">API 服务商的 BaseURL</span>
-                  </label>
-                  <input 
-                    type="text" 
-                    class="input" 
-                    :value="provider.base_url"
-                    @input="updateProvider(index, 'base_url', ($event.target as HTMLInputElement).value)"
-                    placeholder="例如: https://api.deepseek.com/v1"
-                  />
-                </div>
-                <div class="config-field">
-                  <label>
-                    API 密钥
-                    <span class="field-hint">支持单个密钥或密钥列表轮询（用逗号分隔）</span>
-                  </label>
-                  <div class="password-input">
-                    <input 
-                      :type="showApiKey[index] ? 'text' : 'password'" 
-                      class="input" 
-                      :value="formatApiKey(provider.api_key)"
-                      @input="updateProvider(index, 'api_key', parseApiKey(($event.target as HTMLInputElement).value))"
-                      placeholder="sk-xxx 或 key1, key2, key3"
-                    />
-                    <button class="toggle-visibility" @click="toggleApiKeyVisibility(index)">
-                      <Icon :icon="showApiKey[index] ? 'lucide:eye-off' : 'lucide:eye'" />
-                    </button>
-                  </div>
-                </div>
-                <div class="config-field">
-                  <label>
-                    客户端类型
-                    <span class="field-hint">API 请求客户端，Gemini 需要选择专用客户端</span>
-                  </label>
+                <div class="form-group">
+                  <label>客户端类型</label>
                   <select 
-                    class="input"
+                    class="form-input"
                     :value="provider.client_type || 'openai'"
                     @change="updateProvider(index, 'client_type', ($event.target as HTMLSelectElement).value)"
                   >
@@ -126,305 +103,319 @@
                     <option value="aiohttp_gemini">Gemini（Google）</option>
                   </select>
                 </div>
-              </div>
-            </div>
-            
-            <!-- 高级设置 -->
-            <div class="config-group collapsible">
-              <div class="group-header clickable" @click="toggleAdvanced(index)">
-                <h5>
-                  <Icon icon="lucide:sliders" />
-                  高级设置
-                </h5>
-                <Icon :icon="showAdvanced[index] ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
-              </div>
-              <div v-show="showAdvanced[index]" class="advanced-fields">
-                <div class="config-field">
-                  <label>
-                    最大重试次数
-                    <span class="field-hint">单个模型 API 调用失败时的最大重试次数</span>
-                  </label>
+                <div class="form-group full-width">
+                  <label>API 地址</label>
+                  <input 
+                    type="text" 
+                    class="form-input" 
+                    :value="provider.base_url"
+                    @input="updateProvider(index, 'base_url', ($event.target as HTMLInputElement).value)"
+                    placeholder="https://api.example.com/v1"
+                  />
+                </div>
+                <div class="form-group full-width">
+                  <label>API 密钥</label>
+                  <div class="input-with-action">
+                    <input 
+                      :type="showApiKey[index] ? 'text' : 'password'" 
+                      class="form-input" 
+                      :value="formatApiKey(provider.api_key)"
+                      @input="updateProvider(index, 'api_key', parseApiKey(($event.target as HTMLInputElement).value))"
+                      placeholder="sk-xxx 或多个密钥用逗号分隔"
+                    />
+                    <button class="input-action" @click="toggleApiKeyVisibility(index)">
+                      <Icon :icon="showApiKey[index] ? 'lucide:eye-off' : 'lucide:eye'" />
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>最大重试</label>
                   <input 
                     type="number" 
-                    class="input" 
+                    class="form-input" 
                     :value="provider.max_retry ?? 2"
                     @input="updateProvider(index, 'max_retry', parseInt(($event.target as HTMLInputElement).value))"
-                    min="0"
-                    max="10"
+                    min="0" max="10"
                   />
                 </div>
-                <div class="config-field">
-                  <label>
-                    请求超时（秒）
-                    <span class="field-hint">API 请求超时时间</span>
-                  </label>
+                <div class="form-group">
+                  <label>超时(秒)</label>
                   <input 
                     type="number" 
-                    class="input" 
+                    class="form-input" 
                     :value="provider.timeout ?? 30"
                     @input="updateProvider(index, 'timeout', parseInt(($event.target as HTMLInputElement).value))"
-                    min="5"
-                    max="300"
+                    min="5" max="300"
                   />
                 </div>
-                <div class="config-field">
-                  <label>
-                    重试间隔（秒）
-                    <span class="field-hint">重试间隔时间</span>
-                  </label>
+                <div class="form-group">
+                  <label>重试间隔(秒)</label>
                   <input 
                     type="number" 
-                    class="input" 
+                    class="form-input" 
                     :value="provider.retry_interval ?? 10"
                     @input="updateProvider(index, 'retry_interval', parseInt(($event.target as HTMLInputElement).value))"
-                    min="1"
-                    max="60"
+                    min="1" max="60"
                   />
                 </div>
               </div>
             </div>
-            
-            <!-- 操作按钮 -->
-            <div class="provider-actions">
-              <button class="btn btn-danger" @click="removeProvider(index)">
-                <Icon icon="lucide:trash-2" />
-                删除此提供商
-              </button>
-            </div>
-          </div>
+          </Transition>
         </div>
       </div>
     </div>
 
-    <!-- 模型列表 -->
-    <div class="models-section">
-      <div class="section-header">
-        <h3>
-          <Icon icon="lucide:cpu" />
-          模型配置
-        </h3>
-        <span class="model-count">{{ models.length }} 个模型</span>
-      </div>
-      
+    <!-- 模型面板 -->
+    <div v-show="activeTab === 'models'" class="tab-panel">
       <div v-if="models.length === 0" class="empty-state">
-        <Icon icon="lucide:bot" />
-        <p>暂无配置的模型</p>
+        <div class="empty-icon">
+          <Icon icon="lucide:bot" />
+        </div>
+        <h3>暂无配置的模型</h3>
+        <p>添加一个 AI 模型以启用各项功能</p>
         <button class="btn btn-primary" @click="showAddModelModal = true">
           <Icon icon="lucide:plus" />
           添加第一个模型
         </button>
       </div>
       
-      <div v-else class="models-grid">
+      <div v-else class="model-list">
         <div 
-          v-for="(model, index) in models" 
+          v-for="(model, index) in filteredModels" 
           :key="index" 
-          class="model-card"
-          :class="{ expanded: expandedModel === index }"
+          class="model-item"
+          :class="{ active: selectedModel === index }"
         >
-          <div class="model-header" @click="toggleModel(index)">
+          <div class="model-row" @click="selectedModel = selectedModel === index ? null : index">
             <div class="model-icon">
               <Icon :icon="getProviderIcon(model.api_provider || '')" />
             </div>
-            <div class="model-info">
-              <h4>{{ model.name || model.model_identifier || '未命名模型' }}</h4>
-              <span class="model-provider">{{ model.api_provider || '未指定提供商' }}</span>
+            <div class="model-main">
+              <div class="model-name">{{ model.name || model.model_identifier || '未命名模型' }}</div>
+              <div class="model-meta">
+                <span class="meta-tag provider">{{ model.api_provider || '未指定' }}</span>
+                <span v-if="model.price_in || model.price_out" class="meta-tag price">
+                  ¥{{ model.price_in ?? 0 }}/{{ model.price_out ?? 0 }}/M
+                </span>
+                <span v-if="model.anti_truncation" class="meta-tag feature">防截断</span>
+                <span v-if="model.enable_prompt_perturbation" class="meta-tag feature">扰动</span>
+              </div>
             </div>
-            <div class="model-meta">
-              <span v-if="model.price_in || model.price_out" class="model-price">
-                ¥{{ model.price_in ?? 0 }}/{{ model.price_out ?? 0 }} /M
-              </span>
-              <Icon :icon="expandedModel === index ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+            <div class="model-actions-row">
+              <button class="icon-btn" @click.stop="removeModel(index)" title="删除">
+                <Icon icon="lucide:trash-2" />
+              </button>
+              <Icon :icon="selectedModel === index ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="expand-icon" />
             </div>
           </div>
           
-          <div v-show="expandedModel === index" class="model-content">
-            <div class="config-fields">
-              <div class="config-field">
-                <label>
-                  模型标识符
-                  <span class="field-hint">API 服务商提供的模型标识符</span>
-                </label>
-                <input 
-                  type="text" 
-                  class="input" 
-                  :value="model.model_identifier"
-                  @input="updateModel(index, 'model_identifier', ($event.target as HTMLInputElement).value)"
-                  placeholder="例如: deepseek-chat, gpt-4"
-                />
-              </div>
-              <div class="config-field">
-                <label>
-                  模型名称
-                  <span class="field-hint">模型的自定义名称，在任务配置中使用</span>
-                </label>
-                <input 
-                  type="text" 
-                  class="input" 
-                  :value="model.name"
-                  @input="updateModel(index, 'name', ($event.target as HTMLInputElement).value)"
-                  placeholder="例如: deepseek-v3"
-                />
-              </div>
-              <div class="config-field">
-                <label>
-                  API 提供商
-                  <span class="field-hint">对应在 api_providers 中配置的服务商名称</span>
-                </label>
-                <select 
-                  class="input"
-                  :value="model.api_provider"
-                  @change="updateModel(index, 'api_provider', ($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="">请选择提供商</option>
-                  <option v-for="provider in apiProviders" :key="provider.name" :value="provider.name">
-                    {{ provider.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="config-field-row">
-                <div class="config-field">
-                  <label>
-                    输入价格
-                    <span class="field-hint">元/M token</span>
-                  </label>
+          <Transition name="slide">
+            <div v-if="selectedModel === index" class="model-detail">
+              <div class="detail-grid">
+                <div class="form-group">
+                  <label>模型标识符</label>
+                  <input 
+                    type="text" 
+                    class="form-input" 
+                    :value="model.model_identifier"
+                    @input="updateModel(index, 'model_identifier', ($event.target as HTMLInputElement).value)"
+                    placeholder="deepseek-chat"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>模型名称</label>
+                  <input 
+                    type="text" 
+                    class="form-input" 
+                    :value="model.name"
+                    @input="updateModel(index, 'name', ($event.target as HTMLInputElement).value)"
+                    placeholder="deepseek-v3"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>API 提供商</label>
+                  <select 
+                    class="form-input"
+                    :value="model.api_provider"
+                    @change="updateModel(index, 'api_provider', ($event.target as HTMLSelectElement).value)"
+                  >
+                    <option value="">请选择</option>
+                    <option v-for="p in apiProviders" :key="p.name" :value="p.name">{{ p.name }}</option>
+                  </select>
+                </div>
+                <div class="form-group half">
+                  <label>输入价格(元/M)</label>
                   <input 
                     type="number" 
-                    class="input" 
+                    class="form-input" 
                     :value="model.price_in ?? 0"
                     @input="updateModel(index, 'price_in', parseFloat(($event.target as HTMLInputElement).value))"
-                    step="0.1"
-                    min="0"
+                    step="0.1" min="0"
                   />
                 </div>
-                <div class="config-field">
-                  <label>
-                    输出价格
-                    <span class="field-hint">元/M token</span>
-                  </label>
+                <div class="form-group half">
+                  <label>输出价格(元/M)</label>
                   <input 
                     type="number" 
-                    class="input" 
+                    class="form-input" 
                     :value="model.price_out ?? 0"
                     @input="updateModel(index, 'price_out', parseFloat(($event.target as HTMLInputElement).value))"
-                    step="0.1"
-                    min="0"
+                    step="0.1" min="0"
                   />
                 </div>
               </div>
-            </div>
-            
-            <!-- 模型高级选项 -->
-            <div class="config-group collapsible">
-              <div class="group-header clickable" @click="toggleModelAdvanced(index)">
-                <h5>
-                  <Icon icon="lucide:sliders" />
-                  高级选项
-                </h5>
-                <Icon :icon="showModelAdvanced[index] ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+              
+              <!-- 高级选项 -->
+              <div class="advanced-section">
+                <div class="advanced-header" @click="toggleModelAdvanced(index)">
+                  <span>高级选项</span>
+                  <Icon :icon="showModelAdvanced[index] ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                </div>
+                <Transition name="slide">
+                  <div v-if="showModelAdvanced[index]" class="advanced-content">
+                    <div class="toggle-group">
+                      <div class="toggle-item" @click="updateModel(index, 'force_stream_mode', !model.force_stream_mode)">
+                        <div class="toggle-info">
+                          <Icon icon="lucide:radio" />
+                          <div>
+                            <span class="toggle-label">强制流式</span>
+                            <span class="toggle-hint">模型不支持非流式时启用</span>
+                          </div>
+                        </div>
+                        <label class="switch" @click.stop>
+                          <input type="checkbox" :checked="Boolean(model.force_stream_mode)" @change="updateModel(index, 'force_stream_mode', ($event.target as HTMLInputElement).checked)" />
+                          <span class="slider"></span>
+                        </label>
+                      </div>
+                      <div class="toggle-item" @click="updateModel(index, 'anti_truncation', !model.anti_truncation)">
+                        <div class="toggle-info">
+                          <Icon icon="lucide:shield-check" />
+                          <div>
+                            <span class="toggle-label">防截断</span>
+                            <span class="toggle-hint">输出不完整时自动重试</span>
+                          </div>
+                        </div>
+                        <label class="switch" @click.stop>
+                          <input type="checkbox" :checked="Boolean(model.anti_truncation)" @change="updateModel(index, 'anti_truncation', ($event.target as HTMLInputElement).checked)" />
+                          <span class="slider"></span>
+                        </label>
+                      </div>
+                      <div class="toggle-item" @click="updateModel(index, 'enable_prompt_perturbation', !model.enable_prompt_perturbation)">
+                        <div class="toggle-info">
+                          <Icon icon="lucide:shuffle" />
+                          <div>
+                            <span class="toggle-label">提示词扰动</span>
+                            <span class="toggle-hint">整合内容混淆和注意力优化</span>
+                          </div>
+                        </div>
+                        <label class="switch" @click.stop>
+                          <input type="checkbox" :checked="Boolean(model.enable_prompt_perturbation)" @change="updateModel(index, 'enable_prompt_perturbation', ($event.target as HTMLInputElement).checked)" />
+                          <span class="slider"></span>
+                        </label>
+                      </div>
+                      <div v-if="model.enable_prompt_perturbation" class="perturbation-options">
+                        <div class="form-group">
+                          <label>扰动强度</label>
+                          <select 
+                            class="form-input"
+                            :value="model.perturbation_strength || 'light'"
+                            @change="updateModel(index, 'perturbation_strength', ($event.target as HTMLSelectElement).value)"
+                          >
+                            <option value="light">轻度</option>
+                            <option value="medium">中度</option>
+                            <option value="heavy">重度</option>
+                          </select>
+                        </div>
+                        <div class="toggle-item compact">
+                          <div class="toggle-info">
+                            <span class="toggle-label">语义变体</span>
+                          </div>
+                          <label class="switch small" @click.stop>
+                            <input type="checkbox" :checked="Boolean(model.enable_semantic_variants)" @change="updateModel(index, 'enable_semantic_variants', ($event.target as HTMLInputElement).checked)" />
+                            <span class="slider"></span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Transition>
               </div>
-              <div v-show="showModelAdvanced[index]" class="advanced-fields">
-                <div class="config-field inline">
-                  <div class="field-left">
-                    <label>强制流式输出</label>
-                    <span class="field-hint">如果模型不支持非流式输出，请启用此选项</span>
-                  </div>
-                  <label class="toggle-switch">
-                    <input 
-                      type="checkbox" 
-                      :checked="Boolean(model.force_stream_mode)"
-                      @change="updateModel(index, 'force_stream_mode', ($event.target as HTMLInputElement).checked)"
-                    />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-                <div class="config-field inline">
-                  <div class="field-left">
-                    <label>防截断</label>
-                    <span class="field-hint">当模型输出不完整时，系统会自动重试</span>
-                  </div>
-                  <label class="toggle-switch">
-                    <input 
-                      type="checkbox" 
-                      :checked="Boolean(model.anti_truncation)"
-                      @change="updateModel(index, 'anti_truncation', ($event.target as HTMLInputElement).checked)"
-                    />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-                <div class="config-field inline">
-                  <div class="field-left">
-                    <label>提示词扰动</label>
-                    <span class="field-hint">启用提示词扰动，整合内容混淆和注意力优化</span>
-                  </div>
-                  <label class="toggle-switch">
-                    <input 
-                      type="checkbox" 
-                      :checked="Boolean(model.enable_prompt_perturbation)"
-                      @change="updateModel(index, 'enable_prompt_perturbation', ($event.target as HTMLInputElement).checked)"
-                    />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-              </div>
             </div>
-            
-            <!-- 操作按钮 -->
-            <div class="model-actions">
-              <button class="btn btn-danger" @click="removeModel(index)">
-                <Icon icon="lucide:trash-2" />
-                删除此模型
-              </button>
-            </div>
-          </div>
+          </Transition>
         </div>
       </div>
     </div>
 
-    <!-- 模型任务配置 -->
-    <div class="task-config-section">
-      <div class="section-header">
-        <h3>
-          <Icon icon="lucide:list-checks" />
-          模型任务配置
-        </h3>
-        <span class="task-count">配置各功能使用的模型</span>
+    <!-- 任务配置面板 -->
+    <div v-show="activeTab === 'tasks'" class="tab-panel">
+      <div class="task-categories">
+        <button 
+          v-for="cat in taskCategories" 
+          :key="cat.key"
+          class="category-btn"
+          :class="{ active: activeTaskCategory === cat.key }"
+          @click="activeTaskCategory = cat.key"
+        >
+          <Icon :icon="cat.icon" />
+          <span>{{ cat.name }}</span>
+        </button>
       </div>
       
-      <div class="task-configs">
+      <div class="task-list">
         <div 
-          v-for="(task, taskKey) in modelTaskConfigs" 
+          v-for="(task, taskKey) in filteredTasks" 
           :key="taskKey" 
-          class="task-card"
+          class="task-item"
         >
-          <div class="task-info">
-            <h4>{{ task.name }}</h4>
-            <p>{{ task.description }}</p>
+          <div class="task-header">
+            <div class="task-info">
+              <span class="task-name">{{ task.name }}</span>
+              <span class="task-desc">{{ task.description }}</span>
+            </div>
           </div>
-          <div class="task-config">
-            <div class="task-config-row">
-              <select 
-                class="input"
-                :value="getTaskModel(taskKey)"
-                @change="updateTaskModel(taskKey, ($event.target as HTMLSelectElement).value)"
-              >
-                <option value="">未配置</option>
-                <option v-for="model in models" :key="model.name" :value="model.name">
-                  {{ model.name }}
-                </option>
-              </select>
-              <div class="concurrency-config">
-                <label title="模型并发请求数量">
-                  <Icon icon="lucide:layers" />
-                  并发
-                </label>
+          <div class="task-controls">
+            <div class="control-row">
+              <div class="control-group model-select">
+                <label>模型</label>
+                <select 
+                  class="form-input"
+                  :value="getTaskModel(taskKey)"
+                  @change="updateTaskModel(taskKey, ($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="">未配置</option>
+                  <option v-for="m in models" :key="m.name" :value="m.name">{{ m.name }}</option>
+                </select>
+              </div>
+              <div class="control-group small">
+                <label>温度</label>
                 <input 
                   type="number" 
-                  class="input concurrency-input"
+                  class="form-input"
+                  :value="getTaskTemperature(taskKey)"
+                  @input="updateTaskTemperature(taskKey, parseFloat(($event.target as HTMLInputElement).value))"
+                  step="0.1" min="0" max="2"
+                  placeholder="0.7"
+                />
+              </div>
+              <div class="control-group small">
+                <label>最大Token</label>
+                <input 
+                  type="number" 
+                  class="form-input"
+                  :value="getTaskMaxTokens(taskKey)"
+                  @input="updateTaskMaxTokens(taskKey, parseInt(($event.target as HTMLInputElement).value))"
+                  min="1"
+                  placeholder="800"
+                />
+              </div>
+              <div class="control-group tiny">
+                <label>并发</label>
+                <input 
+                  type="number" 
+                  class="form-input"
                   :value="getTaskConcurrency(taskKey)"
                   @input="updateTaskConcurrency(taskKey, Number(($event.target as HTMLInputElement).value))"
-                  min="1"
-                  max="100"
+                  min="1" max="100"
                   placeholder="1"
                 />
               </div>
@@ -549,41 +540,88 @@
           </div>
 
           <!-- 高级参数 -->
-          <div class="divider">
-            <span>高级参数 (可选)</span>
-          </div>
-          
-          <div class="config-field-row">
-            <div class="config-field">
-              <label>
-                最大输出 Token
-                <span class="field-hint">留空使用默认值</span>
-              </label>
-              <input v-model.number="newModel.max_tokens" type="number" class="input" min="1" placeholder="例如: 4096" />
+          <div class="advanced-params-section">
+            <div class="advanced-header" @click="showAddModelAdvanced = !showAddModelAdvanced">
+              <div class="advanced-header-left">
+                <Icon :icon="showAddModelAdvanced ? 'lucide:chevron-down' : 'lucide:chevron-right'" />
+                <span>高级参数 (可选)</span>
+              </div>
+              <span class="advanced-hint">{{ showAddModelAdvanced ? '收起' : '展开' }}</span>
             </div>
-            <div class="config-field">
-              <label>
-                温度 (temperature)
-                <span class="field-hint">0-2，留空使用默认值</span>
-              </label>
-              <input v-model.number="newModel.temperature" type="number" class="input" step="0.1" min="0" max="2" placeholder="例如: 0.7" />
-            </div>
-          </div>
+            
+            <div v-show="showAddModelAdvanced" class="advanced-params-content">
+              <div class="config-field">
+                <label>
+                  最大输出 Token
+                  <span class="field-hint">留空使用默认值</span>
+                </label>
+                <input v-model.number="newModel.max_tokens" type="number" class="input" min="1" placeholder="例如: 4096" />
+              </div>
+              <div class="config-field">
+                <label>
+                  温度 (temperature)
+                  <span class="field-hint">0-2，留空使用默认值</span>
+                </label>
+                <div class="slider-with-input">
+                  <input 
+                    type="range" 
+                    class="temp-slider"
+                    :value="newModel.temperature ?? 0.7" 
+                    @input="newModel.temperature = parseFloat(($event.target as HTMLInputElement).value)"
+                    min="0" 
+                    max="2" 
+                    step="0.1"
+                  />
+                  <input 
+                    v-model.number="newModel.temperature" 
+                    type="number" 
+                    class="input temp-input" 
+                    step="0.1" 
+                    min="0" 
+                    max="2" 
+                    placeholder="0.7" 
+                  />
+                </div>
+              </div>
 
-          <div class="config-field-row">
-            <div class="config-field checkbox-field">
-              <label>
-                <input v-model="newModel.anti_truncation" type="checkbox" />
-                <span>反截断</span>
-                <span class="field-hint">防止模型输出被截断</span>
-              </label>
-            </div>
-            <div class="config-field checkbox-field">
-              <label>
-                <input v-model="newModel.enable_prompt_perturbation" type="checkbox" />
-                <span>内容混淆</span>
-                <span class="field-hint">对提示词进行微扰动，增加输出多样性</span>
-              </label>
+              <div class="feature-toggles">
+                <div class="feature-toggle" @click="newModel.anti_truncation = !newModel.anti_truncation">
+                  <div class="feature-toggle-info">
+                    <div class="feature-toggle-icon" :class="{ active: newModel.anti_truncation }">
+                      <Icon icon="lucide:shield-check" />
+                    </div>
+                    <div class="feature-toggle-text">
+                      <span class="feature-name">反截断</span>
+                      <span class="feature-hint">防止模型输出被截断</span>
+                    </div>
+                  </div>
+                  <label class="switch small" @click.stop>
+                    <input 
+                      type="checkbox" 
+                      v-model="newModel.anti_truncation"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="feature-toggle" @click="newModel.enable_prompt_perturbation = !newModel.enable_prompt_perturbation">
+                  <div class="feature-toggle-info">
+                    <div class="feature-toggle-icon" :class="{ active: newModel.enable_prompt_perturbation }">
+                      <Icon icon="lucide:shuffle" />
+                    </div>
+                    <div class="feature-toggle-text">
+                      <span class="feature-name">内容混淆</span>
+                      <span class="feature-hint">对提示词进行微扰动，增加输出多样性</span>
+                    </div>
+                  </div>
+                  <label class="switch small" @click.stop>
+                    <input 
+                      type="checkbox" 
+                      v-model="newModel.enable_prompt_perturbation"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -626,6 +664,8 @@ interface Model {
   force_stream_mode?: boolean
   anti_truncation?: boolean
   enable_prompt_perturbation?: boolean
+  perturbation_strength?: string
+  enable_semantic_variants?: boolean
   extra_params?: Record<string, unknown>
   [key: string]: unknown
 }
@@ -639,14 +679,63 @@ const emit = defineEmits<{
   (e: 'update', key: string, value: unknown): void
 }>()
 
+// 导航状态
+const activeTab = ref<'providers' | 'models' | 'tasks'>('providers')
+const searchQuery = ref('')
+const selectedProvider = ref<number | null>(0)
+const selectedModel = ref<number | null>(null)
+const activeTaskCategory = ref('core')
+
+// 标签页定义
+const tabs = computed(() => [
+  { key: 'providers' as const, name: '提供商', icon: 'lucide:cloud', count: apiProviders.value.length },
+  { key: 'models' as const, name: '模型', icon: 'lucide:cpu', count: models.value.length },
+  { key: 'tasks' as const, name: '任务配置', icon: 'lucide:list-checks', count: undefined }
+])
+
+// 任务分类
+const taskCategories = [
+  { key: 'core', name: '核心功能', icon: 'lucide:star' },
+  { key: 'media', name: '多媒体', icon: 'lucide:image' },
+  { key: 'memory', name: '记忆系统', icon: 'lucide:brain' },
+  { key: 'lpmm', name: '知识库', icon: 'lucide:database' },
+  { key: 'other', name: '其他', icon: 'lucide:more-horizontal' }
+]
+
+// 任务分类映射
+const taskCategoryMap: Record<string, string> = {
+  'utils': 'core',
+  'utils_small': 'core',
+  'replyer': 'core',
+  'planner': 'core',
+  'emotion': 'core',
+  'mood': 'core',
+  'maizone': 'core',
+  'tool_use': 'core',
+  'anti_injection': 'core',
+  'vlm': 'media',
+  'emoji_vlm': 'media',
+  'utils_video': 'media',
+  'voice': 'media',
+  'embedding': 'memory',
+  'memory_short_term_builder': 'memory',
+  'memory_short_term_decider': 'memory',
+  'memory_long_term_builder': 'memory',
+  'memory_judge': 'memory',
+  'lpmm_entity_extract': 'lpmm',
+  'lpmm_rdf_build': 'lpmm',
+  'lpmm_qa': 'lpmm',
+  'schedule_generator': 'other',
+  'monthly_plan_generator': 'other',
+  'relationship_tracker': 'other'
+}
+
 // 状态
-const expandedProvider = ref<number | null>(0)
-const expandedModel = ref<number | null>(null)
 const showApiKey = ref<Record<number, boolean>>({})
-const showAdvanced = ref<Record<number, boolean>>({})
 const showModelAdvanced = ref<Record<number, boolean>>({})
 const showAddProviderModal = ref(false)
 const showAddModelModal = ref(false)
+const showAddModelAdvanced = ref(false)
 
 // 新提供商表单
 const newProvider = ref({
@@ -663,7 +752,6 @@ const newModel = ref({
   api_provider: '',
   price_in: 0,
   price_out: 0,
-  // 高级参数
   max_tokens: undefined as number | undefined,
   temperature: undefined as number | undefined,
   anti_truncation: false,
@@ -688,21 +776,32 @@ const models = computed(() => {
   return []
 })
 
+// 过滤后的模型列表
+const filteredModels = computed(() => {
+  if (!searchQuery.value) return models.value
+  const query = searchQuery.value.toLowerCase()
+  return models.value.filter(m => 
+    (m.name?.toLowerCase().includes(query)) ||
+    (m.model_identifier?.toLowerCase().includes(query)) ||
+    (m.api_provider?.toLowerCase().includes(query))
+  )
+})
+
+// 过滤后的任务列表
+const filteredTasks = computed(() => {
+  const filtered: Record<string, { name: string; description: string }> = {}
+  for (const [key, value] of Object.entries(modelTaskConfigs)) {
+    const category = taskCategoryMap[key] || 'other'
+    if (category === activeTaskCategory.value) {
+      filtered[key] = value
+    }
+  }
+  return filtered
+})
+
 // 方法
-function toggleProvider(index: number) {
-  expandedProvider.value = expandedProvider.value === index ? null : index
-}
-
-function toggleModel(index: number) {
-  expandedModel.value = expandedModel.value === index ? null : index
-}
-
 function toggleApiKeyVisibility(index: number) {
   showApiKey.value[index] = !showApiKey.value[index]
-}
-
-function toggleAdvanced(index: number) {
-  showAdvanced.value[index] = !showAdvanced.value[index]
 }
 
 function toggleModelAdvanced(index: number) {
@@ -795,7 +894,7 @@ function confirmAddProvider() {
   newProvider.value = { name: '', base_url: '', api_key: '', client_type: 'openai' }
   
   // 展开新添加的提供商
-  expandedProvider.value = newProviders.length - 1
+  selectedProvider.value = newProviders.length - 1
 }
 
 function removeProvider(index: number) {
@@ -804,8 +903,8 @@ function removeProvider(index: number) {
   const newProviders = apiProviders.value.filter((_, i) => i !== index)
   emit('update', 'api_providers', newProviders)
   
-  if (expandedProvider.value === index) {
-    expandedProvider.value = null
+  if (selectedProvider.value === index) {
+    selectedProvider.value = null
   }
 }
 
@@ -847,6 +946,7 @@ function confirmAddModel() {
   emit('update', 'models', newModels)
   
   showAddModelModal.value = false
+  showAddModelAdvanced.value = false
   newModel.value = { 
     model_identifier: '', 
     name: '', 
@@ -860,7 +960,7 @@ function confirmAddModel() {
   }
   
   // 展开新添加的模型
-  expandedModel.value = newModels.length - 1
+  selectedModel.value = newModels.length - 1
 }
 
 function removeModel(index: number) {
@@ -869,8 +969,8 @@ function removeModel(index: number) {
   const newModels = models.value.filter((_, i) => i !== index)
   emit('update', 'models', newModels)
   
-  if (expandedModel.value === index) {
-    expandedModel.value = null
+  if (selectedModel.value === index) {
+    selectedModel.value = null
   }
 }
 
@@ -886,6 +986,34 @@ function getTaskModel(taskKey: string): string {
 
 function updateTaskModel(taskKey: string, modelName: string) {
   emit('update', `model_task_config.${taskKey}.model_list`, modelName ? [modelName] : [])
+}
+
+// 获取任务温度
+function getTaskTemperature(taskKey: string): number | undefined {
+  const data = props.parsedData
+  const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
+  if (!taskConfig || !taskConfig[taskKey]) return undefined
+  return taskConfig[taskKey].temperature as number | undefined
+}
+
+// 更新任务温度
+function updateTaskTemperature(taskKey: string, temp: number) {
+  if (isNaN(temp)) return
+  emit('update', `model_task_config.${taskKey}.temperature`, temp)
+}
+
+// 获取任务最大token
+function getTaskMaxTokens(taskKey: string): number | undefined {
+  const data = props.parsedData
+  const taskConfig = data.model_task_config as Record<string, Record<string, unknown>> | undefined
+  if (!taskConfig || !taskConfig[taskKey]) return undefined
+  return taskConfig[taskKey].max_tokens as number | undefined
+}
+
+// 更新任务最大token
+function updateTaskMaxTokens(taskKey: string, tokens: number) {
+  if (isNaN(tokens) || tokens < 1) return
+  emit('update', `model_task_config.${taskKey}.max_tokens`, tokens)
 }
 
 // 获取任务并发数
@@ -908,8 +1036,8 @@ function updateTaskConcurrency(taskKey: string, count: number) {
 // 初始化
 watch(() => props.parsedData, () => {
   // 如果有提供商，默认展开第一个
-  if (apiProviders.value.length > 0 && expandedProvider.value === null) {
-    expandedProvider.value = 0
+  if (apiProviders.value.length > 0 && selectedProvider.value === null) {
+    selectedProvider.value = 0
   }
 }, { immediate: true })
 </script>
@@ -918,399 +1046,703 @@ watch(() => props.parsedData, () => {
 .model-config-editor {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-/* 快速操作栏 */
-.quick-actions {
-  background: linear-gradient(135deg, var(--primary-bg), rgba(139, 92, 246, 0.1));
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  border: 1px solid var(--border-color);
-}
-
-.quick-actions h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 16px 0;
-}
-
-.quick-actions h3 svg {
-  color: var(--primary);
-}
-
-.action-buttons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.action-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 16px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.action-btn:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-}
-
-.action-btn svg {
-  font-size: 24px;
-  color: var(--primary);
-}
-
-.action-btn span {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.action-btn small {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-/* 提供商区域 */
-.providers-section {
+  height: 100%;
   background: var(--bg-primary);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
   overflow: hidden;
 }
 
-.section-header {
+/* 导航头部 */
+.nav-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 12px 16px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.section-header h3 {
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-tab.active {
+  background: var(--primary);
+  color: white;
+}
+
+.tab-badge {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.nav-tab:not(.active) .tab-badge {
+  background: var(--bg-hover);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.provider-count {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  padding: 4px 10px;
+  padding: 6px 12px;
   background: var(--bg-primary);
-  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
 }
 
-.providers-grid {
+.search-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+}
+
+.search-input {
+  width: 160px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.clear-search {
   display: flex;
-  flex-direction: column;
+  padding: 2px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
 }
 
-/* 提供商卡片 */
-.provider-card {
-  border-bottom: 1px solid var(--border-color);
+.clear-search:hover {
+  color: var(--text-primary);
 }
 
-.provider-card:last-child {
-  border-bottom: none;
-}
-
-.provider-header {
+.add-btn {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all 0.15s ease;
 }
 
-.provider-header:hover {
+.add-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* 面板 */
+.tab-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-secondary);
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  font-size: 28px;
+  margin-bottom: 16px;
 }
 
-.provider-icon {
-  width: 44px;
-  height: 44px;
+.empty-state h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 20px 0;
+}
+
+/* 列表项通用样式 */
+.provider-list,
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-item,
+.model-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.provider-item.active,
+.model-item.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+}
+
+.provider-row,
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.provider-row:hover,
+.model-row:hover {
+  background: var(--bg-hover);
+}
+
+.provider-icon,
+.model-icon {
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--primary), #6d28d9);
   border-radius: var(--radius);
   color: white;
-  font-size: 20px;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.provider-info {
+.model-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.provider-main,
+.model-main {
   flex: 1;
+  min-width: 0;
 }
 
-.provider-info h4 {
-  font-size: 15px;
+.provider-name,
+.model-name {
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 4px 0;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.provider-type {
-  font-size: 12px;
+.provider-meta,
+.model-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.meta-tag {
+  padding: 2px 8px;
+  background: var(--bg-primary);
+  border-radius: 10px;
+  font-size: 11px;
   color: var(--text-tertiary);
 }
 
-.provider-meta {
+.meta-tag.provider {
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+
+.meta-tag.price {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.meta-tag.feature {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.provider-actions-row,
+.model-actions-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--bg-primary);
+  color: #ef4444;
+}
+
+.expand-icon {
+  color: var(--text-tertiary);
+}
+
+/* 详情面板 */
+.provider-detail,
+.model-detail {
+  padding: 16px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group.half {
+  grid-column: span 1;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
-.model-count {
-  font-size: 12px;
-  padding: 4px 10px;
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
   background: var(--bg-secondary);
-  border-radius: var(--radius-full);
-}
-
-.provider-content {
-  padding: 0 20px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* 配置组 */
-.config-group {
-  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 16px;
-}
-
-.config-group h5 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 16px 0;
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.group-header h5 {
-  margin: 0;
-}
-
-.group-header.clickable {
-  cursor: pointer;
-  margin-bottom: 0;
-  padding: 4px 0;
-}
-
-.group-header.clickable:hover {
-  color: var(--primary);
-}
-
-.config-fields {
-  display: grid;
-  gap: 16px;
-}
-
-.config-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.config-field label {
   font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  outline: none;
+  transition: all 0.15s ease;
 }
 
-.field-hint {
-  font-size: 11px;
-  font-weight: 400;
+.form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+}
+
+.form-input::placeholder {
   color: var(--text-tertiary);
 }
 
-.input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  outline: none;
-  transition: all var(--transition-fast);
-}
-
-.input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-bg);
-}
-
-select.input {
+select.form-input {
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
 }
 
-.password-input {
+.input-with-action {
   position: relative;
   display: flex;
 }
 
-.password-input .input {
-  padding-right: 44px;
+.input-with-action .form-input {
+  padding-right: 38px;
 }
 
-.toggle-visibility {
+.input-action {
   position: absolute;
-  right: 8px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 26px;
+  height: 26px;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: all var(--transition-fast);
 }
 
-.toggle-visibility:hover {
-  background: var(--bg-secondary);
+.input-action:hover {
+  background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-/* 模型列表 */
-.models-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* 高级选项 */
+.advanced-section {
+  margin-top: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
-.model-item {
+.advanced-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  background: var(--bg-primary);
-  border-radius: var(--radius);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: background 0.15s ease;
 }
 
-.model-info {
+.advanced-header:hover {
+  background: var(--bg-hover);
+}
+
+.advanced-content {
+  padding: 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+.toggle-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
 }
 
-.model-name {
+.toggle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toggle-item:hover {
+  border-color: var(--primary);
+}
+
+.toggle-item.compact {
+  padding: 8px 12px;
+}
+
+.toggle-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-info > svg {
+  color: var(--text-tertiary);
+  font-size: 18px;
+}
+
+.toggle-label {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
 }
 
-.model-display-name {
+.toggle-hint {
   font-size: 11px;
   color: var(--text-tertiary);
 }
 
-.model-actions {
+.perturbation-options {
   display: flex;
-  gap: 4px;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  margin-top: 8px;
 }
 
-.btn-icon {
-  width: 28px;
-  height: 28px;
+.perturbation-options .form-group {
+  flex: 1;
+}
+
+.perturbation-options .toggle-item {
+  flex: 1;
+  background: var(--bg-primary);
+}
+
+/* Switch 开关 */
+.switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-hover);
+  border-radius: 11px;
+  transition: 0.2s;
+}
+
+.slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.switch input:checked + .slider {
+  background: var(--primary);
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(18px);
+}
+
+.switch.small {
+  width: 34px;
+  height: 18px;
+}
+
+.switch.small .slider {
+  border-radius: 9px;
+}
+
+.switch.small .slider::before {
+  height: 14px;
+  width: 14px;
+}
+
+.switch.small input:checked + .slider::before {
+  transform: translateX(16px);
+}
+
+/* 任务配置 */
+.task-categories {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.category-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-tertiary);
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
-.btn-icon:hover {
+.category-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.category-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-item {
+  padding: 14px;
   background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+
+.task-header {
+  margin-bottom: 12px;
+}
+
+.task-name {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-.btn-icon.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.empty-models {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px;
+.task-desc {
+  display: block;
+  font-size: 12px;
   color: var(--text-tertiary);
-  font-size: 13px;
+  margin-top: 2px;
 }
 
-.advanced-fields {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.provider-actions {
+.task-controls {
   display: flex;
-  justify-content: flex-end;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-color);
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* 按钮样式 */
+.control-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.control-group.model-select {
+  flex: 1;
+  min-width: 150px;
+}
+
+.control-group.small {
+  width: 80px;
+}
+
+.control-group.tiny {
+  width: 60px;
+}
+
+.control-group label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.control-group .form-input {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* 过渡动画 */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.slide-enter-to,
+.slide-leave-from {
+  opacity: 1;
+  max-height: 500px;
+}
+
+/* 按钮 */
 .btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 10px 18px;
   border: none;
   border-radius: var(--radius);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.15s ease;
 }
 
 .btn:disabled {
@@ -1330,58 +1762,14 @@ select.input {
 .btn-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover:not(:disabled) {
   background: var(--bg-hover);
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.btn-danger {
-  background: transparent;
-  color: #ef4444;
-}
-
-.btn-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-/* 空状态 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 60px;
-  color: var(--text-tertiary);
-}
-
-.empty-state svg {
-  font-size: 48px;
-  opacity: 0.5;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 14px;
-}
-
-/* 弹窗样式 */
+/* 弹窗 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1401,17 +1789,23 @@ select.input {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
+  max-width: 480px;
+  max-height: 85vh;
   overflow: hidden;
-  animation: modalIn 0.2s ease;
   display: flex;
   flex-direction: column;
+  animation: modalIn 0.2s ease;
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal-header {
@@ -1432,18 +1826,21 @@ select.input {
   color: var(--text-primary);
 }
 
+.modal-header h3 svg {
+  color: var(--primary);
+}
+
 .close-btn {
-  width: 28px;
-  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
   background: transparent;
   border: none;
   border-radius: var(--radius);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
-  transition: all var(--transition-fast);
 }
 
 .close-btn:hover {
@@ -1455,19 +1852,23 @@ select.input {
   padding: 20px;
   overflow-y: auto;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   padding: 16px 20px;
   border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 /* 预设模板 */
 .preset-providers h4 {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
   margin: 0 0 12px 0;
@@ -1483,39 +1884,51 @@ select.input {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 12px;
+  gap: 6px;
+  padding: 12px 8px;
   background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.15s ease;
 }
 
 .preset-btn:hover {
+  border-color: var(--primary);
+}
+
+.preset-btn.active {
   border-color: var(--primary);
   background: var(--primary-bg);
 }
 
 .preset-btn svg {
-  font-size: 24px;
+  font-size: 20px;
   color: var(--text-secondary);
 }
 
+.preset-btn.active svg,
 .preset-btn:hover svg {
   color: var(--primary);
 }
 
 .preset-btn span {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-primary);
+}
+
+.preset-btn small {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-align: center;
 }
 
 .divider {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin: 20px 0;
+  gap: 12px;
+  margin: 8px 0;
 }
 
 .divider::before,
@@ -1527,303 +1940,213 @@ select.input {
 }
 
 .divider span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-tertiary);
 }
 
 .manual-config {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* 模型区域 */
-.models-section {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
+/* 高级参数区域 */
+.advanced-params-section {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
   overflow: hidden;
 }
 
-.models-grid {
-  display: flex;
-  flex-direction: column;
-}
-
-/* 模型卡片 */
-.model-card {
-  border-bottom: 1px solid var(--border-color);
-}
-
-.model-card:last-child {
-  border-bottom: none;
-}
-
-.model-header {
+.slider-with-input {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 10px;
+}
+
+.temp-slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-hover);
+  border-radius: 2px;
+  outline: none;
+}
+
+.temp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--primary);
+  border-radius: 50%;
   cursor: pointer;
-  transition: background var(--transition-fast);
 }
 
-.model-header:hover {
-  background: var(--bg-secondary);
+.temp-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
 }
 
-.model-icon {
-  width: 40px;
-  height: 40px;
+.temp-input {
+  width: 60px !important;
+  text-align: center;
+}
+
+.feature-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feature-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.feature-toggle:hover {
+  border-color: var(--primary);
+}
+
+.feature-toggle-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.feature-toggle-icon {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: var(--bg-secondary);
   border-radius: var(--radius);
-  color: white;
-  font-size: 18px;
-}
-
-.model-info {
-  flex: 1;
-}
-
-.model-info h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.model-provider {
-  font-size: 12px;
   color: var(--text-tertiary);
 }
 
-.model-meta {
+.feature-toggle-icon.active {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+
+.feature-toggle-text {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.feature-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.feature-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-field label {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
-.model-price {
-  font-size: 12px;
-  padding: 4px 10px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-full);
-  font-family: 'JetBrains Mono', monospace;
+.field-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-tertiary);
 }
 
-.model-content {
-  padding: 0 20px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+select.input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
 }
 
 .config-field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
 }
 
-.config-field.checkbox-field label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  margin-bottom: 0;
-}
+/* 响应式 */
+@media (max-width: 640px) {
+  .nav-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-.config-field.checkbox-field input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary);
-}
+  .nav-tabs {
+    overflow-x: auto;
+  }
 
-.config-field.checkbox-field span {
-  font-weight: 500;
-}
+  .nav-actions {
+    justify-content: space-between;
+  }
 
-.config-field.checkbox-field .field-hint {
-  margin-left: auto;
-}
+  .search-input {
+    width: 100px;
+  }
 
-.config-field.inline {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-}
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
 
-.config-field.inline .field-left {
-  flex: 1;
-}
+  .control-row {
+    flex-direction: column;
+  }
 
-.config-field.inline label {
-  margin-bottom: 0;
-}
+  .control-group.model-select,
+  .control-group.small,
+  .control-group.tiny {
+    width: 100%;
+  }
 
-/* Toggle 开关 */
-.toggle-switch {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.toggle-switch input {
-  display: none;
-}
-
-.toggle-slider {
-  width: 44px;
-  height: 24px;
-  background: var(--bg-hover);
-  border-radius: 12px;
-  position: relative;
-  transition: background var(--transition-fast);
-}
-
-.toggle-slider::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  background: white;
-  border-radius: 50%;
-  transition: transform var(--transition-fast);
-  box-shadow: var(--shadow-sm);
-}
-
-.toggle-switch input:checked + .toggle-slider {
-  background: var(--primary);
-}
-
-.toggle-switch input:checked + .toggle-slider::after {
-  transform: translateX(20px);
-}
-
-.model-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-color);
-}
-
-/* 任务配置区域 */
-.task-config-section {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-}
-
-.task-count {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.task-configs {
-  display: grid;
-  gap: 1px;
-  background: var(--border-color);
-}
-
-.task-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--bg-primary);
-}
-
-.task-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.task-info h4 {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-}
-
-.task-info p {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.task-config {
-  flex-shrink: 0;
-  width: 300px;
-}
-
-.task-config .input {
-  font-size: 13px;
-  padding: 8px 12px;
-}
-
-.task-config-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.task-config-row select.input {
-  flex: 1;
-  min-width: 140px;
-}
-
-.concurrency-config {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.concurrency-config label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.concurrency-input {
-  width: 60px !important;
-  text-align: center;
-  padding: 6px 8px !important;
-}
-
-/* 预设按钮激活状态 */
-.preset-btn.active {
-  border-color: var(--primary);
-  background: var(--primary-bg);
-}
-
-.preset-btn.active svg {
-  color: var(--primary);
-}
-
-.preset-btn small {
-  font-size: 10px;
-  color: var(--text-tertiary);
-  text-align: center;
-}
-
-.field-left {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  .preset-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

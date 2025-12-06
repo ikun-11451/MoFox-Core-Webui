@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import toml
+import tomlkit
 from pydantic import BaseModel
 
 from src.common.logger import get_logger
@@ -222,23 +223,44 @@ def toml_to_schema(parsed: dict, comments: dict, prefix: str = "") -> list[Confi
 def apply_updates(original: dict, updates: dict) -> dict:
     """
     应用更新到原始配置
-    支持点号分隔的键路径，如 "database.host"
+    支持点号分隔的键路径，如 "database.host" 或 "api_providers.0.name"
+    支持 tomlkit 文档对象以保留注释
     """
-    result = original.copy()
+    result = original  # 不复制，直接修改以保留 tomlkit 结构
     
     for key_path, value in updates.items():
         keys = key_path.split(".")
         current = result
         
         # 遍历到倒数第二层
-        for key in keys[:-1]:
-            if key not in current:
-                current[key] = {}
-            current = current[key]
+        for i, key in enumerate(keys[:-1]):
+            # 检查是否是数组索引
+            if key.isdigit():
+                idx = int(key)
+                if isinstance(current, list) and idx < len(current):
+                    current = current[idx]
+                else:
+                    break
+            else:
+                if key not in current:
+                    # 检查下一个键是否是数字，决定创建 dict 还是 list
+                    if i + 1 < len(keys) - 1 and keys[i + 1].isdigit():
+                        current[key] = []
+                    else:
+                        current[key] = {}
+                current = current[key]
         
         # 设置最终值
         final_key = keys[-1]
-        current[final_key] = value
+        if final_key.isdigit():
+            idx = int(final_key)
+            if isinstance(current, list):
+                if idx < len(current):
+                    current[idx] = value
+                else:
+                    current.append(value)
+        else:
+            current[final_key] = value
     
     return result
 
@@ -578,6 +600,7 @@ class WebUIConfigRouter(BaseRouterComponent):
         def update_config(path: str, request: UpdateConfigRequest, _=VerifiedDep):
             """
             更新配置文件的特定字段（用于可视化编辑）
+            使用 tomlkit 保留原始文件的注释和格式
             
             Args:
                 path: 配置文件相对路径
@@ -600,11 +623,11 @@ class WebUIConfigRouter(BaseRouterComponent):
                         error="配置文件不存在"
                     )
                 
-                # 读取当前配置
+                # 读取当前配置（使用 tomlkit 保留注释）
                 content = config_path.read_text(encoding="utf-8")
-                parsed = toml.loads(content)
+                parsed = tomlkit.parse(content)
                 
-                # 应用更新
+                # 应用更新（tomlkit 文档对象会保留注释）
                 updated = apply_updates(parsed, request.updates)
                 
                 backup_path = None
@@ -621,8 +644,8 @@ class WebUIConfigRouter(BaseRouterComponent):
                     shutil.copy2(config_path, backup_file)
                     backup_path = str(backup_file.relative_to(CONFIG_ROOT))
                 
-                # 保存更新后的配置
-                new_content = toml.dumps(updated)
+                # 保存更新后的配置（使用 tomlkit.dumps 保留注释）
+                new_content = tomlkit.dumps(updated)
                 config_path.write_text(new_content, encoding="utf-8")
                 
                 logger.info(f"配置文件已更新: {path}")
