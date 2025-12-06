@@ -406,8 +406,6 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
 }
 
 .header-left {

@@ -1058,8 +1058,6 @@ watch(() => props.parsedData, () => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
   gap: 16px;
   flex-wrap: wrap;
 }
