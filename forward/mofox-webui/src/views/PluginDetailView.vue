@@ -11,11 +11,11 @@
         <p>v{{ currentPlugin.version }} • {{ currentPlugin.author }}</p>
       </div>
       <div class="header-actions">
-        <div v-if="isSystemPlugin" class="system-plugin-badge">
+        <div v-if="isSystemPlugin(currentPlugin)" class="system-plugin-badge">
           <Icon icon="lucide:lock" />
           <span>系统插件 - 仅可查看</span>
         </div>
-        <div v-if="!isSystemPlugin" class="toggle-switch">
+        <div v-if="!isSystemPlugin(currentPlugin)" class="toggle-switch">
           <input 
             type="checkbox" 
             id="plugin-enable-toggle"
@@ -76,7 +76,7 @@
           :key="tab.value"
           class="tab"
           :class="{ active: activeTab === tab.value }"
-          @click="activeTab = tab.value"
+          @click="activeTab = tab.value as 'overview' | 'components' | 'config'"
         >
           <Icon :icon="tab.icon" />
           {{ tab.label }}
@@ -297,7 +297,8 @@ const SYSTEM_PLUGINS = [
 ]
 
 // 判断是否为系统插件
-function isSystemPlugin(plugin: PluginItem): boolean {
+function isSystemPlugin(plugin: PluginItem | null): boolean {
+  if (!plugin) return false
   return SYSTEM_PLUGINS.includes(plugin.display_name)
 }
 
