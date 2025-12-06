@@ -206,10 +206,18 @@
                 </div>
               </div>
             </div>
-            <button class="btn btn-primary" @click="goToConfig">
+            <button 
+              v-if="currentPlugin.config.exists"
+              class="btn btn-primary" 
+              @click="goToConfig"
+            >
               <Icon icon="lucide:settings" />
               打开配置编辑器
             </button>
+            <div v-else class="config-not-found">
+              <Icon icon="lucide:alert-circle" />
+              <span>配置文件不存在</span>
+            </div>
           </div>
         </div>
       </div>
@@ -249,7 +257,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { usePluginStore } from '@/stores/plugin'
-import type { PluginComponent } from '@/api'
+import type { PluginComponent, PluginDetailInfo } from '@/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -297,7 +305,7 @@ const SYSTEM_PLUGINS = [
 ]
 
 // 判断是否为系统插件
-function isSystemPlugin(plugin: PluginItem | null): boolean {
+function isSystemPlugin(plugin: PluginDetailInfo | null): boolean {
   if (!plugin) return false
   return SYSTEM_PLUGINS.includes(plugin.display_name)
 }
@@ -806,6 +814,23 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   margin-bottom: 20px;
+}
+
+.config-not-found {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius);
+  color: rgb(239, 68, 68);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.config-not-found svg {
+  font-size: 18px;
 }
 
 /* Toggle Switch */

@@ -6,6 +6,7 @@
 from typing import Optional
 
 from fastapi import Query
+from pathlib import Path
 from pydantic import BaseModel
 
 from src.common.logger import get_logger
@@ -288,6 +289,7 @@ class WebUIPluginRouter(BaseRouterComponent):
 
                 # 构建详情响应
                 config_path = plugin_info.get("config_path") or f"plugins/{plugin_name}/config.toml"
+                config_file_exists = Path(config_path).exists()
 
                 plugin_enabled = plugin_instance.enable_plugin if plugin_instance else False
 
@@ -303,7 +305,7 @@ class WebUIPluginRouter(BaseRouterComponent):
                     "components_count": len(components),
                     "config": {
                         "path": config_path,
-                        "exists": True,  # TODO: 实际检查文件是否存在
+                        "exists": config_file_exists,  
                     },
                     "metadata": plugin_info.get("metadata", {}),
                 }
