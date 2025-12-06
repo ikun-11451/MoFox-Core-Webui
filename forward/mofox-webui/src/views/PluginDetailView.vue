@@ -28,7 +28,7 @@
           </label>
         </div>
         <button 
-          v-if="!currentPlugin?.loaded && !isSystemPlugin"
+          v-if="!currentPlugin?.loaded && !isSystemPlugin(currentPlugin)"
           class="btn btn-success" 
           @click="handleLoad"
         >
@@ -36,7 +36,7 @@
           加载
         </button>
         <button 
-          v-if="currentPlugin?.loaded && !isSystemPlugin"
+          v-if="currentPlugin?.loaded && !isSystemPlugin(currentPlugin)"
           class="btn btn-ghost" 
           @click="handleReload"
         >
@@ -44,7 +44,7 @@
           重载
         </button>
         <button 
-          v-if="currentPlugin?.loaded && !isSystemPlugin"
+          v-if="currentPlugin?.loaded && !isSystemPlugin(currentPlugin)"
           class="btn btn-error" 
           @click="handleUnload"
         >
@@ -159,7 +159,7 @@
                   <p class="component-type">{{ component.type }}</p>
                 </div>
                 <div class="component-actions">
-                  <div v-if="!isSystemPlugin" class="toggle-switch">
+                  <div v-if="!isSystemPlugin(currentPlugin)" class="toggle-switch">
                     <input 
                       type="checkbox" 
                       :id="`comp-${component.name}`"
