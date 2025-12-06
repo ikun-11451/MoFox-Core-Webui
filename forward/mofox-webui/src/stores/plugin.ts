@@ -32,6 +32,9 @@ export const usePluginStore = defineStore('plugin', () => {
   /** 插件列表 */
   const plugins = ref<PluginItem[]>([])
   
+  /** 加载失败的插件列表 */
+  const failedPlugins = ref<PluginItem[]>([])
+  
   /** 当前选中的插件详情 */
   const currentPlugin = ref<PluginDetailInfo | null>(null)
   
@@ -57,10 +60,10 @@ export const usePluginStore = defineStore('plugin', () => {
   
   /** 统计信息 */
   const stats = computed(() => {
-    const total = plugins.value.length
+    const total = plugins.value.length + failedPlugins.value.length
     const loaded = plugins.value.filter(p => p.loaded).length
     const enabled = plugins.value.filter(p => p.enabled).length
-    const failed = plugins.value.filter(p => p.error).length
+    const failed = failedPlugins.value.length
     
     return { total, loaded, enabled, failed }
   })
@@ -111,6 +114,7 @@ export const usePluginStore = defineStore('plugin', () => {
       
       if (response.success && response.data) {
         plugins.value = response.data.plugins
+        failedPlugins.value = response.data.failed_plugins || []
         return true
       } else {
         error.value = response.data?.error || response.error || '获取插件列表失败'
@@ -503,6 +507,7 @@ export const usePluginStore = defineStore('plugin', () => {
   return {
     // 状态
     plugins,
+    failedPlugins,
     currentPlugin,
     currentComponents,
     loading,

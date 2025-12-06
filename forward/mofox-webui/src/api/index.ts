@@ -628,6 +628,7 @@ export interface PluginItem {
 export interface PluginManageListResponse {
   success: boolean
   plugins: PluginItem[]
+  failed_plugins: PluginItem[]  // 加载失败的插件列表
   total: number
   loaded: number
   enabled: number

@@ -88,6 +88,58 @@
       </div>
     </div>
 
+    <!-- 失败插件区域 -->
+    <div v-if="!loading && pluginStore.failedPlugins.length > 0" class="failed-plugins-section">
+      <div class="section-header">
+        <Icon icon="lucide:alert-circle" class="section-icon error" />
+        <h2>加载失败的插件 ({{ pluginStore.failedPlugins.length }})</h2>
+      </div>
+      <div class="plugin-grid failed-grid">
+        <div 
+          v-for="plugin in pluginStore.failedPlugins" 
+          :key="plugin.name"
+          class="plugin-card plugin-card-failed"
+        >
+          <!-- 插件卡片头部 -->
+          <div class="plugin-card-header">
+            <div class="plugin-icon error">
+              <Icon icon="lucide:alert-circle" />
+            </div>
+            <div class="plugin-header-info">
+              <h3 class="plugin-name">{{ plugin.display_name }}</h3>
+              <p class="plugin-version">v{{ plugin.version }} • {{ plugin.author }}</p>
+            </div>
+            <div class="plugin-badges">
+              <span class="badge badge-error">加载失败</span>
+            </div>
+          </div>
+
+          <!-- 插件描述 -->
+          <div class="plugin-description">
+            {{ plugin.description || '暂无描述' }}
+          </div>
+
+          <!-- 错误信息 -->
+          <div class="plugin-error">
+            <Icon icon="lucide:alert-triangle" />
+            {{ plugin.error || '未知错误' }}
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="plugin-actions" @click.stop>
+            <button 
+              class="btn btn-sm btn-ghost" 
+              @click="handleReloadPlugin(plugin.name)"
+              title="重试加载"
+            >
+              <Icon icon="lucide:refresh-cw" />
+              重试
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 插件列表 -->
     <div class="plugin-list-container">
       <div v-if="loading" class="loading-state">
@@ -99,17 +151,23 @@
         {{ error }}
         <button class="btn btn-primary" @click="refreshPluginList">重试</button>
       </div>
-      <div v-else-if="pluginStore.filteredPlugins.length === 0" class="empty-state">
+      <div v-else-if="pluginStore.filteredPlugins.length === 0 && pluginStore.failedPlugins.length === 0" class="empty-state">
         <Icon icon="lucide:package" />
         <p>没有找到插件</p>
         <span class="hint">尝试调整筛选条件或扫描新插件</span>
       </div>
-      <div v-else class="plugin-grid">
+      <div v-else-if="pluginStore.filteredPlugins.length > 0">
+        <div class="section-header" v-if="pluginStore.failedPlugins.length > 0">
+          <Icon icon="lucide:check-circle" class="section-icon success" />
+          <h2>正常插件 ({{ pluginStore.filteredPlugins.length }})</h2>
+        </div>
+        <div class="plugin-grid">
         <div 
           v-for="plugin in pluginStore.filteredPlugins" 
           :key="plugin.name"
           class="plugin-card"
-          @click="goToDetail(plugin.name)"
+          :class="{ 'plugin-card-disabled': !plugin.loaded }"
+          @click="plugin.loaded ? goToDetail(plugin.name) : null"
         >
           <!-- 插件卡片头部 -->
           <div class="plugin-card-header">
@@ -178,6 +236,7 @@
               <Icon icon="lucide:refresh-cw" />
             </button>
             <button 
+              v-if="plugin.loaded"
               class="btn btn-sm btn-primary" 
               @click="goToDetail(plugin.name)"
               title="查看详情"
@@ -186,6 +245,7 @@
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
 
@@ -373,6 +433,12 @@ async function handleReloadAll() {
 }
 
 function goToDetail(pluginName: string) {
+  // 检查插件是否已加载
+  const plugin = pluginStore.plugins.find(p => p.name === pluginName)
+  if (!plugin || !plugin.loaded) {
+    showToast('插件未加载，无法查看详情', 'error')
+    return
+  }
   router.push(`/dashboard/plugin-manage/${pluginName}`)
 }
 
@@ -581,6 +647,17 @@ onMounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   border-color: var(--primary);
+}
+
+.plugin-card-disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.plugin-card-disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-color);
 }
 
 .plugin-card-header {
@@ -948,6 +1025,56 @@ onMounted(() => {
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
   transform: scale(0.9);
+}
+
+/* 失败插件区域 */
+.failed-plugins-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.section-icon {
+  font-size: 24px;
+}
+
+.section-icon.error {
+  color: rgb(239, 68, 68);
+}
+
+.section-icon.success {
+  color: rgb(34, 197, 94);
+}
+
+.section-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.plugin-card-failed {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.plugin-card-failed:hover {
+  border-color: rgb(239, 68, 68);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+}
+
+.plugin-card-failed .plugin-icon {
+  background: linear-gradient(135deg, rgb(239, 68, 68) 0%, rgb(220, 38, 38) 100%);
+}
+
+.failed-grid {
+  margin-bottom: 24px;
 }
 
 /* 动画 */

@@ -39,7 +39,8 @@ class PluginItemResponse(BaseModel):
 class PluginListResponse(BaseModel):
     """插件列表响应"""
     success: bool
-    plugins: list[PluginItemResponse]
+    plugins: list[PluginItemResponse]  # 正常加载的插件列表（已加载和已注册）
+    failed_plugins: list[PluginItemResponse] = []  # 加载失败的插件列表
     total: int
     loaded: int
     enabled: int
@@ -178,36 +179,38 @@ class WebUIPluginRouter(BaseRouterComponent):
             获取所有插件列表，包括已加载、已注册和加载失败的插件
             """
             try:
-                plugins = []
+                plugins = []  # 正常插件列表（已加载和已注册）
+                failed_plugin_list = []  # 失败插件列表
                 
                 # 获取已加载的插件
                 loaded_plugins = plugin_manage_api.list_loaded_plugins()
                 for name in loaded_plugins:
                     plugins.append(_get_plugin_item_response(name))
                 
-                # 获取已注册但未加载的插件
+                # 获取已注册但未加载的插件（这些插件可以被加载）
                 registered_plugins = plugin_manage_api.list_registered_plugins()
                 for name in registered_plugins:
                     if name not in loaded_plugins:
                         plugins.append(_get_plugin_item_response(name))
                 
-                # 获取加载失败的插件
+                # 获取加载失败的插件（单独列表）
                 failed_plugins = plugin_manage_api.list_failed_plugins()
                 for name, error in failed_plugins.items():
-                    plugins.append(_get_plugin_item_response(
+                    failed_plugin_list.append(_get_plugin_item_response(
                         name, 
                         error_msg=str(error) if error else "加载失败"
                     ))
                 
                 # 统计
-                total = len(plugins)
+                total = len(plugins) + len(failed_plugin_list)
                 loaded = len(loaded_plugins)
                 enabled = sum(1 for p in plugins if p.enabled)
-                failed = len(failed_plugins)
+                failed = len(failed_plugin_list)
                 
                 return PluginListResponse(
                     success=True,
                     plugins=plugins,
+                    failed_plugins=failed_plugin_list,  # 返回失败插件列表
                     total=total,
                     loaded=loaded,
                     enabled=enabled,
@@ -218,6 +221,7 @@ class WebUIPluginRouter(BaseRouterComponent):
                 return PluginListResponse(
                     success=False,
                     plugins=[],
+                    failed_plugins=[],
                     total=0,
                     loaded=0,
                     enabled=0,
@@ -229,16 +233,17 @@ class WebUIPluginRouter(BaseRouterComponent):
         def get_plugin_detail(plugin_name: str, _=VerifiedDep) -> PluginDetailResponse:
             """
             获取指定插件的详细信息，包括组件列表、配置路径等
+            注意：只有已加载的插件才能获取详情
             """
             try:
                 logger.info(f"[PluginRouter] 获取插件详情: {plugin_name}")
                 
-                # 检查插件是否存在
+                # 检查插件是否已加载（未加载的插件不能查看详情）
                 if not plugin_manage_api.is_plugin_loaded(plugin_name):
-                    logger.warning(f"[PluginRouter] 插件未加载: {plugin_name}")
+                    logger.warning(f"[PluginRouter] 插件未加载，无法获取详情: {plugin_name}")
                     return PluginDetailResponse(
                         success=False,
-                        error=f"插件 '{plugin_name}' 未加载"
+                        error=f"插件 '{plugin_name}' 未加载，无法查看详情"
                     )
                 
                 # 获取插件信息
@@ -250,81 +255,35 @@ class WebUIPluginRouter(BaseRouterComponent):
                         error=f"无法获取插件 '{plugin_name}' 的信息"
                     )
                 
-                logger.debug(f"[PluginRouter] 插件信息: {plugin_info.keys()}")
+                logger.debug(f"[PluginRouter] 插件信息键: {plugin_info.keys()}")
                 
                 # 获取插件实例
                 plugin_instance = plugin_manage_api.get_plugin_instance(plugin_name)
                 
                 # 构建组件列表
+                # plugin_info_api.get_plugin_details() 返回的 components 是 list[dict]
+                components_data = plugin_info.get("components", [])
+                logger.info(f"[PluginRouter] 组件数量: {len(components_data)}")
+                
                 components = []
-                components_data = plugin_info.get("components", {})
-                logger.info(f"[PluginRouter] 组件数据类型: {type(components_data)}, 长度: {len(components_data) if isinstance(components_data, (dict, list)) else 0}")
-                
-                # 打印第一个组件的原始数据用于调试
-                if isinstance(components_data, list) and len(components_data) > 0:
-                    logger.info(f"[PluginRouter] 第一个组件原始数据: {components_data[0]}")
-                elif isinstance(components_data, dict) and len(components_data) > 0:
-                    first_key = next(iter(components_data))
-                    logger.info(f"[PluginRouter] 第一个组件原始数据: {first_key} = {components_data[first_key]}")
-                
-                # 处理组件数据（可能是字典或列表）
-                if isinstance(components_data, dict):
-                    for comp_name, comp_info in components_data.items():
-                        # 注意：字段名可能是 component_type 或 type
-                        comp_type_str = comp_info.get("component_type") or comp_info.get("type", "Unknown")
-                        # 尝试转换组件类型
-                        try:
-                            comp_type = ComponentType[comp_type_str.upper()]
-                        except (KeyError, AttributeError):
-                            comp_type = ComponentType.COMMAND
-                        
-                        # 优先使用组件信息中的 enabled 状态
-                        if "enabled" in comp_info:
-                            is_enabled = comp_info.get("enabled", False)
-                        else:
-                            is_enabled = component_state_api.is_component_enabled(comp_name, comp_type)
-                        
-                        logger.debug(f"[PluginRouter] 组件 {comp_name} (type={comp_type_str}, enum={comp_type}): enabled={is_enabled}")
-                        
-                        components.append({
-                            "name": comp_name,
-                            "type": comp_type_str,
-                            "description": comp_info.get("description"),
-                            "enabled": is_enabled,
-                        })
-                elif isinstance(components_data, list):
-                    for comp_info in components_data:
-                        if isinstance(comp_info, dict):
-                            comp_name = comp_info.get("name", "unknown")
-                            # 注意：字段名是 component_type，不是 type
-                            comp_type_str = comp_info.get("component_type") or comp_info.get("type", "Unknown")
-                            logger.debug(f"[PluginRouter] 原始组件信息: {comp_info}")
-                            logger.debug(f"[PluginRouter] 组件名: {comp_name}, 类型字符串: '{comp_type_str}'")
-                            
-                            # 尝试转换组件类型
-                            try:
-                                comp_type = ComponentType[comp_type_str.upper()]
-                                logger.debug(f"[PluginRouter] 类型转换成功: {comp_type_str} -> {comp_type}")
-                            except (KeyError, AttributeError) as e:
-                                comp_type = ComponentType.COMMAND
-                                logger.warning(f"[PluginRouter] 类型转换失败: '{comp_type_str}' -> {e}, 使用默认类型 COMMAND")
-                            
-                            # 优先使用组件信息中的 enabled 状态，如果没有则查询 component_state_api
-                            if "enabled" in comp_info:
-                                is_enabled = comp_info.get("enabled", False)
-                                logger.debug(f"[PluginRouter] 使用组件自带的 enabled 状态: {is_enabled}")
-                            else:
-                                is_enabled = component_state_api.is_component_enabled(comp_name, comp_type)
-                                logger.debug(f"[PluginRouter] 从 component_state_api 查询 enabled 状态: {is_enabled}")
-                            
-                            logger.info(f"[PluginRouter] 组件 {comp_name} (type={comp_type_str}, enum={comp_type}): enabled={is_enabled}")
-                            
-                            components.append({
-                                "name": comp_name,
-                                "type": comp_type_str,
-                                "description": comp_info.get("description"),
-                                "enabled": is_enabled,
-                            })
+                for comp_info in components_data:
+                    comp_name = comp_info.get("name", "unknown")
+                    # API 返回的字段是 component_type
+                    comp_type_str = comp_info.get("component_type", "Unknown")
+                    
+                    logger.debug(f"[PluginRouter] 处理组件: {comp_name}, 类型: {comp_type_str}")
+                    
+                    # 直接使用 API 返回的 enabled 状态
+                    is_enabled = comp_info.get("enabled", False)
+                    
+                    logger.info(f"[PluginRouter] 组件 {comp_name} (type={comp_type_str}): enabled={is_enabled}")
+                    
+                    components.append({
+                        "name": comp_name,
+                        "type": comp_type_str,
+                        "description": comp_info.get("description", ""),
+                        "enabled": is_enabled,
+                    })
                 
                 # 构建详情响应
                 config_path = plugin_info.get("config_path") or f"plugins/{plugin_name}/config.toml"
