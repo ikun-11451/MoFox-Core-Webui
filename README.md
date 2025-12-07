@@ -43,7 +43,7 @@ MoFox-Bot 的 Web 管理控制台，提供可视化的机器人管理界面。
 
 2. **配置 API Key**
 
-   打开 MoFox-Bot 的配置文件 `bot_config.toml`（通常在 Bot 根目录下），找到 `plugin_api_valid_keys` 配置项：
+   打开 MoFox-Bot 的配置文件 `bot_config.toml`（通常在 config 目录下），找到 `plugin_api_valid_keys` 配置项：
 
    ```toml
    # --- 插件API密钥认证 ---
@@ -167,17 +167,7 @@ MoFox-Core-Webui/
 ## ⚙️ 配置说明
 
 ### 后端配置
-
-插件加载后会自动创建配置文件：`<Bot目录>/data/configs/webui_backend.json`
-
-默认配置：
-```json
-{
-  "enable_plugin": true,
-  "discovery_port": 12138,
-  "discovery_host": "0.0.0.0"
-}
-```
+后端主要通过 MoFox-Bot 的 `config.toml` 进行配置，详细解释见[MoFox-Core Docs](https://docs.mofox-sama.com/docs/development/plugins/configuration-guide.html)。
 
 ### 前端配置
 
