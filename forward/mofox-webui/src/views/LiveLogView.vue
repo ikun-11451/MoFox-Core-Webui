@@ -49,14 +49,23 @@
           
           <div class="toolbar-right">
             <div class="filter-group">
-              <select v-model="filterLevel" class="filter-select">
-                <option value="">全部级别</option>
-                <option value="DEBUG">DEBUG</option>
-                <option value="INFO">INFO</option>
-                <option value="WARNING">WARNING</option>
-                <option value="ERROR">ERROR</option>
-                <option value="CRITICAL">CRITICAL</option>
-              </select>
+              <div class="level-filter-dropdown">
+                <button class="filter-button" @click="toggleLevelFilter">
+                  <Icon icon="lucide:filter" />
+                  <span>日志级别 ({{ selectedLevels.length }})</span>
+                  <Icon :icon="showLevelFilter ? 'lucide:chevron-up' : 'lucide:chevron-down'" />
+                </button>
+                <div v-if="showLevelFilter" class="filter-dropdown-menu">
+                  <label v-for="level in logLevels" :key="level" class="filter-option">
+                    <input 
+                      type="checkbox" 
+                      :value="level" 
+                      v-model="selectedLevels"
+                    />
+                    <span :class="`level-badge level-${level.toLowerCase()}`">{{ level }}</span>
+                  </label>
+                </div>
+              </div>
               
               <input 
                 v-model="searchQuery" 
@@ -124,7 +133,7 @@
                 </span>
                 <span class="entry-line">#{{ entry.line_number }}</span>
               </div>
-              <div class="entry-message">{{ entry.event }}</div>
+              <div class="entry-message" v-html="formatLogMessage(entry.event)"></div>
               <div v-if="entry.extra" class="entry-extra">
                 <details>
                   <summary>额外信息</summary>
@@ -154,16 +163,31 @@ const websocket = ref<WebSocket | null>(null)
 const logContentContainer = ref<HTMLElement | null>(null)
 
 // 筛选
-const filterLevel = ref('')
+const logLevels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+const selectedLevels = ref<string[]>(['INFO', 'WARNING', 'ERROR', 'CRITICAL']) // 默认排除 DEBUG
+const showLevelFilter = ref(false)
 const searchQuery = ref('')
+
+// 切换级别筛选面板
+const toggleLevelFilter = () => {
+  showLevelFilter.value = !showLevelFilter.value
+}
+
+// 点击外部关闭筛选面板
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.level-filter-dropdown')) {
+    showLevelFilter.value = false
+  }
+}
 
 // 过滤后的日志
 const filteredLogs = computed(() => {
   let logs = realtimeLogs.value
 
-  // 按级别筛选
-  if (filterLevel.value) {
-    logs = logs.filter(log => log.level === filterLevel.value)
+  // 按级别筛选（多选）
+  if (selectedLevels.value.length > 0 && selectedLevels.value.length < logLevels.length) {
+    logs = logs.filter(log => selectedLevels.value.includes(log.level))
   }
 
   // 按关键词搜索
@@ -205,6 +229,103 @@ const formatTimestamp = (timestamp: string) => {
   return timestamp.replace('T', ' ').substring(0, 19)
 }
 
+// 格式化日志消息（处理 ANSI 转义序列和 JSON）
+const formatLogMessage = (message: string) => {
+  console.log('[formatLogMessage] 输入消息:', message, '类型:', typeof message)
+  if (!message) return ''
+  
+  // 尝试解析 JSON 格式的日志（包括 Python 字典格式）
+  try {
+    // 先尝试直接解析 JSON
+    let parsed = null
+    try {
+      parsed = JSON.parse(message)
+      console.log('[formatLogMessage] 标准JSON解析成功:', parsed)
+    } catch {
+      // 如果失败，尝试将 Python 字典格式转换为 JSON
+      // 将单引号替换为双引号（注意：这是简化处理，可能在某些情况下不够完善）
+      console.log('[formatLogMessage] 尝试Python字典格式转换')
+      const jsonMessage = message
+        .replace(/'/g, '"')  // 单引号转双引号
+        .replace(/True/g, 'true')  // Python True -> JSON true
+        .replace(/False/g, 'false')  // Python False -> JSON false
+        .replace(/None/g, 'null')  // Python None -> JSON null
+      console.log('[formatLogMessage] 转换后的JSON字符串:', jsonMessage)
+      parsed = JSON.parse(jsonMessage)
+      console.log('[formatLogMessage] Python字典格式解析成功:', parsed)
+    }
+    
+    if (parsed && typeof parsed === 'object') {
+      // 格式化为可读的文本
+      const parts: string[] = []
+      if (parsed.event) parts.push(parsed.event)
+      if (parsed.logger_name && !parsed.alias) parts.push(`[${parsed.logger_name}]`)
+      if (parsed.level) parts.push(`[${parsed.level}]`)
+      if (parsed.timestamp) parts.push(`[${parsed.timestamp}]`)
+      const result = escapeHtml(parts.join(' '))
+      console.log('[formatLogMessage] JSON格式化结果:', result)
+      return result
+    }
+  } catch (e) {
+    console.log('[formatLogMessage] JSON解析完全失败，继续ANSI处理:', e)
+    // 不是 JSON，继续处理
+  }
+  
+  // 处理 ANSI 转义序列
+  const ansiRegex = /\x1b\[(\d+)m/g
+  const colorMap: Record<string, string> = {
+    '30': '#000000', '31': '#e74c3c', '32': '#2ecc71', '33': '#f39c12',
+    '34': '#3498db', '35': '#9b59b6', '36': '#1abc9c', '37': '#ecf0f1',
+    '90': '#7f8c8d', '91': '#e74c3c', '92': '#2ecc71', '93': '#f39c12',
+    '94': '#3498db', '95': '#9b59b6', '96': '#1abc9c', '97': '#ffffff'
+  }
+  
+  let result = ''
+  let lastIndex = 0
+  let currentColor = ''
+  let match: RegExpExecArray | null
+  
+  while ((match = ansiRegex.exec(message)) !== null) {
+    const text = message.substring(lastIndex, match.index)
+    if (text) {
+      if (currentColor) {
+        result += `<span style="color: ${currentColor};">${escapeHtml(text)}</span>`
+      } else {
+        result += escapeHtml(text)
+      }
+    }
+    
+    const code = match[1]
+    if (code === '0') {
+      currentColor = ''
+    } else if (code && colorMap[code]) {
+      currentColor = colorMap[code]
+    }
+    
+    lastIndex = ansiRegex.lastIndex
+  }
+  
+  const remainingText = message.substring(lastIndex)
+  if (remainingText) {
+    if (currentColor) {
+      result += `<span style="color: ${currentColor};">${escapeHtml(remainingText)}</span>`
+    } else {
+      result += escapeHtml(remainingText)
+    }
+  }
+  
+  const finalResult = result || escapeHtml(message)
+  console.log('[formatLogMessage] ANSI处理最终结果:', finalResult)
+  return finalResult
+}
+
+// HTML 转义
+const escapeHtml = (text: string) => {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
 // 切换实时日志
 const toggleRealtime = () => {
   if (realtimeEnabled.value) {
@@ -235,12 +356,31 @@ const connectWebSocket = async () => {
     
     websocket.value.onmessage = (event) => {
       try {
-        const logEntry: LogEntry = JSON.parse(event.data)
+        let logEntry: LogEntry | any = JSON.parse(event.data)
+        
+        // 检查是否是嵌套的 JSON 字符串（后端可能发送的是字符串化的 JSON）
+        if (typeof logEntry === 'string') {
+          try {
+            logEntry = JSON.parse(logEntry)
+          } catch {
+            // 如果不是 JSON 字符串，创建一个简单的日志对象
+            logEntry = {
+              timestamp: new Date().toISOString(),
+              level: 'INFO',
+              logger_name: 'unknown',
+              event: String(logEntry),
+              line_number: 0,
+              file_name: 'realtime'
+            }
+          }
+        }
+        
+        
         // 添加行号(用于key)
         logEntry.line_number = realtimeLogs.value.length + 1
         logEntry.file_name = 'realtime'
         
-        realtimeLogs.value.push(logEntry)
+        realtimeLogs.value.push(logEntry as LogEntry)
         
         // 限制缓冲区大小
         if (realtimeLogs.value.length > 1000) {
@@ -258,7 +398,7 @@ const connectWebSocket = async () => {
           })
         }
       } catch (error) {
-        console.error('解析日志消息失败:', error)
+        console.error('解析日志消息失败:', error, event.data)
       }
     }
     
@@ -313,11 +453,15 @@ watch(autoScroll, (newValue) => {
 onMounted(() => {
   // 可以选择自动连接
   // connectWebSocket()
+  
+  // 添加点击外部关闭筛选面板的监听器
+  document.addEventListener('click', handleClickOutside)
 })
 
 // 清理
 onUnmounted(() => {
   disconnectWebSocket()
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -509,8 +653,15 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.filter-select {
-  padding: 10px 12px;
+.level-filter-dropdown {
+  position: relative;
+}
+
+.filter-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   background: var(--bg-secondary);
@@ -518,12 +669,64 @@ onUnmounted(() => {
   font-size: 14px;
   cursor: pointer;
   transition: all var(--transition);
+  white-space: nowrap;
 }
 
-.filter-select:focus {
-  outline: none;
+.filter-button:hover {
+  background: var(--bg-hover);
   border-color: var(--primary);
 }
+
+.filter-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1000;
+  min-width: 200px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+}
+
+.filter-option:hover {
+  background: var(--bg-hover);
+}
+
+.filter-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.level-badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 11px;
+  flex: 1;
+}
+
+.level-badge.level-debug { background: #8b8b8b; color: white; }
+.level-badge.level-info { background: #3b82f6; color: white; }
+.level-badge.level-warning { background: #f59e0b; color: white; }
+.level-badge.level-error { background: #ef4444; color: white; }
+.level-badge.level-critical { background: #dc2626; color: white; }
 
 .search-input {
   padding: 10px 12px;
