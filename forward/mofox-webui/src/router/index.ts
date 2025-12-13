@@ -13,6 +13,8 @@ import PluginMarketplaceDetail from '@/views/PluginMarketplaceDetail.vue'
 import GitUpdateView from '@/views/GitUpdateView.vue'
 import LogViewerView from '@/views/LogViewerView.vue'
 import LiveLogView from '@/views/LiveLogView.vue'
+import RelationshipView from '@/views/RelationshipView.vue'
+import ExpressionView from '@/views/ExpressionView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -92,6 +94,16 @@ const routes: Array<RouteRecordRaw> = [
         path: 'live-log',
         name: 'LiveLog',
         component: LiveLogView
+      },
+      {
+        path: 'relationship',
+        name: 'Relationship',
+        component: RelationshipView
+      },
+      {
+        path: 'expression',
+        name: 'Expression',
+        component: ExpressionView
       }
     ]
   }
