@@ -1,11 +1,18 @@
 name: Build and Release Frontend
 
 on:
+
   # 每天零点自动触发
   schedule:
     - cron: '0 0 * * *'
+
   # 允许手动触发
   workflow_dispatch:
+
+  # 工作流文件自身有变动时自动触发
+  push:
+    paths:
+      - '.github/workflows/build-and-release.yml'
 
 jobs:
   build-and-release:
