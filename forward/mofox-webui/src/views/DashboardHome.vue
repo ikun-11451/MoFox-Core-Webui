@@ -100,31 +100,7 @@
     <!-- 插件和组件统计（合并为一行） -->
     <section class="combined-stats-section">
       <div class="combined-stats-grid">
-        <!-- 插件统计卡片 -->
-        <div class="mini-card" @click="showPluginDetail = true">
-          <div class="mini-card-header">
-            <Icon icon="lucide:puzzle" class="mini-card-icon" style="color: #3b82f6" />
-            <span class="mini-card-title">插件统计</span>
-          </div>
-          <div class="mini-card-stats">
-            <div class="mini-stat">
-              <span class="mini-stat-value success">{{ overview?.plugins.enabled ?? 0 }}</span>
-              <span class="mini-stat-label">启用</span>
-            </div>
-            <div class="mini-stat">
-              <span class="mini-stat-value">{{ overview?.plugins.loaded ?? 0 }}</span>
-              <span class="mini-stat-label">已加载</span>
-            </div>
-            <div class="mini-stat">
-              <span class="mini-stat-value warning">{{ overview?.plugins.disabled ?? 0 }}</span>
-              <span class="mini-stat-label">禁用</span>
-            </div>
-            <div class="mini-stat">
-              <span class="mini-stat-value danger">{{ overview?.plugins.failed ?? 0 }}</span>
-              <span class="mini-stat-label">失败</span>
-            </div>
-          </div>
-        </div>
+
 
         <!-- 动作组件卡片 -->
         <div 
@@ -330,61 +306,7 @@
       </div>
     </section>
 
-    <!-- 插件详情弹窗 -->
-    <div v-if="showPluginDetail" class="modal-overlay" @click.self="showPluginDetail = false">
-      <div class="modal-content modal-large">
-        <div class="modal-header">
-          <h3>插件详情</h3>
-          <button class="close-btn" @click="showPluginDetail = false">
-            <Icon icon="lucide:x" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="stats-detail-grid">
-            <div class="stats-detail-item clickable" @click="showPluginListModal('loaded')">
-              <div class="detail-icon" style="background: rgba(16, 185, 129, 0.1)">
-                <Icon icon="lucide:check-circle" style="color: #10b981" />
-              </div>
-              <div class="detail-info">
-                <span class="detail-value">{{ overview?.plugins.loaded ?? '-' }}</span>
-                <span class="detail-label">已加载</span>
-              </div>
-              <Icon icon="lucide:chevron-right" class="detail-arrow" />
-            </div>
-            <div class="stats-detail-item clickable" @click="showPluginListModal('enabled')">
-              <div class="detail-icon" style="background: rgba(59, 130, 246, 0.1)">
-                <Icon icon="lucide:circle-dot" style="color: #3b82f6" />
-              </div>
-              <div class="detail-info">
-                <span class="detail-value">{{ overview?.plugins.enabled ?? '-' }}</span>
-                <span class="detail-label">已启用</span>
-              </div>
-              <Icon icon="lucide:chevron-right" class="detail-arrow" />
-            </div>
-            <div class="stats-detail-item clickable" @click="showPluginListModal('disabled')">
-              <div class="detail-icon" style="background: rgba(245, 158, 11, 0.1)">
-                <Icon icon="lucide:circle-pause" style="color: #f59e0b" />
-              </div>
-              <div class="detail-info">
-                <span class="detail-value">{{ overview?.plugins.disabled ?? '-' }}</span>
-                <span class="detail-label">已禁用</span>
-              </div>
-              <Icon icon="lucide:chevron-right" class="detail-arrow" />
-            </div>
-            <div class="stats-detail-item clickable" @click="showPluginListModal('failed')">
-              <div class="detail-icon" style="background: rgba(239, 68, 68, 0.1)">
-                <Icon icon="lucide:alert-circle" style="color: #ef4444" />
-              </div>
-              <div class="detail-info">
-                <span class="detail-value">{{ overview?.plugins.failed ?? '-' }}</span>
-                <span class="detail-label">加载失败</span>
-              </div>
-              <Icon icon="lucide:chevron-right" class="detail-arrow" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- 插件列表弹窗 -->
     <div v-if="showPluginList" class="modal-overlay" @click.self="showPluginList = false">
@@ -516,7 +438,6 @@ const messageStats = ref<MessageStatsResponse | null>(null)
 const messageStatsPeriod = ref<'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days'>('last_24_hours')
 
 // 弹窗状态
-const showPluginDetail = ref(false)
 const showPluginList = ref(false)
 const showComponentDetail = ref(false)
 
@@ -906,8 +827,14 @@ onMounted(() => {
 .dashboard-home {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
   padding-bottom: 40px;
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* 统计卡片区域 */
@@ -917,38 +844,49 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
 }
 
 .stat-card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
   padding: 24px;
   display: flex;
   align-items: center;
-  gap: 20px;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition);
-  border: 1px solid transparent;
+  gap: 24px;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-light);
+  box-shadow: var(--shadow-xl);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  box-shadow: var(--shadow-sm);
+  font-size: 32px;
+  box-shadow: var(--shadow-md);
+  background: var(--primary-gradient);
+  color: white !important; /* Override inline style if needed, or adjust template */
 }
+
+/* Override inline styles for icon color if possible, or just let them be */
+/* Actually, the template uses inline styles for background and color. 
+   I should probably respect them or override them if I want a uniform look.
+   The template has: :style="{ background: stat.bgColor }" and :style="{ color: stat.color }"
+   I'll leave them as is for now, but maybe add a glass effect to the card itself.
+*/
 
 .stat-content {
   display: flex;
@@ -957,26 +895,30 @@ onMounted(() => {
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.2;
+  letter-spacing: -1px;
 }
 
 .stat-label {
   font-size: 14px;
   color: var(--text-secondary);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .stat-sub {
   margin-left: auto;
-  font-size: 12px;
-  padding: 4px 10px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-full);
-  color: var(--text-tertiary);
+  font-size: 13px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  color: var(--text-secondary);
   font-weight: 600;
+  border: 1px solid var(--glass-border);
 }
 
 /* 主要内容区 */
@@ -987,49 +929,54 @@ onMounted(() => {
 .content-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 24px;
+  gap: 32px;
 }
 
 /* 通用卡片样式 */
 .card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid transparent;
-  transition: all var(--transition);
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-xl);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .card-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .card-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin: 0;
 }
 
 .card-title svg {
   color: var(--primary);
+  filter: drop-shadow(0 2px 4px rgba(249, 115, 22, 0.3));
 }
 
 .card-body {
-  padding: 24px;
+  padding: 32px;
   flex: 1;
 }
 
@@ -1041,65 +988,69 @@ onMounted(() => {
 }
 
 .mini-card {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
   padding: 24px;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.3s ease;
   box-shadow: var(--shadow-sm);
-  border: 1px solid transparent;
+  border: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
 .mini-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: var(--shadow-md);
-  border-color: var(--primary-light);
+  background: white;
+  border-color: var(--primary);
 }
 
 .mini-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .mini-card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 24px;
+  background: var(--primary-gradient);
+  color: white;
+  box-shadow: var(--shadow-md);
 }
 
 .mini-card-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .mini-card-stats {
   display: flex;
-  gap: 24px;
+  gap: 32px;
 }
 
 .mini-stat {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .mini-stat-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--text-primary);
 }
 
 .mini-stat-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-tertiary);
   font-weight: 600;
   text-transform: uppercase;
@@ -1111,32 +1062,32 @@ onMounted(() => {
 }
 
 .chart-container {
-  height: 300px;
+  height: 320px;
   width: 100%;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .chart-summary {
   display: flex;
-  gap: 32px;
-  margin-bottom: 20px;
+  gap: 40px;
+  margin-bottom: 24px;
 }
 
 .summary-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .summary-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-tertiary);
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .summary-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
 }
 
@@ -1152,50 +1103,53 @@ onMounted(() => {
 .stats-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .stats-detail-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  transition: all var(--transition-fast);
-  border: 1px solid transparent;
+  gap: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  border: 1px solid var(--glass-border);
 }
 
 .stats-detail-item:hover {
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--border-light);
+  background: white;
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+  transform: translateY(-2px);
 }
 
 .detail-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 24px;
+  background: var(--bg-secondary);
+  color: var(--primary);
 }
 
 .detail-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .detail-value {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
 .detail-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-tertiary);
   font-weight: 600;
 }
@@ -1207,29 +1161,34 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
 }
 
 .modal-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 32px;
   width: 90%;
-  max-width: 500px;
+  max-width: 560px;
   max-height: 85vh;
   overflow: hidden;
-  animation: modalIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-2xl);
+  border: 1px solid white;
 }
 
 @keyframes modalIn {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(10px);
+    transform: scale(0.95) translateY(20px);
   }
   to {
     opacity: 1;
@@ -1241,14 +1200,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-light);
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
@@ -1256,23 +1216,24 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border: none;
   background: transparent;
-  border-radius: var(--radius);
+  border-radius: 12px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.3s ease;
 }
 
 .close-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--danger);
+  background: rgba(255, 82, 82, 0.1);
+  color: #ff5252;
+  transform: rotate(90deg);
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 32px;
   overflow-y: auto;
 }
 
@@ -1282,51 +1243,54 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px;
+  padding: 64px;
   color: var(--text-tertiary);
-  gap: 16px;
+  gap: 24px;
 }
 
 .empty-state.small {
-  padding: 32px;
+  padding: 40px;
 }
 
 .empty-state.small .empty-icon {
-  font-size: 36px;
+  font-size: 40px;
 }
 
 .empty-icon {
-  font-size: 56px;
-  opacity: 0.4;
+  font-size: 64px;
+  opacity: 0.5;
   color: var(--text-tertiary);
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
 }
 
 /* 日程卡片 */
 .date-badge {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--primary);
-  padding: 6px 14px;
-  background: var(--primary-bg);
-  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  background: rgba(249, 115, 22, 0.1);
+  border-radius: 20px;
   font-weight: 700;
+  border: 1px solid rgba(249, 115, 22, 0.2);
 }
 
 .current-activity {
-  background: linear-gradient(135deg, var(--primary-bg), rgba(249, 115, 22, 0.05));
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.02));
   border: 1px solid rgba(249, 115, 22, 0.2);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 20px;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
 }
 
 .current-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 700;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 800;
   color: var(--primary);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -1334,25 +1298,25 @@ onMounted(() => {
 .current-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .current-time {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
 .current-text {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
 .schedule-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex: 1;
   overflow-y: auto;
 }
@@ -1360,78 +1324,83 @@ onMounted(() => {
 .schedule-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  transition: all var(--transition-fast);
+  gap: 20px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  transition: all 0.3s ease;
   border: 1px solid transparent;
 }
 
 .schedule-item:hover {
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
+  background: white;
+  box-shadow: var(--shadow-md);
   transform: translateX(4px);
+  border-color: var(--glass-border);
 }
 
 .schedule-item.is-current {
-  background: var(--primary-bg);
+  background: rgba(249, 115, 22, 0.05);
   border-left: 4px solid var(--primary);
 }
 
 .schedule-time {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-secondary);
-  min-width: 110px;
+  min-width: 120px;
 }
 
 .schedule-activity {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-primary);
   flex: 1;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* 月度计划卡片 */
 .plans-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .plan-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  transition: all var(--transition-fast);
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .plan-item:hover {
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
+  background: white;
+  box-shadow: var(--shadow-md);
+  border-color: var(--glass-border);
+  transform: translateX(4px);
 }
 
 .plan-icon {
-  font-size: 18px;
+  font-size: 20px;
   color: var(--success);
   flex-shrink: 0;
   margin-top: 2px;
+  filter: drop-shadow(0 2px 4px rgba(34, 197, 94, 0.2));
 }
 
 .plan-text {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-primary);
-  line-height: 1.5;
+  line-height: 1.6;
   font-weight: 500;
 }
 
 /* 加大弹窗 */
 .modal-large {
-  max-width: 700px;
+  max-width: 800px;
 }
 
 /* 可点击的详情项 */
@@ -1440,15 +1409,22 @@ onMounted(() => {
 }
 
 .stats-detail-item.clickable:hover {
-  background: var(--bg-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  background: white;
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
 }
 
 .detail-arrow {
   color: var(--text-tertiary);
-  font-size: 18px;
+  font-size: 20px;
   margin-left: auto;
+  transition: transform 0.3s ease;
+}
+
+.stats-detail-item.clickable:hover .detail-arrow {
+  transform: translateX(4px);
+  color: var(--primary);
 }
 
 /* 加载状态 */
@@ -1456,77 +1432,82 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 48px;
+  gap: 16px;
+  padding: 64px;
   color: var(--text-tertiary);
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 16px;
 }
 
 /* 插件列表 */
 .plugin-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   max-height: 400px;
   overflow-y: auto;
+  padding-right: 8px;
 }
 
 .plugin-item {
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  padding: 16px;
-  transition: all var(--transition-fast);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s ease;
   border: 1px solid transparent;
 }
 
 .plugin-item:hover {
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--border-light);
+  background: white;
+  box-shadow: var(--shadow-md);
+  border-color: var(--glass-border);
+  transform: translateX(4px);
 }
 
 .plugin-item-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
 .plugin-name {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   flex: 1;
 }
 
 .plugin-version {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
-  padding: 2px 8px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
   font-weight: 600;
+  border: 1px solid var(--glass-border);
 }
 
 .plugin-item-info {
   display: flex;
-  gap: 16px;
-  font-size: 13px;
+  gap: 20px;
+  font-size: 14px;
   color: var(--text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .plugin-error {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
+  gap: 12px;
+  font-size: 14px;
   color: var(--danger);
-  background: var(--danger-bg);
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  margin-top: 10px;
+  background: rgba(255, 82, 82, 0.1);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-top: 12px;
   font-weight: 500;
+  border: 1px solid rgba(255, 82, 82, 0.2);
 }
 
 .plugin-error span {
@@ -1537,74 +1518,82 @@ onMounted(() => {
 .component-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   max-height: 400px;
   overflow-y: auto;
+  padding-right: 8px;
 }
 
 .component-item {
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  padding: 16px;
-  transition: all var(--transition-fast);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s ease;
   border: 1px solid transparent;
 }
 
 .component-item:hover {
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--border-light);
+  background: white;
+  box-shadow: var(--shadow-md);
+  border-color: var(--glass-border);
+  transform: translateX(4px);
 }
 
 .component-item-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
 .component-name {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
   flex: 1;
 }
 
 .component-status {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
 }
 
 .component-status.enabled {
   color: var(--success);
-  background: var(--success-bg);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 .component-status.disabled {
   color: var(--warning);
-  background: var(--warning-bg);
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.2);
 }
 
 .component-item-desc {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 10px;
+  line-height: 1.6;
+  margin-bottom: 12px;
 }
 
 .component-item-plugin {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 13px;
   color: var(--text-tertiary);
-  font-weight: 500;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 6px 12px;
+  border-radius: 10px;
+  width: fit-content;
 }
 
 .component-item-plugin svg {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 /* 响应式 */

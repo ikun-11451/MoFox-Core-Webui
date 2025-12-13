@@ -45,17 +45,17 @@ import DashboardHeader from '@/components/DashboardHeader.vue'
 /* 页面过渡动画 */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .page-fade-enter-from {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(20px) scale(0.98);
 }
 
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(-20px);
+  transform: translateY(-20px) scale(0.98);
 }
 
 /* 响应式 */
