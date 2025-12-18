@@ -460,7 +460,7 @@ function updateApiKey(configKey: string, index: number, value: string) {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 13px;
-  font-family: var(--font-mono);
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace !important;
 }
 
 .api-key-input:focus {

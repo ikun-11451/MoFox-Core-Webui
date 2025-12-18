@@ -9,6 +9,7 @@ from .git_update_router import GitUpdateRouterComponent
 from .log_viewer_router import LogViewerRouterComponent
 from .marketplace_router import MarketplaceRouterComponent
 from .plugin_router import WebUIPluginRouter
+from .relationship_router import RelationshipRouterComponent
 from .stats_router import WebUIStatsRouter
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "GitUpdateRouterComponent",
     "LogViewerRouterComponent",
     "MarketplaceRouterComponent",
+    "RelationshipRouterComponent",
     "WebUIAuthRouter",
     "WebUIConfigRouter",
     "WebUIPluginRouter",

@@ -156,7 +156,7 @@
     
     <!-- 多行文本 -->
     <textarea 
-      v-else-if="isMultilineText"
+      v-else-if="field.type === 'textarea' || isMultilineText"
       class="input textarea"
       :value="value as string"
       :readonly="field.readonly"
@@ -362,6 +362,7 @@ function openObjectEditor() {
   border-radius: var(--radius);
   background: var(--bg-primary);
   color: var(--text-primary);
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'Microsoft YaHei', monospace !important;
   font-size: 14px;
   outline: none;
   transition: all var(--transition-fast);
@@ -382,7 +383,7 @@ function openObjectEditor() {
 .textarea {
   min-height: 100px;
   resize: vertical;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'Microsoft YaHei', monospace !important;
   font-size: 13px;
   line-height: 1.5;
 }

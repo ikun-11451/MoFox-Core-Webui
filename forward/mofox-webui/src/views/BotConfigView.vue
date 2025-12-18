@@ -82,7 +82,7 @@
         <vue-monaco-editor
           v-model:value="sourceContent"
           :language="'toml'"
-          :theme="isDarkMode ? 'vs-dark' : 'vs'"
+          :theme="'vs-dark'"
           :options="monacoOptions"
           @mount="onEditorMount"
         />
@@ -179,7 +179,7 @@ const backups = ref<any[]>([])
 const toast = ref({ visible: false, message: '', type: 'success' })
 
 const themeStore = useThemeStore()
-const isDarkMode = computed(() => themeStore.isDark)
+const isDarkMode = computed(() => themeStore.theme === 'dark')
 
 // 配置 Schema
 const configSchema = ref<any>(botConfigGroups)
@@ -189,7 +189,7 @@ const monacoOptions = {
   minimap: { enabled: false },
   fontSize: 14,
   lineHeight: 24,
-  fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+  fontFamily: "'Roboto Mono', 'Noto Sans SC', monospace",
   scrollBeyondLastLine: false,
   automaticLayout: true,
   padding: { top: 16, bottom: 16 }

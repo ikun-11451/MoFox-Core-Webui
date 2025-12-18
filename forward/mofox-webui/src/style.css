@@ -6,6 +6,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 
+/* 全局字体强制覆盖 - 针对输入框 */
+input, textarea, .input, .textarea, .api-key-input {
+  font-family: 'Roboto Mono', 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', monospace !important;
+}
+
 * {
   margin: 0;
   padding: 0;

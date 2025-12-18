@@ -411,6 +411,7 @@ function updatePattern(ruleIndex: number, patternIndex: number, value: string) {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   color: var(--text-primary);
+  font-family: 'Roboto Mono', 'Noto Sans SC', sans-serif !important;
   font-size: 13px;
 }
 
@@ -422,7 +423,7 @@ function updatePattern(ruleIndex: number, patternIndex: number, value: string) {
 .textarea {
   resize: vertical;
   min-height: 60px;
-  font-family: inherit;
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace !important;
 }
 
 .patterns-editor {

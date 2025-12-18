@@ -289,6 +289,7 @@ function updateUser(index: number, field: number, value: string) {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   color: var(--text-primary);
+  font-family: 'Roboto Mono', 'Noto Sans SC', sans-serif !important;
   font-size: 13px;
 }
 
