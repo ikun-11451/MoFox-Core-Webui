@@ -9,22 +9,24 @@
     </div>
 
     <!-- 搜索栏 (列表页时) -->
-    <div v-else class="search-bar">
-      <div class="search-input-wrapper">
+    <div v-else class="search-bar-container">
+      <div class="search-wrapper" :class="{ focused: isSearchFocused }">
         <span class="material-symbols-rounded search-icon">search</span>
         <input 
           v-model="searchQuery" 
           type="text" 
-          class="m3-input search-input" 
+          class="search-input" 
           placeholder="搜索用户名..."
+          @focus="isSearchFocused = true"
+          @blur="isSearchFocused = false"
           @keyup.enter="handleSearch"
         />
         <button 
           v-if="searchQuery" 
-          class="m3-icon-button clear-button" 
+          class="icon-button clear-btn" 
           @click="clearSearch"
         >
-          <span class="material-symbols-rounded">close</span>
+          <span class="material-symbols-rounded">cancel</span>
         </button>
       </div>
       <button class="m3-button filled" @click="handleSearch">
@@ -765,6 +767,8 @@ const formatDate = (dateStr?: string) => {
     return dateStr
   }
 }
+
+const isSearchFocused = ref(false)
 </script>
 
 <style scoped>
@@ -786,38 +790,64 @@ const formatDate = (dateStr?: string) => {
 }
 
 /* 搜索栏 */
-.search-bar {
+.search-bar-container {
   display: flex;
   gap: 12px;
   margin-bottom: 24px;
+  align-items: center;
 }
 
-.search-input-wrapper {
+.search-wrapper {
   flex: 1;
   position: relative;
   display: flex;
   align-items: center;
+  height: 48px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 24px;
+  padding: 0 16px;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.search-wrapper.focused {
+  background: var(--md-sys-color-surface);
+  border-color: var(--md-sys-color-primary);
 }
 
 .search-icon {
-  position: absolute;
-  left: 12px;
-  font-size: 20px;
   color: var(--md-sys-color-on-surface-variant);
-  pointer-events: none;
+  font-size: 24px;
+  margin-right: 12px;
 }
 
 .search-input {
-  padding-left: 40px;
-  padding-right: 40px;
-  width: 100%;
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-size: 16px;
+  outline: none;
+  padding: 0;
+  height: 100%;
 }
 
-.clear-button {
-  position: absolute;
-  right: 8px;
-  width: 32px;
-  height: 32px;
+.clear-btn {
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 4px;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.clear-btn:hover {
+  background: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface);
 }
 
 /* 用户列表 */
