@@ -1081,7 +1081,7 @@ function getSectionIcon(sectionName: string): string {
   font-size: 15px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Roboto Mono', monospace;
 }
 
 .field-type-badge {
@@ -1221,12 +1221,13 @@ function getSectionIcon(sectionName: string): string {
 
 .m3-switch-thumb {
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 4px;
   width: 20px;
   height: 20px;
   background: var(--md-sys-color-outline);
   border-radius: 50%;
+  transform: translateY(-50%);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -1236,7 +1237,7 @@ function getSectionIcon(sectionName: string): string {
 }
 
 .m3-switch input:checked + .m3-switch-track .m3-switch-thumb {
-  transform: translateX(20px);
+  transform: translate(20px, -50%);
   background: var(--md-sys-color-on-primary);
 }
 
