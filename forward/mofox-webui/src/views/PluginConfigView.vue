@@ -470,7 +470,8 @@ async function loadConfig() {
       // 加载配置模式（包含注释信息）
       await loadConfigSchema()
     } else {
-      loadError.value = contentRes.error || '加载配置失败'
+      // 显示详细错误信息
+      loadError.value = contentRes.data.error || contentRes.error || '加载配置失败'
     }
   } catch (e: any) {
     loadError.value = e.message || '网络请求失败'
