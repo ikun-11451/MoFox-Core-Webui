@@ -488,7 +488,7 @@ function goToConfig() {
     console.log('[PluginDetail] 跳转到配置编辑器:', currentPlugin.value.config.path)
     router.push({
       name: 'PluginConfigView',
-      query: { path: currentPlugin.value.config.path }
+      params: { path: currentPlugin.value.config.path }
     })
   } else {
     console.warn('[PluginDetail] 配置文件路径不存在')
