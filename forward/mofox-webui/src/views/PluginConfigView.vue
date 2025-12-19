@@ -452,8 +452,8 @@ async function loadConfig() {
     ])
     
     // 从配置列表中找到当前文件的信息
-    if (listRes.configs) {
-      const config = listRes.configs.find(c => c.path === decodedPath.value)
+    if (listRes.data?.configs) {
+      const config = listRes.data.configs.find((c: ConfigFileInfo) => c.path === decodedPath.value)
       if (config) {
         configInfo.value = config
       }
@@ -461,7 +461,7 @@ async function loadConfig() {
     
     // 处理配置内容
     console.log(contentRes)
-    if (contentRes.data.success && contentRes.data.parsed) {
+    if (contentRes.data?.success && contentRes.data?.parsed) {
       originalParsed.value = contentRes.data.parsed
       editedValues.value = JSON.parse(JSON.stringify(contentRes.data.parsed))
       sourceContent.value = contentRes.data.content || ''
@@ -471,7 +471,7 @@ async function loadConfig() {
       await loadConfigSchema()
     } else {
       // 显示详细错误信息
-      loadError.value = contentRes.data.error || contentRes.error || '加载配置失败'
+      loadError.value = contentRes.data?.error || contentRes.error || '加载配置失败'
     }
   } catch (e: any) {
     loadError.value = e.message || '网络请求失败'
@@ -486,7 +486,7 @@ async function loadConfigSchema() {
   try {
     const res = await getConfigSchema(decodedPath.value)
     
-    if (res.data.success && res.data.sections) {
+    if (res.data?.success && res.data?.sections) {
       configSchema.value = res.data.sections
     } else {
       console.error('加载配置模式失败:', res.error)
@@ -568,6 +568,7 @@ function updateFieldValue(fullKey: string, value: any) {
   // 遍历到倒数第二层
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i]
+    if (!key) continue
     if (!current[key] || typeof current[key] !== 'object') {
       current[key] = {}
     }
@@ -576,7 +577,9 @@ function updateFieldValue(fullKey: string, value: any) {
   
   // 设置最终值
   const lastKey = keys[keys.length - 1]
-  current[lastKey] = value
+  if (current && lastKey) {
+    current[lastKey] = value
+  }
 }
 
 // 数组值处理
@@ -615,8 +618,8 @@ async function saveCurrentConfig() {
 
     if (res.success) {
       showToast('配置已保存', 'success')
-      if (res.backup_path) {
-        console.log('备份已创建:', res.backup_path)
+      if (res.data?.backup_path) {
+        console.log('备份已创建:', res.data.backup_path)
       }
       // 重新加载配置
       await loadConfig()
@@ -649,12 +652,12 @@ async function validateSource() {
   }
 }
 
-function onEditorMount(editor: any) {
+function onEditorMount(_editor: any) {
   console.log('Monaco编辑器已加载')
 }
 
 // 展开数组字段到源码模式
-function expandArrayField(field: ConfigSchemaField) {
+function expandArrayField(_field: ConfigSchemaField) {
   editorMode.value = 'source'
   showToast('已切换到源码模式，可以编辑复杂数组对象', 'success')
 }
@@ -668,8 +671,8 @@ async function fetchBackups() {
   backupsLoading.value = true
   try {
     const res = await getConfigBackups(decodedPath.value)
-    if (res.success && res.backups) {
-      backups.value = res.backups
+    if (res.success && res.data?.backups) {
+      backups.value = res.data.backups
     }
   } catch (e) {
     console.error('获取备份列表失败:', e)

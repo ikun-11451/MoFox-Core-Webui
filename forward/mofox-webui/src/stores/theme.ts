@@ -114,9 +114,12 @@ export const useThemeStore = defineStore('theme', () => {
     updateTheme()
   }, { immediate: true })
 
+  const isDark = computed(() => theme.value === 'dark')
+
   return {
     theme,
     sourceColor,
+    isDark,
     toggleTheme,
     setSourceColor
   }
