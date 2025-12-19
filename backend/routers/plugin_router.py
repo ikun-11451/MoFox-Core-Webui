@@ -16,6 +16,8 @@ from src.plugin_system.apis import component_state_api, plugin_info_api, plugin_
 from src.plugin_system.base.component_types import ComponentType
 from src.plugin_system.core.component_registry import component_registry
 from src.plugin_system.core.plugin_manager import plugin_manager
+from src.config.config import CONFIG_DIR
+
 
 logger = get_logger("WebUI.PluginRouter")
 
@@ -288,7 +290,7 @@ class WebUIPluginRouter(BaseRouterComponent):
                     )
 
                 # 构建详情响应
-                config_path = plugin_info.get("config_path") or f"plugins/{plugin_name}/config.toml"
+                config_path = f"{CONFIG_DIR}/plugins/{plugin_name}/config.toml"
                 config_file_exists = Path(config_path).exists()
 
                 plugin_enabled = plugin_instance.enable_plugin if plugin_instance else False
