@@ -398,7 +398,7 @@ class WebUIPluginRouter(BaseRouterComponent):
                     return OperationResponse(success=False, error=f"无法找到插件 '{plugin_name}' 的文件夹")
                 
                 # 获取插件文件夹路径（去除 plugin.py 或 __init__.py 部分）
-                plugin_folder = Path(plugin_path).parent
+                plugin_folder = Path(plugin_path)
                 
                 # 安全检查：确保路径包含 "plugins" 目录
                 if "plugins" not in str(plugin_folder).lower():

@@ -113,6 +113,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await getPluginList()
       
+      console.log('插件列表响应:', response)
       if (response.success && response.data) {
         plugins.value = response.data.plugins
         failedPlugins.value = response.data.failed_plugins || []

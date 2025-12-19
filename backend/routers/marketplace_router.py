@@ -101,15 +101,43 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                     response.raise_for_status()
                     plugins = response.json()
 
-                # 获取已安装插件列表
-                installed_plugins = []
+                # 获取已安装插件列表 (Mapping: repo_name -> real_plugin_name)
+                installed_plugins = {}
+                
+                from src.plugin_system.core.plugin_manager import plugin_manager
+
+                # 获取所有已加载插件的路径映射 {path: name}
+                loaded_paths = {}
+                try:
+                    for name in plugin_manager.list_loaded_plugins():
+                        path = plugin_manager.get_plugin_path(name)
+                        if path:
+                            try:
+                                # Normalize path for comparison
+                                loaded_paths[str(Path(path).resolve())] = name
+                            except Exception:
+                                pass
+                except Exception as e:
+                    logger.warning(f"获取已加载插件路径失败: {e}")
 
                 # 检查本地插件目录
                 if PLUGINS_DIR.exists():
                     for plugin_dir in PLUGINS_DIR.iterdir():
                         if plugin_dir.is_dir() and (plugin_dir / "__init__.py").exists():
-                            installed_plugins.append(plugin_dir.name)
-                    logger.info(f"已安装的插件: {installed_plugins}")
+                            repo_name = plugin_dir.name
+                            real_name = None
+                            
+                            # Try to find if this dir is loaded
+                            try:
+                                dir_abs_path = str(plugin_dir.resolve())
+                                if dir_abs_path in loaded_paths:
+                                    real_name = loaded_paths[dir_abs_path]
+                            except Exception:
+                                pass
+                                
+                            installed_plugins[repo_name] = real_name
+                            
+                    logger.info(f"已安装的插件: {list(installed_plugins.keys())}")
 
                 return MarketplaceListResponse(
                     success=True, data={"plugins": plugins, "installed_plugins": installed_plugins}
@@ -274,6 +302,8 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                     # 自动加载插件（如果启用）
                     loaded = False
                     load_error = None
+                    real_plugin_name = None
+
                     if request.auto_load:
                         try:
                             # 重新扫描插件目录以注册新安装的插件
@@ -283,31 +313,52 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                             )
                             logger.info(f"扫描完成: 成功 {success_count}, 失败 {fail_count}")
 
-                            # 检查插件是否已加载（使用不区分大小写的比较）
+                            # 检查插件是否已加载（使用路径比较）
                             from src.plugin_system.core.plugin_manager import plugin_manager
+                            
+                            target_abs_path = str(target_plugin_path.resolve())
+                            
+                            # 遍历所有已加载插件，比较路径
+                            for name in plugin_manager.list_loaded_plugins():
+                                path = plugin_manager.get_plugin_path(name)
+                                if path:
+                                    try:
+                                        if str(Path(path).resolve()) == target_abs_path:
+                                            loaded = True
+                                            real_plugin_name = name
+                                            logger.info(f"插件 {repo_name} 已自动加载为 {real_plugin_name}")
+                                            break
+                                    except Exception:
+                                        continue
 
-                            loaded_plugins = [p.lower() for p in plugin_manager.list_loaded_plugins()]
-                            if repo_name.lower() in loaded_plugins:
-                                loaded = True
-                                logger.info(f"插件 {repo_name} 已自动加载")
-                            else:
-                                load_error = "插件扫描成功但未能加载"
-                                logger.warning(
-                                    f"插件 {repo_name} 未在已加载列表中。"
-                                    f"已加载插件: {plugin_manager.list_loaded_plugins()}"
-                                )
+                            if not loaded:
+                                # 降级检查：使用名称比较（不区分大小写）
+                                loaded_plugins = [p.lower() for p in plugin_manager.list_loaded_plugins()]
+                                if repo_name.lower() in loaded_plugins:
+                                    loaded = True
+                                    real_plugin_name = repo_name # 假设名称一致
+                                    logger.info(f"插件 {repo_name} 已自动加载 (通过名称匹配)")
+                                else:
+                                    load_error = "插件扫描成功但未能加载"
+                                    logger.warning(
+                                        f"插件 {repo_name} 未在已加载列表中。"
+                                        f"已加载插件: {plugin_manager.list_loaded_plugins()}"
+                                    )
                         except Exception as e:
                             logger.warning(f"自动加载插件失败: {e}")
                             load_error = str(e)
 
                     message = f"插件 {repo_name} 安装成功"
                     if loaded:
-                        message += "并已加载"
+                        message += f"并已加载 ({real_plugin_name})" if real_plugin_name else "并已加载"
                     elif request.auto_load:
                         message += f"，但加载失败：{load_error}"
 
                     return InstallPluginResponse(
-                        success=True, message=message, plugin_name=repo_name, loaded=loaded
+                        success=True, 
+                        message=message, 
+                        plugin_name=real_plugin_name if real_plugin_name else repo_name, 
+                        loaded=loaded
                     )
 
                 finally:

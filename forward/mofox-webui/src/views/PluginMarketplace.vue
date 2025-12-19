@@ -117,7 +117,7 @@
             <button 
               v-else
               class="m3-button tonal" 
-              @click="viewPluginConfig()"
+              @click="viewPluginConfig(plugin)"
             >
               <span class="material-symbols-rounded">settings</span>
               配置
@@ -154,7 +154,7 @@ const router = useRouter()
 const loading = ref(true)
 const loadError = ref('')
 const plugins = ref<MarketplacePlugin[]>([])
-const installedPlugins = ref<string[]>([])
+const installedPlugins = ref<Record<string, string | null>>({})
 const searchQuery = ref('')
 const selectedCategory = ref('全部')
 const installingPlugins = ref(new Set<string>())
@@ -214,7 +214,7 @@ function isInstalled(plugin: MarketplacePlugin): boolean {
   }
   // 使用仓库名检查是否安装
   const repoName = plugin.manifest.repository_url.split('/').pop() || ''
-  return installedPlugins.value.includes(repoName)
+  return Object.prototype.hasOwnProperty.call(installedPlugins.value, repoName)
 }
 
 function getPluginIcon(plugin: MarketplacePlugin): string {
@@ -230,8 +230,16 @@ function viewPluginDetail(pluginId: string) {
   router.push(`/dashboard/marketplace/${pluginId}`)
 }
 
-function viewPluginConfig() {
+function viewPluginConfig(plugin?: MarketplacePlugin) {
   // 跳转到插件配置主页面
+  if (plugin) {
+    const repoName = plugin.manifest.repository_url.split('/').pop() || ''
+    const realName = installedPlugins.value[repoName]
+    if (realName) {
+      router.push({ path: `plugin-config/plugins%2F${realName}%2Fconfig.toml` })
+      return
+    }
+  }
   router.push('/dashboard/plugin-config')
 }
 
@@ -250,7 +258,7 @@ async function installPluginAction(plugin: MarketplacePlugin) {
         showToast(`插件 ${plugin.manifest.name} 安装成功！`, 'success')
         // 使用仓库名添加到已安装列表
         const repoName = plugin.manifest.repository_url.split('/').pop() || ''
-        installedPlugins.value.push(repoName)
+        installedPlugins.value[repoName] = responseData.plugin_name || null
       } else {
         showToast(`安装失败: ${responseData.error || '未知错误'}`, 'error')
       }
@@ -279,21 +287,21 @@ async function refreshMarketplace() {
       const responseData = res.data as any
       if (responseData.success && responseData.data) {
         plugins.value = responseData.data.plugins || []
-        installedPlugins.value = responseData.data.installed_plugins || []
+        installedPlugins.value = responseData.data.installed_plugins || {}
       } else {
         loadError.value = responseData.error || '获取插件市场数据失败'
         plugins.value = []
-        installedPlugins.value = []
+        installedPlugins.value = {}
       }
     } else {
       loadError.value = res.error || '获取插件市场数据失败'
       plugins.value = []
-      installedPlugins.value = []
+      installedPlugins.value = {}
     }
   } catch (e) {
     loadError.value = '加载插件市场时发生错误'
     plugins.value = []
-    installedPlugins.value = []
+    installedPlugins.value = {}
     console.error(e)
   } finally {
     loading.value = false

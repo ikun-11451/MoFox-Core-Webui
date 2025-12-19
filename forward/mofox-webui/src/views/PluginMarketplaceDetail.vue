@@ -263,12 +263,12 @@ async function installPluginAction() {
       const responseData = res.data as any
       if (responseData.success) {
         // 后端已经自动加载了，直接提示成功
-        showToast(`插件 ${pluginData.value?.manifest.name} 安装成功！`, 'success')
+        showToast(`插件 ${pluginData.value?.plugin.manifest.name} 安装成功！`, 'success')
         
         // 重新加载插件详情以更新状态
         await loadPluginDetail()
       } else {
-        showToast(`安装失败: ${responseData.error || '未知错误'}`, 'error')
+        showToast(`安装失败: ${responseData.message || '未知错误'}`, 'error')
       }
     } else {
       showToast(`安装请求失败: ${res.error || '未知错误'}`, 'error')

@@ -370,18 +370,30 @@ async function refreshPluginList() {
 }
 
 async function handleTogglePlugin(plugin: PluginItem) {
-  if (plugin.enabled) {
-    const result = await pluginStore.disablePluginAction(plugin.name)
-    showToast(
-      result.success ? `插件 ${plugin.display_name} 已禁用` : result.error || '操作失败',
-      result.success ? 'success' : 'error'
-    )
-  } else {
-    const result = await pluginStore.enablePluginAction(plugin.name)
-    showToast(
-      result.success ? `插件 ${plugin.display_name} 已启用` : result.error || '操作失败',
-      result.success ? 'success' : 'error'
-    )
+  try {
+    if (plugin.enabled) {
+      const result = await pluginStore.disablePluginAction(plugin.name)
+      if (!result) {
+        showToast('操作失败：无返回结果', 'error')
+        return
+      }
+      showToast(
+        result.success ? `插件 ${plugin.display_name} 已禁用` : (result.error || '操作失败'),
+        result.success ? 'success' : 'error'
+      )
+    } else {
+      const result = await pluginStore.enablePluginAction(plugin.name)
+      if (!result) {
+        showToast('操作失败：无返回结果', 'error')
+        return
+      }
+      showToast(
+        result.success ? `插件 ${plugin.display_name} 已启用` : (result.error || '操作失败'),
+        result.success ? 'success' : 'error'
+      )
+    }
+  } catch (error) {
+    showToast(`操作异常: ${error instanceof Error ? error.message : '未知错误'}`, 'error')
   }
 }
 
@@ -391,11 +403,19 @@ async function handleReloadPlugin(pluginName: string) {
     '重载插件',
     `确定要重载插件 "${plugin?.display_name || pluginName}" 吗？`,
     async () => {
-      const result = await pluginStore.reloadPluginAction(pluginName)
-      showToast(
-        result.success ? '插件重载成功' : result.error || '重载失败',
-        result.success ? 'success' : 'error'
-      )
+      try {
+        const result = await pluginStore.reloadPluginAction(pluginName)
+        if (!result) {
+          showToast('重载失败：无返回结果', 'error')
+          return
+        }
+        showToast(
+          result.success ? '插件重载成功' : (result.error || '重载失败'),
+          result.success ? 'success' : 'error'
+        )
+      } catch (error) {
+        showToast(`重载异常: ${error instanceof Error ? error.message : '未知错误'}`, 'error')
+      }
     }
   )
 }
@@ -406,11 +426,19 @@ async function handleLoadPlugin(pluginName: string) {
     '加载插件',
     `确定要加载插件 "${plugin?.display_name || pluginName}" 吗？`,
     async () => {
-      const result = await pluginStore.loadPluginAction(pluginName)
-      showToast(
-        result.success ? '插件加载成功' : result.error || '加载失败',
-        result.success ? 'success' : 'error'
-      )
+      try {
+        const result = await pluginStore.loadPluginAction(pluginName)
+        if (!result) {
+          showToast('加载失败：无返回结果', 'error')
+          return
+        }
+        showToast(
+          result.success ? '插件加载成功' : (result.error || '加载失败'),
+          result.success ? 'success' : 'error'
+        )
+      } catch (error) {
+        showToast(`加载异常: ${error instanceof Error ? error.message : '未知错误'}`, 'error')
+      }
     }
   )
 }
@@ -420,14 +448,22 @@ async function handleDeletePlugin(pluginName: string, displayName: string) {
     '删除插件',
     `确定要删除插件 "${displayName || pluginName}" 吗？此操作将删除插件的所有文件，且无法撤销！`,
     async () => {
-      const result = await pluginStore.deletePluginAction(pluginName)
-      showToast(
-        result.success ? '插件已删除' : result.error || '删除失败',
-        result.success ? 'success' : 'error'
-      )
-      if (result.success) {
-        // 刷新插件列表
-        await refreshPluginList()
+      try {
+        const result = await pluginStore.deletePluginAction(pluginName)
+        if (!result) {
+          showToast('删除失败：无返回结果', 'error')
+          return
+        }
+        showToast(
+          result.success ? '插件已删除' : (result.error || '删除失败'),
+          result.success ? 'success' : 'error'
+        )
+        if (result.success) {
+          // 刷新插件列表
+          await refreshPluginList()
+        }
+      } catch (error) {
+        showToast(`删除异常: ${error instanceof Error ? error.message : '未知错误'}`, 'error')
       }
     }
   )
@@ -438,17 +474,27 @@ async function handleScanPlugins() {
     '扫描新插件',
     '将扫描插件目录并注册新发现的插件，是否继续？',
     async () => {
-      loading.value = true
-      const result = await pluginStore.scanForNewPlugins()
-      loading.value = false
-      
-      if (result.success && result.data) {
-        showToast(
-          `扫描完成：注册 ${result.data.registered} 个，加载 ${result.data.loaded} 个，失败 ${result.data.failed} 个`,
-          'success'
-        )
-      } else {
-        showToast(result.error || '扫描失败', 'error')
+      try {
+        loading.value = true
+        const result = await pluginStore.scanForNewPlugins()
+        loading.value = false
+        
+        if (!result) {
+          showToast('扫描失败：无返回结果', 'error')
+          return
+        }
+        
+        if (result.success && result.data) {
+          showToast(
+            `扫描完成：注册 ${result.data.registered} 个，加载 ${result.data.loaded} 个，失败 ${result.data.failed} 个`,
+            'success'
+          )
+        } else {
+          showToast(result.error || '扫描失败', 'error')
+        }
+      } catch (error) {
+        loading.value = false
+        showToast(`扫描异常: ${error instanceof Error ? error.message : '未知错误'}`, 'error')
       }
     }
   )
@@ -459,14 +505,24 @@ async function handleReloadAll() {
     '重载所有插件',
     '确定要重载所有已加载的插件吗？这可能需要一些时间。',
     async () => {
-      loading.value = true
-      const result = await pluginStore.reloadAll()
-      loading.value = false
-      
-      showToast(
-        result.success ? '所有插件重载成功' : result.error || '重载失败',
-        result.success ? 'success' : 'error'
-      )
+      try {
+        loading.value = true
+        const result = await pluginStore.reloadAll()
+        loading.value = false
+        
+        if (!result) {
+          showToast('重载失败：无返回结果', 'error')
+          return
+        }
+        
+        showToast(
+          result.success ? '所有插件重载成功' : (result.error || '重载失败'),
+          result.success ? 'success' : 'error'
+        )
+      } catch (error) {
+        loading.value = false
+        showToast(`重载异常: ${error instanceof Error ? error.message : '未知错误'}`, 'error')
+      }
     }
   )
 }
