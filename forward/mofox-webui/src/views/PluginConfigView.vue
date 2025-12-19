@@ -1236,7 +1236,7 @@ function getSectionIcon(sectionName: string): string {
 }
 
 .m3-switch input:checked + .m3-switch-track .m3-switch-thumb {
-  left: 24px;
+  transform: translateX(20px);
   background: var(--md-sys-color-on-primary);
 }
 
