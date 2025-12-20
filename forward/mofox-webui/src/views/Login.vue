@@ -74,10 +74,7 @@
         </button>
       </form>
 
-      <!-- 底部信息 -->
-      <div class="footer-info">
-        <p>© 2024 MoFox Bot · 安全登录</p>
-      </div>
+
     </div>
   </div>
 </template>
