@@ -253,6 +253,7 @@ const menuItems: MenuItem[] = [
   },
   { name: '插件管理', path: '/dashboard/plugin-manage', icon: 'deployed_code' },
   { name: '插件市场', path: '/dashboard/marketplace', icon: 'storefront' },
+  { name: 'UI 聊天室', path: '/dashboard/chatroom', icon: 'forum' },
   { name: '系统更新', path: '/dashboard/git-update', icon: 'system_update' },
   { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
 ]

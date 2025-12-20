@@ -1,18 +1,20 @@
 """
 启动事件处理器
-在系统启动时启动发现服务器
+在系统启动时启动发现服务器和UI Chatroom适配器
 """
 
 import asyncio
 import os
 from typing import Set
 
+from mofox_wire import InProcessCoreSink
 from src.common.logger import get_logger
 from src.plugin_system import BaseEventHandler, EventType
 from src.plugin_system.base.base_event import HandlerResult
 from src.common.server import get_global_server
 
 from ..discovery_server import start_discovery_server, DISCOVERY_PORT
+from ..adapters.ui_chatroom_adapter import UIChatroomAdapter, set_ui_chatroom_adapter
 
 logger = get_logger("WebUIAuth.StartupHandler")
 

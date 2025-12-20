@@ -3,6 +3,7 @@ HTTP路由组件模块
 """
 
 from .auth_router import WebUIAuthRouter
+from .chatroom_router import ChatroomRouterComponent
 from .config_router import WebUIConfigRouter
 from .expression_router import ExpressionRouterComponent
 from .git_update_router import GitUpdateRouterComponent
@@ -13,6 +14,7 @@ from .relationship_router import RelationshipRouterComponent
 from .stats_router import WebUIStatsRouter
 
 __all__ = [
+    "ChatroomRouterComponent",
     "ExpressionRouterComponent",
     "GitUpdateRouterComponent",
     "LogViewerRouterComponent",

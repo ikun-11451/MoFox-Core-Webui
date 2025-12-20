@@ -16,6 +16,7 @@ import LiveLogView from '@/views/LiveLogView.vue'
 import ExpressionView from '@/views/ExpressionView.vue'
 import RelationshipView from '@/views/RelationshipView.vue'
 import ThemeConfigView from '@/views/ThemeConfigView.vue'
+import ChatroomView from '@/views/ChatroomView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -95,6 +96,11 @@ const routes: Array<RouteRecordRaw> = [
         path: 'relationship',
         name: 'Relationship',
         component: RelationshipView
+      },
+      {
+        path: 'chatroom',
+        name: 'Chatroom',
+        component: ChatroomView
       },
       {
         path: 'git-update',

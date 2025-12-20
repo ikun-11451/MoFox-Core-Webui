@@ -13,7 +13,7 @@ from sqlalchemy import select
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
 from src.common.database.api.crud import CRUDBase
-from src.common.database.core.models import PersonInfo
+from src.common.database.core.models import PersonInfo, UserRelationships
 from src.common.database.core.session import get_db_session
 from src.plugin_system import BaseRouterComponent
 
@@ -134,35 +134,45 @@ class RelationshipRouterComponent(BaseRouterComponent):
             "/list",
             response_model=PersonListResponse,
             summary="获取用户列表",
-            description="获取所有用户的卡片信息，支持分页",
+            description="获取所有用户的卡片信息，支持分页和平台筛选",
         )
-        async def get_person_list(page: int = 1, page_size: int = 20, _=VerifiedDep):
+        async def get_person_list(page: int = 1, page_size: int = 20, platform: Optional[str] = None, _=VerifiedDep):
             """获取用户列表"""
+            logger.info(f"[get_person_list] 请求参数: page={page}, page_size={page_size}, platform={platform}")
             try:
                 crud = CRUDBase(PersonInfo)
                 
                 # 获取总数
-                total = await crud.count()
+                if platform:
+                    # 按平台筛选
+                    total = await crud.count(platform=platform)
+                    logger.info(f"[get_person_list] 平台 {platform} 中共有 {total} 个用户")
+                else:
+                    total = await crud.count()
+                    logger.info(f"[get_person_list] 数据库中共有 {total} 个用户")
                 
                 # 计算分页
                 total_pages = (total + page_size - 1) // page_size
                 offset = (page - 1) * page_size
                 
                 # 使用原生SQL查询按最后交互时间排序
+                logger.info(f"[get_person_list] 查询偏移量: offset={offset}, limit={page_size}")
                 async with get_db_session() as session:
-                    stmt = (
-                        select(PersonInfo)
-                        .order_by(PersonInfo.last_know.desc())
-                        .limit(page_size)
-                        .offset(offset)
-                    )
+                    stmt = select(PersonInfo).order_by(PersonInfo.last_know.desc())
+                    
+                    # 如果指定了平台，添加筛选条件
+                    if platform:
+                        stmt = stmt.where(PersonInfo.platform == platform)
+                        logger.debug(f"[get_person_list] 添加平台筛选: platform={platform}")
+                    
+                    stmt = stmt.limit(page_size).offset(offset)
                     result = await session.execute(stmt)
                     persons_data = result.scalars().all()
+                    logger.info(f"[get_person_list] 查询到 {len(persons_data)} 个用户")
                 
                 # 构建响应
                 persons = []
                 for person in persons_data:
-                    # 关系分数默认为0，关系文本从relation_value字段读取
                     relationship_score = 0.0
                     relationship_text = person.relation_value if hasattr(person, 'relation_value') else None
                     
@@ -203,13 +213,18 @@ class RelationshipRouterComponent(BaseRouterComponent):
         )
         async def get_person_detail(person_id: str, _=VerifiedDep):
             """获取用户详情"""
+            logger.info(f"[get_person_detail] 请求用户详情: person_id={person_id}")
             try:
                 # 使用CRUD获取用户信息
                 crud = CRUDBase(PersonInfo)
+                logger.debug(f"[get_person_detail] 开始查询数据库...")
                 person = await crud.get_by(person_id=person_id,use_cache = False)
                 
                 if not person:
+                    logger.warning(f"[get_person_detail] 未找到用户: person_id={person_id}")
                     raise HTTPException(status_code=404, detail="用户不存在")
+                
+                logger.info(f"[get_person_detail] 找到用户: name={person.person_name}, platform={person.platform}, user_id={person.user_id},person.impression={person.impression},short={person.short_impression},{person.points}")
 
                 # 获取印象
                 impression = person.impression or "暂无印象"
@@ -235,6 +250,22 @@ class RelationshipRouterComponent(BaseRouterComponent):
                     except Exception as e:
                         logger.warning(f"解析记忆点失败: {e}")
 
+                # 从UserRelationships获取关系数据
+                relationship_score = 0.0
+                relationship_text = None
+                
+                async with get_db_session() as session:
+                    # 构建user_id: platform:user_id
+                    stmt_rel = select(UserRelationships).where(UserRelationships.user_id == person.user_id)
+                    result_rel = await session.execute(stmt_rel)
+                    user_rel = result_rel.scalar_one_or_none()
+                    
+                    if user_rel:
+                        relationship_score = user_rel.relationship_score
+                        logger.debug(f"[get_person_detail] 找到关系数据: score={relationship_score}, text={relationship_text}")
+                    else:
+                        logger.debug(f"[get_person_detail] 未找到关系数据: user_id={person.user_id}")
+
                 return PersonDetailResponse(
                     basic_info=PersonBasicInfoResponse(
                         person_id=person_id,
@@ -248,9 +279,8 @@ class RelationshipRouterComponent(BaseRouterComponent):
                     relationship=PersonRelationshipResponse(
                         person_id=person_id,
                         person_name=person.person_name or "未知用户",
-                        relationship_score=0.0,
-                        relationship_text=person.relation_value if hasattr(person, 'relation_value') else None
-                    ),
+                        relationship_score=relationship_score,
+                        relationship_text=person.relation_value if hasattr(person, 'relation_value') else None                    ),
                     impression=impression,
                     short_impression=short_impression,
                     memory_points=memory_points,
@@ -272,26 +302,39 @@ class RelationshipRouterComponent(BaseRouterComponent):
             try:
                 # 使用CRUD检查用户是否存在
                 crud = CRUDBase(PersonInfo)
-                person = await crud.get_by(person_id=person_id,use_cache = False)
+                person = await crud.get_by(person_id=person_id, use_cache=False)
                 
                 if not person:
                     return UpdateRelationshipResponse(success=False, message="用户不存在")
 
-                # 更新关系值
-                update_data = {}
-                if hasattr(PersonInfo, 'relation_value'):
-                    update_data['relation_value'] = request.relationship_text
-                
-                if update_data:
-                    async with get_db_session() as session:
-                        stmt = select(PersonInfo).where(PersonInfo.person_id == person_id)
-                        result = await session.execute(stmt)
-                        db_person = result.scalar_one_or_none()
-                        
-                        if db_person:
-                            for key, value in update_data.items():
-                                setattr(db_person, key, value)
-                            await session.commit()
+                # 更新UserRelationships表
+                async with get_db_session() as session:
+                    # 构建user_id: platform:user_id
+                    stmt = select(UserRelationships).where(UserRelationships.user_id == person.user_id)
+                    result = await session.execute(stmt)
+                    user_rel = result.scalar_one_or_none()
+                    
+                    if user_rel:
+                        # 更新现有记录
+                        user_rel.relationship_score = request.relationship_score
+                        if request.relationship_text is not None:
+                            user_rel.relationship_text = request.relationship_text
+                        user_rel.last_updated = __import__('time').time()
+                        logger.info(f"更新用户关系: {person.user_id} -> score={request.relationship_score}")
+                    else:
+                        # 创建新记录
+                        import time
+                        new_rel = UserRelationships(
+                            user_id=person.user_id,
+                            user_name=person.person_name,
+                            relationship_score=request.relationship_score,
+                            relationship_text=request.relationship_text,
+                            last_updated=time.time()
+                        )
+                        session.add(new_rel)
+                        logger.info(f"创建用户关系: {person.user_id} -> score={request.relationship_score}")
+                    
+                    await session.commit()
                 
                 logger.info(f"用户 {person_id} 的关系更新成功")
                 return UpdateRelationshipResponse(success=True, message="关系更新成功")
@@ -393,12 +436,25 @@ class RelationshipRouterComponent(BaseRouterComponent):
                 if not person:
                     return {"error": "用户不存在"}
                 
+                # 从UserRelationships获取关系数据
+                relationship_text = "无"
+                relationship_score = 0.0
+                async with get_db_session() as session:
+                    user_rel_id = f"{person.platform}:{person.user_id}"
+                    stmt_rel = select(UserRelationships).where(UserRelationships.user_id == user_rel_id)
+                    result_rel = await session.execute(stmt_rel)
+                    user_rel = result_rel.scalar_one_or_none()
+                    if user_rel:
+                        relationship_text = user_rel.relationship_text or "无"
+                        relationship_score = user_rel.relationship_score
+                
                 # 生成简单的关系报告
                 report = f"""用户: {person.person_name or '未知'}
 昵称: {person.nickname or '无'}
 认识次数: {person.know_times or 0}
 印象: {person.impression or '暂无'}
-关系描述: {person.relation_value if hasattr(person, 'relation_value') and person.relation_value else '无'}"""
+关系分数: {relationship_score:.2f}
+关系描述: {relationship_text}"""
                 
                 return RelationshipReportResponse(person_id=person_id, report=report)
             except Exception as e:
@@ -456,24 +512,68 @@ class RelationshipRouterComponent(BaseRouterComponent):
                 return {"error": str(e)}
 
         @self.router.get(
+            "/platforms",
+            summary="获取平台列表",
+            description="获取所有用户的平台列表及每个平台的用户数",
+        )
+        async def get_platforms(_=VerifiedDep):
+            """获取平台列表"""
+            logger.info(f"[get_platforms] 请求获取平台列表")
+            try:
+                from sqlalchemy import func
+                
+                async with get_db_session() as session:
+                    # 查询所有平台及其用户数
+                    stmt = (
+                        select(
+                            PersonInfo.platform,
+                            func.count(PersonInfo.id).label('count')
+                        )
+                        .group_by(PersonInfo.platform)
+                        .order_by(func.count(PersonInfo.id).desc())
+                    )
+                    result = await session.execute(stmt)
+                    platforms_data = result.all()
+                    
+                    platforms = [
+                        {"platform": row[0], "count": row[1]}
+                        for row in platforms_data
+                    ]
+                    
+                    logger.info(f"[get_platforms] 找到 {len(platforms)} 个平台")
+                    for p in platforms:
+                        logger.debug(f"[get_platforms] 平台: {p['platform']}, 用户数: {p['count']}")
+                    
+                    return {"platforms": platforms}
+            except Exception as e:
+                logger.error(f"[get_platforms] 获取平台列表失败: {e}")
+                return {"error": str(e)}
+
+        @self.router.get(
             "/search",
             summary="搜索用户",
             description="根据用户名搜索用户",
         )
         async def search_person(query: str, _=VerifiedDep):
             """搜索用户"""
+            logger.info(f"[search_person] 搜索用户: query={query}")
             try:
                 crud = CRUDBase(PersonInfo)
                 
                 # 先按person_name搜索
+                logger.debug(f"[search_person] 按 person_name 搜索...")
                 person = await crud.get_by(person_name=query,use_cache = False)
                 
                 # 如果没找到，按nickname搜索
                 if not person:
+                    logger.debug(f"[search_person] person_name 未找到，尝试按 nickname 搜索...")
                     person = await crud.get_by(nickname=query,use_cache = False)
                 
                 if not person:
+                    logger.warning(f"[search_person] 未找到用户: query={query}")
                     return {"error": "未找到用户"}
+                
+                logger.info(f"[search_person] 找到用户: person_id={person.person_id}, name={person.person_name}, platform={person.platform}")
 
                 return PersonBasicInfoResponse(
                     person_id=person.person_id,
