@@ -19,16 +19,17 @@ import Sidebar from '@/components/Sidebar.vue'
 
 <style scoped>
 .dashboard-wrapper {
-  min-height: 100vh;
+  height: 100vh;
   background-color: var(--md-sys-color-background);
   display: flex;
+  overflow: hidden;
 }
 
 .main-layout {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
+  overflow: hidden;
   min-width: 0;
   background-color: var(--md-sys-color-background);
 }
@@ -38,6 +39,8 @@ import Sidebar from '@/components/Sidebar.vue'
   padding: 24px;
   width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
+  height: 100%;
 }
 
 /* 页面过渡动画 */

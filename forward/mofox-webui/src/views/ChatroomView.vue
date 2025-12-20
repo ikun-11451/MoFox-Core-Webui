@@ -157,16 +157,20 @@
       <!-- 输入区域 -->
       <footer class="input-area m3-card">
         <div class="input-container">
-          <textarea
-            v-model="inputMessage"
-            class="message-input"
-            placeholder="输入消息..."
-            rows="1"
-            :disabled="!selectedUser || sending"
-            @keydown.enter.exact.prevent="sendMessage"
-            @input="autoResize"
-            ref="messageInput"
-          ></textarea>
+          <div class="input-wrapper" :class="{ focused: isInputFocused }">
+            <textarea
+              v-model="inputMessage"
+              class="message-input"
+              placeholder="输入消息..."
+              rows="1"
+              :disabled="!selectedUser || sending"
+              @keydown.enter.exact.prevent="sendMessage"
+              @input="autoResize"
+              @focus="isInputFocused = true"
+              @blur="isInputFocused = false"
+              ref="messageInput"
+            ></textarea>
+          </div>
           <button 
             class="m3-button fab" 
             :disabled="!inputMessage.trim() || !selectedUser || sending"
@@ -373,6 +377,7 @@ const messages: Ref<Message[]> = ref([])
 const inputMessage = ref('')
 const loading = ref(false)
 const sending = ref(false)
+const isInputFocused = ref(false)
 
 // 轮询定时器
 let pollTimer: number | null = null
@@ -1223,25 +1228,37 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   align-items: flex-end;
 }
 
-.message-input {
+.input-wrapper {
   flex: 1;
-  padding: 12px 16px;
+  display: flex;
   border: 1px solid var(--md-sys-color-outline);
   border-radius: 24px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  transition: border-color 0.2s;
+  overflow: hidden;
+}
+
+.input-wrapper.focused {
+  border-color: var(--md-sys-color-primary);
+}
+
+.message-input {
+  flex: 1;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
   font-family: inherit;
   font-size: 14px;
   line-height: 1.5;
   resize: none;
-  background-color: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
-  transition: border-color 0.2s;
   min-height: 42px;
   max-height: 120px;
 }
 
 .message-input:focus {
   outline: none;
-  border-color: var(--md-sys-color-primary);
 }
 
 .message-input:disabled {
