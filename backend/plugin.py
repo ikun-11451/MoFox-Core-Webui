@@ -20,6 +20,7 @@ from src.plugin_system.base.config_types import ConfigField
 
 from .handlers import WebUIShutdownHandler, WebUIStartupHandler
 from .routers import (
+    ChatroomRouterComponent,
     GitUpdateRouterComponent,
     MarketplaceRouterComponent,
     WebUIAuthRouter,
@@ -30,6 +31,7 @@ from .routers import (
     ExpressionRouterComponent,
     RelationshipRouterComponent,
 )
+from .adapters import UIChatroomAdapter
 
 logger = get_logger("WebUIAuth.Plugin")
 
@@ -93,7 +95,7 @@ class WebUIAuthPlugin(BasePlugin):
             f"主程序配置: {self.get_config('main_server.host', '127.0.0.1')}:{self.get_config('main_server.port', 8000)}"
         )
 
-    def get_plugin_components(self) -> List[Tuple[ComponentInfo, Type]]:
+    def get_plugin_components(self) -> List:
         """
         返回插件包含的组件列表
 
@@ -102,6 +104,7 @@ class WebUIAuthPlugin(BasePlugin):
         - WebUIShutdownHandler: 关闭时停止发现服务器
         - WebUIAuthRouter: HTTP认证接口
         - WebUIStatsRouter: HTTP统计数据接口
+        - ChatroomRouterComponent: 聊天室接口
         """
         return [
             # 事件处理器
@@ -117,4 +120,6 @@ class WebUIAuthPlugin(BasePlugin):
             (LogViewerRouterComponent.get_router_info(), LogViewerRouterComponent),
             (ExpressionRouterComponent.get_router_info(), ExpressionRouterComponent),
             (RelationshipRouterComponent.get_router_info(), RelationshipRouterComponent),
+            (ChatroomRouterComponent.get_router_info(), ChatroomRouterComponent),
+            (UIChatroomAdapter.get_adapter_info(), UIChatroomAdapter),
         ]
