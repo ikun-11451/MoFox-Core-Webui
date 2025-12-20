@@ -143,7 +143,7 @@ const handleLogin = async () => {
   padding: 24px;
   position: relative;
   overflow: hidden;
-  background: var(--md-sys-color-surface);
+  background: var(--md-sys-color-background);
 }
 
 /* 背景装饰 */
@@ -227,7 +227,7 @@ const handleLogin = async () => {
   position: relative;
   z-index: 1;
   animation: slideUp 0.5s ease-out;
-  background: var(--md-sys-color-surface-container-low);
+  background: var(--md-sys-color-surface-container);
 }
 
 @keyframes slideUp {

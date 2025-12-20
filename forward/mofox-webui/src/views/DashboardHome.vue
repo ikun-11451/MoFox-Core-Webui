@@ -8,32 +8,62 @@
       @retry="fetchAllData"
     />
 
-    <!-- 统计卡片 -->
-    <section class="stats-section">
-      <div class="stats-grid">
-        <div class="m3-card stat-card" v-for="stat in statsData" :key="stat.label">
-          <div class="stat-icon-container" :style="{ backgroundColor: stat.bgColor, color: stat.color }">
-            <span class="material-symbols-rounded stat-icon">{{ stat.icon }}</span>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value-row">
-              <span class="stat-value">{{ stat.value }}</span>
-            </div>
-            <span class="stat-label">{{ stat.label }}</span>
-          </div>
-          <div v-if="stat.subValue" class="stat-sub">
-            <span class="material-symbols-rounded sub-icon">info</span>
-            <span>{{ stat.subValue }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- 主要内容区 -->
     <section class="main-section">
       <div class="content-grid">
-        <!-- 左侧列 -->
-        <div class="grid-column">
+        <!-- 左侧列：消息统计 -->
+        <div class="grid-column chart-column">
+          <div class="m3-card chart-card">
+            <div class="card-header">
+              <div class="header-title">
+                <span class="material-symbols-rounded">bar_chart</span>
+                <h3>消息统计</h3>
+              </div>
+              <div class="header-actions">
+                <select v-model="messageStatsPeriod" @change="fetchMessageStats" class="m3-select">
+                  <option value="last_hour">最近1小时</option>
+                  <option value="last_24_hours">最近24小时</option>
+                  <option value="last_7_days">最近7天</option>
+                  <option value="last_30_days">最近30天</option>
+                </select>
+              </div>
+            </div>
+            <div class="card-body chart-body">
+              <div v-if="chartLoading" class="loading-overlay">
+                <span class="material-symbols-rounded spinning">refresh</span>
+              </div>
+              <v-chart class="chart" :option="messageChartOption" autoresize />
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧列：月度计划 & 日程 -->
+        <div class="grid-column plans-column">
+          <!-- 月度计划 -->
+          <div class="m3-card plans-card">
+            <div class="card-header">
+              <div class="header-title">
+                <span class="material-symbols-rounded">track_changes</span>
+                <h3>月度计划</h3>
+              </div>
+              <span class="m3-badge tertiary" v-if="monthlyPlans">
+                {{ monthlyPlans.total }} 项
+              </span>
+            </div>
+            <div class="card-body">
+              <div v-if="monthlyPlans?.plans?.length" class="plans-list">
+                <div class="plan-item" v-for="(plan, index) in monthlyPlans.plans" :key="index">
+                  <span class="material-symbols-rounded plan-check">check_box</span>
+                  <span class="plan-text">{{ plan }}</span>
+                </div>
+              </div>
+              <div v-else class="empty-state">
+                <span class="material-symbols-rounded empty-icon">assignment</span>
+                <p>暂无月度计划</p>
+              </div>
+            </div>
+          </div>
+
           <!-- 今日日程 -->
           <div class="m3-card schedule-card">
             <div class="card-header">
@@ -74,96 +104,32 @@
               </div>
             </div>
           </div>
-
-          <!-- 消息统计图表 -->
-          <div class="m3-card chart-card">
-            <div class="card-header">
-              <div class="header-title">
-                <span class="material-symbols-rounded">bar_chart</span>
-                <h3>消息统计</h3>
-              </div>
-              <div class="header-actions">
-                <select v-model="messageStatsPeriod" @change="fetchMessageStats" class="m3-select">
-                  <option value="last_hour">最近1小时</option>
-                  <option value="last_24_hours">最近24小时</option>
-                  <option value="last_7_days">最近7天</option>
-                  <option value="last_30_days">最近30天</option>
-                </select>
-              </div>
-            </div>
-            <div class="card-body chart-body">
-              <div v-if="chartLoading" class="loading-overlay">
-                <span class="material-symbols-rounded spinning">refresh</span>
-              </div>
-              <v-chart class="chart" :option="messageChartOption" autoresize />
-            </div>
-          </div>
         </div>
+      </div>
+    </section>
 
-        <!-- 右侧列 -->
-        <div class="grid-column">
-          <!-- 月度计划 -->
-          <div class="m3-card plans-card">
-            <div class="card-header">
-              <div class="header-title">
-                <span class="material-symbols-rounded">track_changes</span>
-                <h3>月度计划</h3>
-              </div>
-              <span class="m3-badge tertiary" v-if="monthlyPlans">
-                {{ monthlyPlans.total }} 项
-              </span>
-            </div>
-            <div class="card-body">
-              <div v-if="monthlyPlans?.plans?.length" class="plans-list">
-                <div class="plan-item" v-for="(plan, index) in monthlyPlans.plans" :key="index">
-                  <span class="material-symbols-rounded plan-check">check_box</span>
-                  <span class="plan-text">{{ plan }}</span>
-                </div>
-              </div>
-              <div v-else class="empty-state">
-                <span class="material-symbols-rounded empty-icon">assignment</span>
-                <p>暂无月度计划</p>
-              </div>
-            </div>
+    <!-- 统计卡片 -->
+    <section class="stats-section">
+      <div class="stats-grid">
+        <div 
+          class="m3-card stat-card" 
+          v-for="stat in statsData" 
+          :key="stat.label"
+          :class="{ 'clickable': !!stat.action }"
+          @click="stat.action && stat.action()"
+        >
+          <div class="stat-icon-container" :style="{ backgroundColor: stat.bgColor, color: stat.color }">
+            <span class="material-symbols-rounded stat-icon">{{ stat.icon }}</span>
           </div>
-
-          <!-- 概览小卡片 -->
-          <div class="mini-cards-grid">
-            <!-- 插件概览 -->
-            <div class="m3-card mini-card clickable" @click="showPluginListModal('loaded')">
-              <div class="mini-card-header">
-                <span class="mini-card-title">插件系统</span>
-                <span class="material-symbols-rounded arrow-icon">chevron_right</span>
-              </div>
-              <div class="mini-card-stats">
-                <div class="mini-stat">
-                  <span class="mini-value">{{ overview?.plugins.loaded_count ?? '-' }}</span>
-                  <span class="mini-label">已加载</span>
-                </div>
-                <div class="mini-stat">
-                  <span class="mini-value error">{{ overview?.plugins.failed_count ?? '-' }}</span>
-                  <span class="mini-label">失败</span>
-                </div>
-              </div>
+          <div class="stat-content">
+            <div class="stat-value-row">
+              <span class="stat-value">{{ stat.value }}</span>
             </div>
-
-            <!-- 组件概览 -->
-            <div class="m3-card mini-card clickable" @click="showComponentDetailModal('all')">
-              <div class="mini-card-header">
-                <span class="mini-card-title">组件系统</span>
-                <span class="material-symbols-rounded arrow-icon">chevron_right</span>
-              </div>
-              <div class="mini-card-stats">
-                <div class="mini-stat">
-                  <span class="mini-value">{{ overview?.components.total_count ?? '-' }}</span>
-                  <span class="mini-label">总数</span>
-                </div>
-                <div class="mini-stat">
-                  <span class="mini-value success">{{ overview?.components.enabled_count ?? '-' }}</span>
-                  <span class="mini-label">启用</span>
-                </div>
-              </div>
-            </div>
+            <span class="stat-label">{{ stat.label }}</span>
+          </div>
+          <div v-if="stat.subValue" class="stat-sub">
+            <span class="material-symbols-rounded sub-icon">info</span>
+            <span>{{ stat.subValue }}</span>
           </div>
         </div>
       </div>
@@ -419,6 +385,24 @@ const statsData = computed(() => [
     bgColor: 'var(--md-sys-color-tertiary-container)',
   },
   { 
+    label: '插件系统',
+    value: overview.value?.plugins.loaded_count ?? '-',
+    subValue: `失败 ${overview.value?.plugins.failed_count ?? 0}`,
+    icon: 'extension',
+    color: '#8ab4f8',
+    bgColor: 'rgba(138, 180, 248, 0.15)',
+    action: () => showPluginListModal('loaded')
+  },
+  { 
+    label: '组件系统',
+    value: overview.value?.components.total_count ?? '-',
+    subValue: `启用 ${overview.value?.components.enabled_count ?? 0}`,
+    icon: 'widgets',
+    color: '#f28b82',
+    bgColor: 'rgba(242, 139, 130, 0.15)',
+    action: () => showComponentDetailModal('all')
+  },
+  { 
     label: '内存占用', 
     value: formatMemory(overview.value?.system.memory_usage_mb ?? 0), 
     subValue: `CPU ${overview.value?.system.cpu_percent ?? 0}%`,
@@ -647,13 +631,21 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
   padding-bottom: 40px;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes slideUpFade {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
 }
 
 @keyframes spin {
@@ -668,86 +660,153 @@ onMounted(() => {
 /* 统计卡片区 */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
 
 .m3-card {
   background: var(--md-sys-color-surface-container);
-  border-radius: 16px;
-  padding: 20px;
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  border-radius: 24px;
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  
+  /* 初始动画状态 */
+  opacity: 0;
+  animation: slideUpFade 0.6s cubic-bezier(0.2, 0, 0, 1) forwards;
 }
+
+/* 统计卡片交错动画 */
+.stats-grid .m3-card:nth-child(1) { animation-delay: 0.1s; }
+.stats-grid .m3-card:nth-child(2) { animation-delay: 0.2s; }
+.stats-grid .m3-card:nth-child(3) { animation-delay: 0.3s; }
+.stats-grid .m3-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* 内容区卡片交错动画 */
+.content-grid .grid-column:nth-child(1) .m3-card:nth-child(1) { animation-delay: 0.5s; }
+.content-grid .grid-column:nth-child(1) .m3-card:nth-child(2) { animation-delay: 0.6s; }
+.content-grid .grid-column:nth-child(2) .m3-card:nth-child(1) { animation-delay: 0.7s; }
+.content-grid .grid-column:nth-child(2) .m3-card:nth-child(2) { animation-delay: 0.8s; }
 
 .stat-card {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 20px;
   position: relative;
   overflow: hidden;
 }
 
 .stat-card:hover {
   background: var(--md-sys-color-surface-container-high);
+  transform: translateY(-4px);
+  box-shadow: var(--md-sys-elevation-3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.stat-card.clickable {
+  cursor: pointer;
+}
+
+.stat-card.clickable:active {
   transform: translateY(-2px);
-  box-shadow: var(--md-sys-elevation-2);
+  box-shadow: var(--md-sys-elevation-1);
 }
 
 .stat-icon-container {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover .stat-icon-container {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .stat-icon {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .stat-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  min-height: 56px;
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 32px;
+  font-weight: 700;
   color: var(--md-sys-color-on-surface);
   line-height: 1.2;
+  letter-spacing: -0.5px;
+  min-width: 60px; /* 防止数字未加载时塌陷 */
+  display: inline-block;
 }
 
 .stat-label {
   font-size: 14px;
+  font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
   margin-top: 4px;
+  white-space: nowrap;
 }
 
 .stat-sub {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 20px;
+  right: 20px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: 12px;
+  font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
   background: var(--md-sys-color-surface-container-highest);
-  padding: 4px 8px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.stat-card:hover .stat-sub {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .sub-icon {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 /* 主内容网格 */
 .content-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 24px;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+
+.chart-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.plans-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 响应式调整 */
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .grid-column {
@@ -971,15 +1030,31 @@ onMounted(() => {
 
 /* 图表卡片 */
 .chart-card {
-  min-height: 300px;
+  min-height: 240px;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* 确保圆角 */
+}
+
+.chart-card .card-header {
+  background: linear-gradient(90deg, var(--md-sys-color-primary-container), var(--md-sys-color-surface-container-high));
+  margin: -24px -24px 24px -24px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.chart-card .header-title .material-symbols-rounded {
+  color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface);
+  padding: 8px;
+  border-radius: 12px;
 }
 
 .chart-body {
   flex: 1;
   position: relative;
-  min-height: 240px;
+  min-height: 180px;
 }
 
 .chart {

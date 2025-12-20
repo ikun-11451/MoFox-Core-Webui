@@ -20,7 +20,7 @@ import Sidebar from '@/components/Sidebar.vue'
 <style scoped>
 .dashboard-wrapper {
   min-height: 100vh;
-  background-color: var(--md-sys-color-surface);
+  background-color: var(--md-sys-color-background);
   display: flex;
 }
 
@@ -30,7 +30,7 @@ import Sidebar from '@/components/Sidebar.vue'
   flex-direction: column;
   overflow-x: hidden;
   min-width: 0;
-  background-color: var(--md-sys-color-surface);
+  background-color: var(--md-sys-color-background);
 }
 
 .dashboard-content {
@@ -43,17 +43,17 @@ import Sidebar from '@/components/Sidebar.vue'
 /* 页面过渡动画 */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .page-fade-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(20px);
 }
 
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-20px);
 }
 
 /* 响应式 */

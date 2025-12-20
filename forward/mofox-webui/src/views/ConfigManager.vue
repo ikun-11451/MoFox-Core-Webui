@@ -613,6 +613,10 @@ onMounted(() => {
   height: 100%;
   gap: 0;
   animation: fadeIn 0.3s ease;
+  background: var(--md-sys-color-surface);
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes fadeIn {

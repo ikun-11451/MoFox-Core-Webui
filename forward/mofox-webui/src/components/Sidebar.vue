@@ -178,7 +178,7 @@ const route = useRoute()
 const themeStore = useThemeStore()
 const userStore = useUserStore()
 
-const isCollapsed = ref(false)
+const isCollapsed = ref(true)
 
 // 可折叠组的展开状态
 const expandedGroups = reactive<Record<string, boolean>>({
@@ -288,17 +288,20 @@ const isGroupActive = (item: MenuItem) => {
 
 <style scoped>
 .sidebar {
-  height: 100vh;
+  height: calc(100vh - 32px);
+  margin: 16px;
   background: var(--md-sys-color-surface-container);
-  border-right: 1px solid var(--md-sys-color-outline-variant);
+  border-right: none;
+  border-radius: 28px;
   display: flex;
   flex-direction: column;
   position: sticky;
-  top: 0;
+  top: 16px;
   z-index: 100;
   width: 280px;
-  transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
+  transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 .sidebar.collapsed {
@@ -307,49 +310,62 @@ const isGroupActive = (item: MenuItem) => {
 
 /* 侧边栏头部 */
 .sidebar-header {
-  height: 64px;
+  height: 80px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  margin-bottom: 12px;
+  padding: 0 24px;
+  margin-bottom: 8px;
 }
 
 .logo-wrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   overflow: hidden;
-  padding: 0 8px;
+  padding: 0;
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
+  color: var(--md-sys-color-on-primary);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: var(--md-sys-elevation-2);
+  transition: all 0.3s ease;
+}
+
+.sidebar.collapsed .logo-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 12px;
 }
 
 .logo-icon span {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .logo-text {
-  font-size: 22px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--md-sys-color-on-surface);
   white-space: nowrap;
   font-family: 'Google Sans', sans-serif;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-tertiary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* 导航菜单 */
 .sidebar-nav {
   flex: 1;
-  padding: 0 12px;
+  padding: 0 16px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -357,15 +373,19 @@ const isGroupActive = (item: MenuItem) => {
 .nav-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
 .nav-section-title {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
   padding: 16px 16px 8px;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
 }
 
 .nav-item {
@@ -376,26 +396,35 @@ const isGroupActive = (item: MenuItem) => {
 .nav-item-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   height: 56px;
-  padding: 0 16px;
+  padding: 0 20px;
   border-radius: 28px;
   cursor: pointer;
   position: relative;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
   color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
 }
 
 .nav-item-content:hover {
-  background: var(--md-sys-color-surface-container-highest);
+  background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
+  transform: translateX(4px);
 }
 
 .nav-item.active .nav-item-content,
 .nav-item .nav-item-content.active {
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
+  font-weight: 600;
+}
+
+.nav-item.active .nav-item-content:hover,
+.nav-item .nav-item-content.active:hover {
+  transform: none;
+  box-shadow: var(--md-sys-elevation-1);
 }
 
 .nav-icon-wrapper {
