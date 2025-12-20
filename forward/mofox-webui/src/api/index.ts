@@ -288,7 +288,8 @@ export const API_ENDPOINTS = {
     UPDATE: (path: string) => `config/update/${path}`,
     BACKUPS: (path: string) => `config/backups/${path}`,
     RESTORE: (path: string) => `config/restore/${path}`,
-    VALIDATE: 'config/validate'
+    VALIDATE: 'config/validate',
+    TEST_MODEL: 'config/test-model'
   },
   PLUGIN: {
     LIST: 'plugin_manager/plugins',
@@ -643,6 +644,16 @@ export interface ValidateTomlResponse {
   error?: string
 }
 
+/** 模型测试响应 */
+export interface ModelTestResponse {
+  success: boolean
+  model_name: string
+  connected: boolean
+  response_time?: number
+  response_text?: string
+  error?: string
+}
+
 // ==================== 配置管理 API 方法 ====================
 
 /**
@@ -935,6 +946,15 @@ export async function getConfigBackups(path: string) {
  */
 export async function restoreConfigBackup(path: string, backupName: string) {
   return api.post<SaveConfigResponse>(`${API_ENDPOINTS.CONFIG.RESTORE(path)}?backup_name=${encodeURIComponent(backupName)}`)
+}
+
+/**
+ * 测试模型连通性
+ */
+export async function testModelConnection(modelName: string) {
+  return api.post<ModelTestResponse>(API_ENDPOINTS.CONFIG.TEST_MODEL, {
+    model_name: modelName
+  })
 }
 
 /**

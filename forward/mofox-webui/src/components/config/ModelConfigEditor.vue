@@ -265,6 +265,40 @@
                 </div>
               </div>
               
+              <!-- 模型测试 -->
+              <div class="model-test-section">
+                <button 
+                  class="test-model-btn"
+                  :class="{ 
+                    testing: testingModels[model.name || ''], 
+                    success: modelTestResults[model.name || '']?.connected === true,
+                    error: modelTestResults[model.name || '']?.connected === false
+                  }"
+                  @click.stop="testModelConnection(model.name || '')"
+                  :disabled="!model.name || testingModels[model.name || '']"
+                  :title="getTestButtonTitle(model.name || '')"
+                >
+                  <Icon v-if="testingModels[model.name || '']" icon="lucide:loader-2" class="spinning" />
+                  <Icon v-else-if="modelTestResults[model.name || '']?.connected === true" icon="lucide:check-circle" />
+                  <Icon v-else-if="modelTestResults[model.name || '']?.connected === false" icon="lucide:x-circle" />
+                  <Icon v-else icon="lucide:play-circle" />
+                  <span>{{ getTestButtonText(model.name || '') }}</span>
+                </button>
+                <div v-if="modelTestResults[model.name || '']" class="test-result">
+                  <div v-if="modelTestResults[model.name || '']?.connected" class="test-success">
+                    <Icon icon="lucide:check-circle-2" />
+                    <span>连接成功 · 响应时间: {{ modelTestResults[model.name || '']?.response_time?.toFixed(2) }}s</span>
+                    <span v-if="modelTestResults[model.name || '']?.response_text" class="response-preview">
+                      "{{ modelTestResults[model.name || '']?.response_text }}"
+                    </span>
+                  </div>
+                  <div v-else class="test-error">
+                    <Icon icon="lucide:alert-circle" />
+                    <span>连接失败: {{ modelTestResults[model.name || '']?.error }}</span>
+                  </div>
+                </div>
+              </div>
+              
               <!-- 高级选项 -->
               <div class="advanced-section">
                 <div class="advanced-header" @click="toggleModelAdvanced(index)">
@@ -1033,6 +1067,76 @@ function updateTaskConcurrency(taskKey: string, count: number) {
   emit('update', `model_task_config.${taskKey}.concurrency_count`, count)
 }
 
+// 模型测试相关
+const testingModels = ref<Record<string, boolean>>({})
+const modelTestResults = ref<Record<string, {
+  connected: boolean
+  response_time?: number
+  response_text?: string
+  error?: string
+}>>({})
+
+// 测试模型连通性
+async function testModelConnection(modelName: string) {
+  console.log('🧪 测试模型连通性:', modelName)
+  if (!modelName) {
+    console.warn('⚠️ 模型名称为空')
+    return
+  }
+  
+  // 导入 API 函数
+  const { testModelConnection: testAPI } = await import('@/api')
+  
+  // 标记为测试中
+  testingModels.value[modelName] = true
+  delete modelTestResults.value[modelName]
+  console.log('📡 开始测试模型:', modelName)
+  
+  try {
+    const response = await testAPI(modelName)
+    console.log('✅ 测试响应:', response)
+    
+    if (response.success && response.data) {
+      modelTestResults.value[modelName] = {
+        connected: response.data.connected,
+        response_time: response.data.response_time,
+        response_text: response.data.response_text,
+        error: response.data.error
+      }
+    } else {
+      modelTestResults.value[modelName] = {
+        connected: false,
+        error: response.error || '测试失败'
+      }
+    }
+  } catch (error: any) {
+    console.error('❌ 测试出错:', error)
+    modelTestResults.value[modelName] = {
+      connected: false,
+      error: error.message || '网络错误'
+    }
+  } finally {
+    testingModels.value[modelName] = false
+    console.log('🏁 测试完成:', modelName, modelTestResults.value[modelName])
+  }
+}
+
+// 获取测试按钮标题
+function getTestButtonTitle(modelName: string): string {
+  if (!modelName) return '请先配置模型名称'
+  if (testingModels.value[modelName]) return '测试中...'
+  if (modelTestResults.value[modelName]?.connected === true) return '连接成功，点击重新测试'
+  if (modelTestResults.value[modelName]?.connected === false) return '连接失败，点击重试'
+  return '测试模型连通性'
+}
+
+// 获取测试按钮文本
+function getTestButtonText(modelName: string): string {
+  if (testingModels.value[modelName]) return '测试中'
+  if (modelTestResults.value[modelName]) return '重新测试'
+  return '测试连接'
+}
+
 // 初始化
 watch(() => props.parsedData, () => {
   // 如果有提供商，默认展开第一个
@@ -1731,6 +1835,108 @@ select.form-input {
 .control-group .form-input {
   padding: 6px 10px;
   font-size: 12px;
+}
+
+/* 模型测试区域 */
+.model-test-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 测试按钮 */
+.test-model-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.test-model-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--primary);
+}
+
+.test-model-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.test-model-btn.testing {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.test-model-btn.success {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.test-model-btn.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.test-model-btn .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 测试结果 */
+.test-result {
+  font-size: 12px;
+}
+
+.test-success {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+}
+
+.test-success > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-success .response-preview {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.test-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 10px 12px;
+  border-radius: var(--radius);
 }
 
 /* 过渡动画 */

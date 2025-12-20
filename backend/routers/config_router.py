@@ -107,6 +107,21 @@ class ConfigBackupsResponse(BaseModel):
     error: Optional[str] = None
 
 
+class ModelTestRequest(BaseModel):
+    """模型测试请求"""
+    model_name: str  # 模型配置名称（如 "default", "chat" 等）
+
+
+class ModelTestResponse(BaseModel):
+    """模型测试响应"""
+    success: bool
+    model_name: str
+    connected: bool
+    response_time: Optional[float] = None  # 响应时间（秒）
+    response_text: Optional[str] = None  # 测试响应内容
+    error: Optional[str] = None
+
+
 # ==================== 工具函数 ====================
 
 def get_plugin_display_name(plugin_folder: str) -> str:
@@ -810,3 +825,79 @@ class WebUIConfigRouter(BaseRouterComponent):
                 }
             except Exception as e:
                 return {"success": False, "error": str(e)}
+        
+        @self.router.post("/test-model", summary="测试模型连通性")
+        async def test_model_connection(request: ModelTestRequest, _=VerifiedDep):
+            """
+            测试指定模型的连通性
+            
+            Args:
+                request: 包含模型名称的测求
+            
+            返回：
+            - 连接状态
+            - 响应时间
+            - 测试响应内容
+            """
+            import time
+            from src.plugin_system.apis import llm_api
+            
+            try:
+                # 获取可用的模型配置
+                models = llm_api.get_available_models()
+                logger.info(models)
+                model_config = models.get(request.model_name)
+                
+                if not model_config:
+                    return ModelTestResponse(
+                        success=True,
+                        model_name=request.model_name,
+                        connected=False,
+                        error=f"未找到模型配置: {request.model_name}"
+                    )
+                
+                # 简单的测试提示词
+                test_prompt = """你好，这是一条测试消息，请简单回复"好的"即可。"""
+                
+                # 记录开始时间
+                start_time = time.time()
+                
+                # 使用 llm_api 发送测试请求
+                success, response, _, actual_model = await llm_api.generate_with_model(
+                    prompt=test_prompt,
+                    model_config=model_config,
+                    request_type="webui.model_test",
+                    temperature=0.7,
+                    max_tokens=50
+                )
+                
+                # 计算响应时间
+                response_time = time.time() - start_time
+                
+                if success and response:
+                    logger.info(f"模型 {request.model_name} 测试成功，响应时间: {response_time:.2f}秒")
+                    return ModelTestResponse(
+                        success=True,
+                        model_name=request.model_name,
+                        connected=True,
+                        response_time=round(response_time, 2),
+                        response_text=response[:200]  # 限制响应长度
+                    )
+                else:
+                    logger.warning(f"模型 {request.model_name} 测试失败: {response}")
+                    return ModelTestResponse(
+                        success=True,
+                        model_name=request.model_name,
+                        connected=False,
+                        response_time=round(response_time, 2),
+                        error=f"模型调用失败: {response}"
+                    )
+                    
+            except Exception as e:
+                logger.error(f"测试模型 {request.model_name} 时出错: {e}")
+                return ModelTestResponse(
+                    success=False,
+                    model_name=request.model_name,
+                    connected=False,
+                    error=str(e)
+                )
