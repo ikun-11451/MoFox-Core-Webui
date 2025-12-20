@@ -72,8 +72,7 @@
               <span class="material-symbols-rounded select-arrow" :class="{ 'rotated': showBranchDropdown }">arrow_drop_down</span>
             </div>
             
-            <Transition name="fade">
-              <div v-if="showBranchDropdown" class="m3-select-dropdown m3-card">
+            <div v-if="showBranchDropdown" class="m3-select-dropdown m3-card">
                 <div 
                   v-for="branch in gitStatus.available_branches" 
                   :key="branch" 
@@ -85,7 +84,6 @@
                   <span v-if="branch === selectedBranch" class="material-symbols-rounded check-icon">check</span>
                 </div>
               </div>
-            </Transition>
           </div>
           <span v-if="switching" class="switching-indicator">
             <span class="material-symbols-rounded spinning">progress_activity</span>
@@ -979,6 +977,8 @@ onUnmounted(() => {
 /* 分支选择区域 */
 .branch-section {
   padding: 20px 24px;
+  position: relative;
+  z-index: 5;
 }
 
 .branch-header {
@@ -1070,6 +1070,10 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* 强制禁用动画 */
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 .m3-select-option {

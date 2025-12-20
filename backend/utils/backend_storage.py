@@ -6,6 +6,7 @@
 @Desc    :   WebUI 后端统一存储管理 API
 """
 
+from src.plugin_system.apis.storage_api import get_local_storage
 from typing import Any, Optional
 from pathlib import Path
 import sys
@@ -13,8 +14,6 @@ import sys
 # 将项目根目录添加到 Python 路径
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from src.plugin_system.apis.storage_api import get_local_storage
 
 
 class BackendStorage:
