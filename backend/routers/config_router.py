@@ -246,10 +246,11 @@ def apply_updates(original: dict, updates: dict) -> dict:
             else:
                 if key not in current:
                     # 检查下一个键是否是数字，决定创建 dict 还是 list
+                    # 使用 tomlkit 对象以保留注释格式
                     if i + 1 < len(keys) - 1 and keys[i + 1].isdigit():
-                        current[key] = []
+                        current[key] = tomlkit.array()
                     else:
-                        current[key] = {}
+                        current[key] = tomlkit.table()
                 current = current[key]
         
         # 设置最终值
