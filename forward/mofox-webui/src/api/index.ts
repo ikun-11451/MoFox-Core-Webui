@@ -1,3 +1,5 @@
+import { MOCK_DATA } from './mock'
+
 /**
  * API 请求模块
  * 统一管理所有 API 请求
@@ -25,6 +27,11 @@ interface ServerInfo {
  * 从发现服务器获取主程序信息
  */
 export async function getServerInfo(): Promise<ServerInfo> {
+  // Demo 模式下直接返回模拟数据
+  if (import.meta.env.MODE === 'demo') {
+    return { host: 'localhost', port: 8080 }
+  }
+
   // 如果有缓存，直接返回
   if (cachedServerInfo) {
     return cachedServerInfo
@@ -108,6 +115,57 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<{ success: boolean; data?: T; error?: string; status: number }> {
+    // Demo 模式拦截
+    if (import.meta.env.MODE === 'demo') {
+      console.log(`[Demo Mode] Request: ${endpoint}`, options)
+      
+      // 模拟网络延迟
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // 登录特殊处理
+      if (endpoint === 'auth/login') {
+        const body = options.body ? JSON.parse(options.body as string) : {}
+        if (body === 'mofox' || (typeof body === 'string' && body.includes('mofox'))) { // 简单判断，实际 body 可能是 JSON 字符串
+           // 实际上 post 方法传入的 body 已经被 JSON.stringify 了，所以这里 options.body 是字符串
+           // 如果直接传字符串给 post，body 就是 JSON 字符串。
+           // 让我们更严谨一点解析
+           let password = ''
+           try {
+             // 假设 body 是直接传的密码字符串，或者 { password: ... }
+             // 根据 Login.vue: api.get(API_ENDPOINTS.AUTH.LOGIN) 
+             // 等等，Login.vue 中是 api.get(API_ENDPOINTS.AUTH.LOGIN) 并且 api.setToken(password)
+             // 它是通过 Header 传密码的！
+             // 让我们再看一眼 Login.vue
+           } catch (e) {}
+        }
+        
+        // Login.vue 逻辑：
+        // api.setToken(loginForm.password)
+        // const result = await api.get(API_ENDPOINTS.AUTH.LOGIN)
+        // 所以这里是 GET 请求，密码在 Header 'X-API-Key' 中
+        
+        const token = this.token
+        if (token === 'mofox') {
+          return { success: true, data: MOCK_DATA.login.data as unknown as T, status: 200 }
+        } else {
+          return { success: false, error: '密钥错误 (Demo模式密码: mofox)', status: 401 }
+        }
+      }
+
+      // 其他接口 Mock
+      if (endpoint === 'dashboard/overview') return { success: true, data: MOCK_DATA.overview.data as unknown as T, status: 200 }
+      if (endpoint === 'dashboard/schedule') return { success: true, data: MOCK_DATA.schedule.data as unknown as T, status: 200 }
+      if (endpoint === 'dashboard/monthly_plans') return { success: true, data: MOCK_DATA.monthlyPlans.data as unknown as T, status: 200 }
+      if (endpoint === 'stats/llm') return { success: true, data: MOCK_DATA.llmStats.data as unknown as T, status: 200 }
+      if (endpoint === 'stats/messages') return { success: true, data: MOCK_DATA.messageStats.data as unknown as T, status: 200 }
+      if (endpoint === 'plugins/list') return { success: true, data: MOCK_DATA.plugins.data as unknown as T, status: 200 }
+      if (endpoint === 'components/list') return { success: true, data: MOCK_DATA.components.data as unknown as T, status: 200 }
+      if (endpoint === 'logs/list') return { success: true, data: MOCK_DATA.logs.data as unknown as T, status: 200 }
+
+      // 默认返回成功
+      return { success: true, data: { success: true } as unknown as T, status: 200 }
+    }
+
     const url = await this.buildUrl(endpoint)
     
     const headers = new Headers(options.headers)

@@ -52,7 +52,7 @@
             </div>
             <div class="card-body">
               <div v-if="monthlyPlans?.plans?.length" class="plans-list">
-                <div class="plan-item" v-for="(plan, index) in monthlyPlans.plans" :key="index">
+                <div class="plan-item" v-for="(plan, index) in monthlyPlans.plans.slice(0, 3)" :key="index">
                   <span class="material-symbols-rounded plan-check">check_box</span>
                   <span class="plan-text">{{ plan }}</span>
                 </div>
@@ -788,6 +788,8 @@ onMounted(() => {
   gap: 24px;
   align-items: stretch;
   margin-bottom: 24px;
+  height: 55vh;
+  min-height: 500px;
 }
 
 .chart-column {
@@ -800,6 +802,26 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  height: 100%;
+}
+
+.plans-column .plans-card {
+  flex: 0 0 auto;
+}
+
+.plans-column .schedule-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.plans-column .schedule-card .card-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 响应式调整 */
@@ -896,7 +918,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 320px;
+  flex: 1;
   overflow-y: auto;
   padding-right: 8px;
 }
@@ -946,8 +968,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 320px;
-  overflow-y: auto;
+  height: auto;
+  overflow-y: hidden;
   padding-right: 8px;
 }
 
