@@ -767,7 +767,8 @@ onUnmounted(() => {
   overflow-x: auto;
   padding: 12px;
   min-height: 0;
-  background: #1e1e1e; /* 深色背景 */
+  background: rgba(30, 30, 30, 0.6); /* 半透明背景 */
+  border-radius: 12px; /* 圆角 */
   color: #d4d4d4; /* 浅色文字 */
   font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
 }

@@ -13,6 +13,8 @@ export const useThemeStore = defineStore('theme', () => {
   const theme = ref(localStorage.getItem('theme') || 'light')
   const sourceColor = ref(localStorage.getItem('sourceColor') || '#6750A4')
   const wallpaper = ref(localStorage.getItem('wallpaper') || '')
+  const wallpaperOpacity = ref(Number(localStorage.getItem('wallpaperOpacity')) || 0.5)
+  const wallpaperBlur = ref(Number(localStorage.getItem('wallpaperBlur')) || 20)
 
   const toggleTheme = () => {
     theme.value = theme.value === 'light' ? 'dark' : 'light'
@@ -20,6 +22,18 @@ export const useThemeStore = defineStore('theme', () => {
 
   const setSourceColor = (color: string) => {
     sourceColor.value = color
+  }
+
+  const setWallpaperOpacity = (opacity: number) => {
+    wallpaperOpacity.value = opacity
+    localStorage.setItem('wallpaperOpacity', String(opacity))
+    applyWallpaper()
+  }
+
+  const setWallpaperBlur = (blur: number) => {
+    wallpaperBlur.value = blur
+    localStorage.setItem('wallpaperBlur', String(blur))
+    applyWallpaper()
   }
 
   const setWallpaper = async (file: File | null) => {
@@ -47,9 +61,13 @@ export const useThemeStore = defineStore('theme', () => {
     const root = document.documentElement
     if (wallpaper.value) {
       root.style.setProperty('--app-wallpaper', `url(${wallpaper.value})`)
+      root.style.setProperty('--app-wallpaper-opacity', String(wallpaperOpacity.value))
+      root.style.setProperty('--app-wallpaper-blur', `${wallpaperBlur.value}px`)
       root.classList.add('has-wallpaper')
     } else {
       root.style.removeProperty('--app-wallpaper')
+      root.style.removeProperty('--app-wallpaper-opacity')
+      root.style.removeProperty('--app-wallpaper-blur')
       root.classList.remove('has-wallpaper')
     }
   }
@@ -161,9 +179,13 @@ export const useThemeStore = defineStore('theme', () => {
     theme,
     sourceColor,
     wallpaper,
+    wallpaperOpacity,
+    wallpaperBlur,
     isDark,
     toggleTheme,
     setSourceColor,
-    setWallpaper
+    setWallpaper,
+    setWallpaperOpacity,
+    setWallpaperBlur
   }
 })

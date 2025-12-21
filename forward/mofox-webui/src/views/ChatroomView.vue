@@ -934,6 +934,8 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 16px;
+  background: var(--md-sys-color-surface);
 }
 
 .chat-header {

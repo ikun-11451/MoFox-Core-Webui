@@ -340,7 +340,9 @@ onMounted(() => {
 
 /* 页面标题 */
 .page-header {
-  padding: 0 8px;
+  padding: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 24px;
 }
 
 .header-content {
@@ -450,7 +452,7 @@ onMounted(() => {
   padding: 6px 16px;
   border: 1px solid var(--md-sys-color-outline);
   border-radius: 8px;
-  background: transparent;
+  background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface-variant);
   font-size: 14px;
   font-weight: 500;

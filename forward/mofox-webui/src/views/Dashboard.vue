@@ -38,8 +38,8 @@ import Sidebar from '@/components/Sidebar.vue'
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(20px);
-  opacity: 0.5;
+  filter: blur(var(--app-wallpaper-blur, 20px));
+  opacity: var(--app-wallpaper-opacity, 0.5);
   z-index: -1;
 }
 
@@ -63,8 +63,8 @@ import Sidebar from '@/components/Sidebar.vue'
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(20px);
-  opacity: 0.5;
+  filter: blur(var(--app-wallpaper-blur, 20px));
+  opacity: var(--app-wallpaper-opacity, 0.5);
   z-index: -1;
 }
 

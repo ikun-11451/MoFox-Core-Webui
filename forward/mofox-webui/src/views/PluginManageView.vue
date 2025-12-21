@@ -563,7 +563,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 8px;
+  padding: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 24px;
 }
 
 .header-content h1 {
@@ -664,7 +666,7 @@ onMounted(() => {
   padding: 0 16px;
   border-radius: 8px;
   border: 1px solid var(--md-sys-color-outline);
-  background: transparent;
+  background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface-variant);
   font-size: 14px;
   font-weight: 500;

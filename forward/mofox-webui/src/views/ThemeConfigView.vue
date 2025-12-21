@@ -64,6 +64,33 @@
             <p class="hint">上传壁纸后将自动提取主题色</p>
           </div>
         </div>
+        
+        <div class="wallpaper-settings" v-if="themeStore.wallpaper">
+            <div class="setting-row">
+              <span class="setting-label">不透明度</span>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.1" 
+                :value="themeStore.wallpaperOpacity" 
+                @input="e => themeStore.setWallpaperOpacity(Number((e.target as HTMLInputElement).value))"
+              >
+              <span class="setting-value">{{ themeStore.wallpaperOpacity }}</span>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">模糊度</span>
+              <input 
+                type="range" 
+                min="0" 
+                max="50" 
+                step="1" 
+                :value="themeStore.wallpaperBlur" 
+                @input="e => themeStore.setWallpaperBlur(Number((e.target as HTMLInputElement).value))"
+              >
+              <span class="setting-value">{{ themeStore.wallpaperBlur }}px</span>
+            </div>
+        </div>
       </div>
 
       <!-- 颜色选择 -->
@@ -95,6 +122,24 @@
               <span class="material-symbols-rounded more-icon" :style="{ color: !isPreset(themeStore.sourceColor) ? '#fff' : '' }">palette</span>
             </div>
             <span class="preset-label">自定义</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="config-section" v-if="extractedColors.length > 0">
+        <h2>图片取色</h2>
+        <div class="color-presets">
+          <button
+            v-for="color in extractedColors"
+            :key="color"
+            class="preset-item"
+            :class="{ active: themeStore.sourceColor.toLowerCase() === color.toLowerCase() }"
+            @click="themeStore.setSourceColor(color)"
+            :title="color"
+          >
+            <div class="preset-circle" :style="getPresetStyle({ source: color })">
+               <span v-if="themeStore.sourceColor.toLowerCase() === color.toLowerCase()" class="material-symbols-rounded check-icon">check</span>
+            </div>
           </button>
         </div>
       </div>
@@ -251,10 +296,51 @@ import {
   argbFromHex, 
   themeFromSourceColor, 
   hexFromArgb,
-  sourceColorFromImage
+  sourceColorFromImage,
+  QuantizerCelebi,
+  Score,
+  argbFromRgb
 } from '@material/material-color-utilities'
 
 const themeStore = useThemeStore()
+const extractedColors = ref<string[]>([])
+
+const extractColorsFromImage = (img: HTMLImageElement) => {
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  if (context) {
+      const maxDimension = 128
+      const scale = Math.min(maxDimension / img.width, maxDimension / img.height)
+      const width = Math.floor(img.width * scale)
+      const height = Math.floor(img.height * scale)
+
+      canvas.width = width
+      canvas.height = height
+      context.drawImage(img, 0, 0, width, height)
+      const imageData = context.getImageData(0, 0, width, height)
+      const pixels = imageData.data
+      
+      const pixelArray = []
+      for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i]
+        const g = pixels[i + 1]
+        const b = pixels[i + 2]
+        const a = pixels[i + 3]
+        if (a < 255) {
+            continue
+        }
+        const argb = argbFromRgb(r, g, b)
+        pixelArray.push(argb)
+      }
+      
+      const result = QuantizerCelebi.quantize(pixelArray, 128)
+      const ranked = Score.score(result)
+      const topColors = ranked.slice(0, 4).map(c => hexFromArgb(c))
+      extractedColors.value = topColors
+      return topColors
+  }
+  return []
+}
 
 // Wallpaper Logic
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -281,9 +367,12 @@ const handleWallpaperUpload = async (event: Event) => {
         img.onload = resolve
       })
       
-      const color = await sourceColorFromImage(img)
-      const hex = hexFromArgb(color)
-      themeStore.setSourceColor(hex)
+      // Extract multiple colors
+      const topColors = extractColorsFromImage(img)
+      
+      if (topColors.length > 0) {
+         themeStore.setSourceColor(topColors[0])
+      }
     }
     
     reader.readAsDataURL(file)
@@ -292,6 +381,7 @@ const handleWallpaperUpload = async (event: Event) => {
 
 const removeWallpaper = () => {
   themeStore.setWallpaper(null)
+  extractedColors.value = []
   if (fileInput.value) {
     fileInput.value.value = ''
   }
@@ -506,11 +596,25 @@ const onMouseMove = (e: MouseEvent | TouchEvent) => {
   if (isDraggingHue.value) handleHueDrag(e)
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', stopDrag)
   window.addEventListener('touchmove', onMouseMove)
   window.addEventListener('touchend', stopDrag)
+  
+  if (themeStore.wallpaper) {
+      const img = new Image()
+      img.crossOrigin = "Anonymous"
+      img.src = themeStore.wallpaper
+      await new Promise((resolve, reject) => {
+        img.onload = resolve
+        img.onerror = reject
+      }).catch(() => {})
+      
+      if (img.complete && img.naturalWidth > 0) {
+          extractColorsFromImage(img)
+      }
+  }
 })
 
 onUnmounted(() => {
@@ -565,12 +669,22 @@ const getPresetName = (color: string) => {
 }
 
 const getPresetStyle = (preset: any) => {
+  let c1, c2, c3, c4;
+  if (preset.c1) {
+      c1 = preset.c1; c2 = preset.c2; c3 = preset.c3; c4 = preset.c4;
+  } else {
+      const theme = themeFromSourceColor(argbFromHex(preset.source))
+      c1 = hexFromArgb(theme.schemes.light.primary)
+      c2 = hexFromArgb(theme.schemes.light.secondaryContainer)
+      c3 = hexFromArgb(theme.schemes.light.tertiaryContainer)
+      c4 = hexFromArgb(theme.schemes.light.surfaceVariant)
+  }
   return {
     background: `conic-gradient(
-      ${preset.c1} 0% 25%, 
-      ${preset.c2} 25% 50%, 
-      ${preset.c3} 50% 75%, 
-      ${preset.c4} 75% 100%
+      ${c1} 0% 25%, 
+      ${c2} 25% 50%, 
+      ${c3} 50% 75%, 
+      ${c4} 75% 100%
     )`
   }
 }
@@ -582,12 +696,13 @@ const getPresetStyle = (preset: any) => {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  border-radius: 16px;
   overflow-y: auto;
 }
 
 .page-header {
   padding: 24px 32px;
-  background: var(--bg-primary);
+  background: transparent;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -1223,6 +1338,34 @@ const getPresetStyle = (preset: any) => {
   font-size: 12px;
   color: var(--md-sys-color-on-surface-variant);
   margin: 0;
+}
+
+.wallpaper-settings {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.setting-label {
+  width: 80px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.setting-value {
+  width: 40px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: right;
 }
 
 .hue-slider {

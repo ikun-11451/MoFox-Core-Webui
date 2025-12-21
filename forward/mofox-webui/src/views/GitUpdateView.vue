@@ -909,6 +909,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  padding: 24px;
+  background: var(--md-sys-color-surface-container);
+  border-radius: 24px;
 }
 
 .header-content {
