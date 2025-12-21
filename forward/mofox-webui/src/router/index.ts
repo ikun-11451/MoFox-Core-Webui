@@ -17,6 +17,7 @@ import ExpressionView from '@/views/ExpressionView.vue'
 import RelationshipView from '@/views/RelationshipView.vue'
 import ThemeConfigView from '@/views/ThemeConfigView.vue'
 import ChatroomView from '@/views/ChatroomView.vue'
+import EmojiManager from '@/components/emoji/EmojiManager.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -96,6 +97,11 @@ const routes: Array<RouteRecordRaw> = [
         path: 'relationship',
         name: 'Relationship',
         component: RelationshipView
+      },
+      {
+        path: 'emoji-manager',
+        name: 'EmojiManager',
+        component: EmojiManager
       },
       {
         path: 'chatroom',

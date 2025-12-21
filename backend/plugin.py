@@ -21,17 +21,18 @@ from src.plugin_system.base.config_types import ConfigField
 from .handlers import WebUIShutdownHandler, WebUIStartupHandler
 from .routers import (
     ChatroomRouterComponent,
+    EmojiManagerRouterComponent,
+    ExpressionRouterComponent,
     GitUpdateRouterComponent,
+    LogViewerRouterComponent,
     MarketplaceRouterComponent,
+    RelationshipRouterComponent,
     WebUIAuthRouter,
     WebUIConfigRouter,
-    WebUIPluginRouter,
-    WebUIStatsRouter,
-    LogViewerRouterComponent,
-    ExpressionRouterComponent,
-    RelationshipRouterComponent,
     WebUIModelRouter,
+    WebUIPluginRouter,
     WebUISettingRouter,
+    WebUIStatsRouter,
 )
 from .adapters import UIChatroomAdapter
 
@@ -122,6 +123,7 @@ class WebUIAuthPlugin(BasePlugin):
             (LogViewerRouterComponent.get_router_info(), LogViewerRouterComponent),
             (ExpressionRouterComponent.get_router_info(), ExpressionRouterComponent),
             (RelationshipRouterComponent.get_router_info(), RelationshipRouterComponent),
+            (EmojiManagerRouterComponent.get_router_info(), EmojiManagerRouterComponent),
             (ChatroomRouterComponent.get_router_info(), ChatroomRouterComponent),
             (UIChatroomAdapter.get_adapter_info(), UIChatroomAdapter),
             (WebUIModelRouter.get_router_info(),WebUIModelRouter),

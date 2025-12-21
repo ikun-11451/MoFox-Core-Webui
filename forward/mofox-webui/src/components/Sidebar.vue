@@ -256,6 +256,7 @@ const menuItems: MenuItem[] = [
   { name: 'UI 聊天室', path: '/dashboard/chatroom', icon: 'forum' },
   { name: '系统更新', path: '/dashboard/git-update', icon: 'system_update' },
   { name: '风格与壁纸', path: '/dashboard/theme', icon: 'palette' },
+  { name: '表情管理', path: '/dashboard/emoji-manager', icon: 'insert_emoticon' },
 ]
 
 const toggleSidebar = () => {

@@ -322,6 +322,15 @@ export const API_ENDPOINTS = {
     BATCH_ENABLE: 'plugin_manager/plugins/batch/enable',
     BATCH_DISABLE: 'plugin_manager/plugins/batch/disable',
     BATCH_RELOAD: 'plugin_manager/plugins/batch/reload'
+  },
+  EMOJI: {
+    LIST: 'emoji/list',
+    DETAIL: (hash: string) => `emoji/${hash}`,
+    UPLOAD: 'emoji/upload',
+    DELETE: (hash: string) => `emoji/${hash}`,
+    UPDATE: (hash: string) => `emoji/${hash}`,
+    BATCH: 'emoji/batch',
+    STATS: 'emoji/stats'
   }
 } as const
 
