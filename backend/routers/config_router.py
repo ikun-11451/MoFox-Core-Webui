@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
-from src.config.config import CONFIG_DIR, model_config
+from src.config.config import CONFIG_DIR
 from src.plugin_system import BaseRouterComponent
 from src.plugin_system.core.plugin_manager import plugin_manager
 

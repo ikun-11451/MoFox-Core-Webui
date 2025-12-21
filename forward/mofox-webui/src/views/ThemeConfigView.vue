@@ -36,6 +36,36 @@
         </div>
       </div>
 
+      <!-- 壁纸设置 -->
+      <div class="config-section">
+        <h2>壁纸</h2>
+        <div class="wallpaper-upload">
+          <div class="wallpaper-preview" :style="wallpaperPreviewStyle">
+            <div v-if="!themeStore.wallpaper" class="placeholder">
+              <span class="material-symbols-rounded">image</span>
+              <span>暂无壁纸</span>
+            </div>
+            <button v-else class="remove-btn" @click="removeWallpaper" title="移除壁纸">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+          <div class="upload-controls">
+            <input 
+              type="file" 
+              ref="fileInput" 
+              accept="image/*" 
+              style="display: none" 
+              @change="handleWallpaperUpload"
+            >
+            <button class="btn-primary" @click="triggerUpload">
+              <span class="material-symbols-rounded">upload</span>
+              上传壁纸
+            </button>
+            <p class="hint">上传壁纸后将自动提取主题色</p>
+          </div>
+        </div>
+      </div>
+
       <!-- 颜色选择 -->
       <div class="config-section">
         <h2>基本颜色</h2>
@@ -220,10 +250,63 @@ import { useThemeStore } from '@/stores/theme'
 import { 
   argbFromHex, 
   themeFromSourceColor, 
-  hexFromArgb 
+  hexFromArgb,
+  sourceColorFromImage
 } from '@material/material-color-utilities'
 
 const themeStore = useThemeStore()
+
+// Wallpaper Logic
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const triggerUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleWallpaperUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    
+    // Upload wallpaper
+    await themeStore.setWallpaper(file)
+    
+    // Extract color
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const result = e.target?.result as string
+      const img = new Image()
+      img.src = result
+      await new Promise((resolve) => {
+        img.onload = resolve
+      })
+      
+      const color = await sourceColorFromImage(img)
+      const hex = hexFromArgb(color)
+      themeStore.setSourceColor(hex)
+    }
+    
+    reader.readAsDataURL(file)
+  }
+}
+
+const removeWallpaper = () => {
+  themeStore.setWallpaper(null)
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+const wallpaperPreviewStyle = computed(() => {
+  if (themeStore.wallpaper) {
+    return {
+      backgroundImage: `url(${themeStore.wallpaper})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center'
+    }
+  }
+  return {}
+})
 
 // Custom Color Modal Logic
 const showColorModal = ref(false)
@@ -1056,6 +1139,90 @@ const getPresetStyle = (preset: any) => {
   box-shadow: 0 0 2px rgba(0,0,0,0.5);
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+/* Wallpaper Upload Styles */
+.wallpaper-upload {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.wallpaper-preview {
+  width: 240px;
+  height: 135px;
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.wallpaper-preview .placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.wallpaper-preview .placeholder .material-symbols-rounded {
+  font-size: 32px;
+}
+
+.wallpaper-preview .remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.wallpaper-preview .remove-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.upload-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0;
 }
 
 .hue-slider {

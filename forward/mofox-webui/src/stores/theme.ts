@@ -4,12 +4,15 @@ import {
   argbFromHex, 
   themeFromSourceColor, 
   hexFromArgb,
+  sourceColorFromImage,
   type Theme
 } from '@material/material-color-utilities'
+import { uploadWallpaper as apiUploadWallpaper, deleteWallpaper as apiDeleteWallpaper, getWallpaperUrl } from '@/api/setting'
 
 export const useThemeStore = defineStore('theme', () => {
   const theme = ref(localStorage.getItem('theme') || 'light')
   const sourceColor = ref(localStorage.getItem('sourceColor') || '#6750A4')
+  const wallpaper = ref(localStorage.getItem('wallpaper') || '')
 
   const toggleTheme = () => {
     theme.value = theme.value === 'light' ? 'dark' : 'light'
@@ -17,6 +20,38 @@ export const useThemeStore = defineStore('theme', () => {
 
   const setSourceColor = (color: string) => {
     sourceColor.value = color
+  }
+
+  const setWallpaper = async (file: File | null) => {
+    try {
+      if (file) {
+        const res = await apiUploadWallpaper(file)
+        if (res.success) {
+          // 获取完整的URL
+          const url = await getWallpaperUrl()
+          wallpaper.value = url
+          localStorage.setItem('wallpaper', url)
+        }
+      } else {
+        await apiDeleteWallpaper()
+        wallpaper.value = ''
+        localStorage.removeItem('wallpaper')
+      }
+      applyWallpaper()
+    } catch (e) {
+      console.error('Failed to set wallpaper:', e)
+    }
+  }
+
+  const applyWallpaper = () => {
+    const root = document.documentElement
+    if (wallpaper.value) {
+      root.style.setProperty('--app-wallpaper', `url(${wallpaper.value})`)
+      root.classList.add('has-wallpaper')
+    } else {
+      root.style.removeProperty('--app-wallpaper')
+      root.classList.remove('has-wallpaper')
+    }
   }
 
   const updateTheme = () => {
@@ -105,6 +140,7 @@ export const useThemeStore = defineStore('theme', () => {
       // Persist settings
       localStorage.setItem('theme', theme.value)
       localStorage.setItem('sourceColor', sourceColor.value)
+      applyWallpaper()
     } catch (e) {
       console.error('Failed to apply theme:', e)
     }
@@ -114,13 +150,20 @@ export const useThemeStore = defineStore('theme', () => {
     updateTheme()
   }, { immediate: true })
 
+  // Watch wallpaper separately to ensure it applies even if theme doesn't change
+  watch(wallpaper, () => {
+    applyWallpaper()
+  })
+
   const isDark = computed(() => theme.value === 'dark')
 
   return {
     theme,
     sourceColor,
+    wallpaper,
     isDark,
     toggleTheme,
-    setSourceColor
+    setSourceColor,
+    setWallpaper
   }
 })

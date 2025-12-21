@@ -67,6 +67,14 @@ export async function getApiBaseUrl(): Promise<string> {
 }
 
 /**
+ * 获取插件 API 基础 URL
+ */
+export async function getPluginBaseUrl(): Promise<string> {
+  const apiBase = await getApiBaseUrl()
+  return `${apiBase}${PLUGIN_BASE_PATH}`
+}
+
+/**
  * API 请求类
  */
 class ApiClient {
@@ -175,8 +183,8 @@ class ApiClient {
       headers.set('X-API-Key', this.token)
     }
     
-    // 设置默认 Content-Type
-    if (!headers.has('Content-Type') && options.body) {
+    // 设置默认 Content-Type（除非是 FormData，让浏览器自动设置）
+    if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
       headers.set('Content-Type', 'application/json')
     }
 

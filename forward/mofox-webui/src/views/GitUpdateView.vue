@@ -1541,7 +1541,7 @@ onUnmounted(() => {
   padding: 10px 20px;
   background: var(--md-sys-color-surface-container-highest);
   border-radius: 8px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Roboto Mono', monospace;
   font-size: 14px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface);

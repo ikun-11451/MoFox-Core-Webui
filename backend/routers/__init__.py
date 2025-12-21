@@ -13,6 +13,7 @@ from .plugin_router import WebUIPluginRouter
 from .relationship_router import RelationshipRouterComponent
 from .stats_router import WebUIStatsRouter
 from .model_router import WebUIModelRouter
+from .setting_router import WebUISettingRouter
 
 __all__ = [
     "ChatroomRouterComponent",
@@ -26,4 +27,5 @@ __all__ = [
     "WebUIConfigRouter",
     "WebUIPluginRouter",
     "WebUIStatsRouter",
+    "WebUISettingRouter",
 ]
