@@ -105,101 +105,112 @@
     </div>
 
     <!-- 自定义颜色弹窗 -->
-    <Modal 
-      v-model="showColorModal"
-      title="自定义主题色"
-      icon="palette"
-      width="600px"
-      :large="true"
-      @confirm="applyCustomColor"
-    >
-      <!-- HSV Color Picker -->
-      <div class="hsv-picker">
-        <div 
-          class="saturation-area" 
-          ref="saturationArea"
-          :style="{ backgroundColor: `hsl(${hsv.h}, 100%, 50%)` }"
-          @mousedown="startDragSaturation"
-          @touchstart.prevent="startDragSaturation"
-        >
-          <div class="saturation-white"></div>
-          <div class="saturation-black"></div>
-          <div 
-            class="saturation-cursor" 
-            :style="{ 
-              left: `${hsv.s}%`, 
-              top: `${100 - hsv.v}%`,
-              backgroundColor: tempColor
-            }"
-          ></div>
-        </div>
-        <div 
-          class="hue-slider" 
-          ref="hueSlider"
-          @mousedown="startDragHue"
-          @touchstart.prevent="startDragHue"
-        >
-          <div 
-            class="hue-cursor" 
-            :style="{ left: `${(hsv.h / 360) * 100}%` }"
-          ></div>
-        </div>
-      </div>
-      
-      <div class="color-controls">
-        <!-- Hex 输入 -->
-        <div class="hex-input-wrapper">
-          <span class="hex-prefix">#</span>
-          <input 
-            type="text" 
-            v-model="tempHex" 
-            @input="handleHexInput"
-            class="hex-input"
-            maxlength="6"
-          />
-        </div>
+    <Transition name="fade">
+      <div v-if="showColorModal" class="modal-overlay" @click="closeColorModal">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>自定义主题色</h3>
+            <button class="close-btn" @click="closeColorModal">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+          
+          <div class="modal-body">
+            <!-- HSV Color Picker -->
+            <div class="hsv-picker">
+              <div 
+                class="saturation-area" 
+                ref="saturationArea"
+                :style="{ backgroundColor: `hsl(${hsv.h}, 100%, 50%)` }"
+                @mousedown="startDragSaturation"
+                @touchstart.prevent="startDragSaturation"
+              >
+                <div class="saturation-white"></div>
+                <div class="saturation-black"></div>
+                <div 
+                  class="saturation-cursor" 
+                  :style="{ 
+                    left: `${hsv.s}%`, 
+                    top: `${100 - hsv.v}%`,
+                    backgroundColor: tempColor
+                  }"
+                ></div>
+              </div>
+              <div 
+                class="hue-slider" 
+                ref="hueSlider"
+                @mousedown="startDragHue"
+                @touchstart.prevent="startDragHue"
+              >
+                <div 
+                  class="hue-cursor" 
+                  :style="{ left: `${(hsv.h / 360) * 100}%` }"
+                ></div>
+              </div>
+            </div>
+            
+            <div class="color-controls">
+              <!-- Hex 输入 -->
+              <div class="hex-input-wrapper">
+                <span class="hex-prefix">#</span>
+                <input 
+                  type="text" 
+                  v-model="tempHex" 
+                  @input="handleHexInput"
+                  class="hex-input"
+                  maxlength="6"
+                />
+              </div>
 
-        <!-- RGB 滑块 -->
-        <div class="sliders-container">
-          <div class="slider-row">
-            <span class="slider-label red">R</span>
-            <input 
-              type="range" 
-              min="0" 
-              max="255" 
-              v-model.number="tempRgb.r"
-              @input="handleRgbInput"
-              class="color-slider red-slider"
-            />
-            <span class="slider-value">{{ tempRgb.r }}</span>
+              <!-- RGB 滑块 -->
+              <div class="sliders-container">
+                <div class="slider-row">
+                  <span class="slider-label red">R</span>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="255" 
+                    v-model.number="tempRgb.r"
+                    @input="handleRgbInput"
+                    class="color-slider red-slider"
+                  />
+                  <span class="slider-value">{{ tempRgb.r }}</span>
+                </div>
+                <div class="slider-row">
+                  <span class="slider-label green">G</span>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="255" 
+                    v-model.number="tempRgb.g"
+                    @input="handleRgbInput"
+                    class="color-slider green-slider"
+                  />
+                  <span class="slider-value">{{ tempRgb.g }}</span>
+                </div>
+                <div class="slider-row">
+                  <span class="slider-label blue">B</span>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="255" 
+                    v-model.number="tempRgb.b"
+                    @input="handleRgbInput"
+                    class="color-slider blue-slider"
+                  />
+                  <span class="slider-value">{{ tempRgb.b }}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="slider-row">
-            <span class="slider-label green">G</span>
-            <input 
-              type="range" 
-              min="0" 
-              max="255" 
-              v-model.number="tempRgb.g"
-              @input="handleRgbInput"
-              class="color-slider green-slider"
-            />
-            <span class="slider-value">{{ tempRgb.g }}</span>
-          </div>
-          <div class="slider-row">
-            <span class="slider-label blue">B</span>
-            <input 
-              type="range" 
-              min="0" 
-              max="255" 
-              v-model.number="tempRgb.b"
-              @input="handleRgbInput"
-              class="color-slider blue-slider"
-            />
-            <span class="slider-value">{{ tempRgb.b }}</span>
+
+          <div class="modal-footer">
+            <button class="btn-text" @click="closeColorModal">取消</button>
+            <button class="btn-filled" @click="applyCustomColor">应用</button>
           </div>
         </div>
       </div>
-    </Modal>
+    </Transition>
   </div>
 </template>
 
@@ -211,7 +222,6 @@ import {
   themeFromSourceColor, 
   hexFromArgb 
 } from '@material/material-color-utilities'
-import Modal from '@/components/common/Modal.vue'
 
 const themeStore = useThemeStore()
 

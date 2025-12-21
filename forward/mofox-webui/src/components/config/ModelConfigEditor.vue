@@ -460,101 +460,116 @@
     </div>
 
     <!-- 添加提供商弹窗 -->
-    <Modal 
-      v-model="showAddProviderModal"
-      title="添加 API 提供商"
-      icon="lucide:plus-circle"
-      width="600px"
-      :confirm-disabled="!newProvider.name || !newProvider.base_url"
-      @confirm="confirmAddProvider"
-    >
-      <!-- 预设模板 -->
-      <div class="preset-providers">
-        <h4>选择预设模板</h4>
-        <div class="preset-grid">
-          <button 
-            v-for="preset in providerPresets" 
-            :key="preset.name"
-            class="preset-btn"
-            :class="{ active: newProvider.name === preset.name }"
-            @click="selectPreset(preset)"
-          >
-            <Icon :icon="preset.icon" />
-            <span>{{ preset.name }}</span>
-            <small>{{ preset.description }}</small>
+    <div v-if="showAddProviderModal" class="modal-overlay" @click.self="showAddProviderModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>
+            <Icon icon="lucide:plus-circle" />
+            添加 API 提供商
+          </h3>
+          <button class="close-btn" @click="showAddProviderModal = false">
+            <Icon icon="lucide:x" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- 预设模板 -->
+          <div class="preset-providers">
+            <h4>选择预设模板</h4>
+            <div class="preset-grid">
+              <button 
+                v-for="preset in providerPresets" 
+                :key="preset.name"
+                class="preset-btn"
+                :class="{ active: newProvider.name === preset.name }"
+                @click="selectPreset(preset)"
+              >
+                <Icon :icon="preset.icon" />
+                <span>{{ preset.name }}</span>
+                <small>{{ preset.description }}</small>
+              </button>
+            </div>
+          </div>
+          
+          <div class="divider">
+            <span>配置详情</span>
+          </div>
+          
+          <div class="manual-config">
+            <div class="config-field">
+              <label>提供商名称</label>
+              <input v-model="newProvider.name" type="text" class="input" placeholder="例如: DeepSeek" />
+            </div>
+            <div class="config-field">
+              <label>API 地址</label>
+              <input v-model="newProvider.base_url" type="text" class="input" placeholder="https://api.example.com/v1" />
+            </div>
+            <div class="config-field">
+              <label>API 密钥</label>
+              <input v-model="newProvider.api_key" type="password" class="input" placeholder="你的 API 密钥" />
+            </div>
+            <div class="config-field">
+              <label>客户端类型</label>
+              <select v-model="newProvider.client_type" class="input">
+                <option value="openai">OpenAI 兼容</option>
+                <option value="aiohttp_gemini">Gemini（Google）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showAddProviderModal = false">取消</button>
+          <button class="btn btn-primary" @click="confirmAddProvider" :disabled="!newProvider.name || !newProvider.base_url">
+            <Icon icon="lucide:check" />
+            添加
           </button>
         </div>
       </div>
-      
-      <div class="divider">
-        <span>配置详情</span>
-      </div>
-      
-      <div class="manual-config">
-        <div class="config-field">
-          <label>提供商名称</label>
-          <Input v-model="newProvider.name" placeholder="例如: DeepSeek" />
-        </div>
-        <div class="config-field">
-          <label>API 地址</label>
-          <Input v-model="newProvider.base_url" placeholder="https://api.example.com/v1" />
-        </div>
-        <div class="config-field">
-          <label>API 密钥</label>
-          <Input v-model="newProvider.api_key" type="password" placeholder="你的 API 密钥" />
-        </div>
-        <div class="config-field">
-          <label>客户端类型</label>
-          <Select 
-            v-model="newProvider.client_type"
-            :options="[
-              { value: 'openai', label: 'OpenAI 兼容' },
-              { value: 'aiohttp_gemini', label: 'Gemini（Google）' }
-            ]"
-          />
-        </div>
-      </div>
-    </Modal>
+    </div>
 
     <!-- 添加模型弹窗 -->
-    <Modal 
-      v-model="showAddModelModal"
-      title="添加模型"
-      icon="lucide:bot"
-      width="650px"
-      :confirm-disabled="!newModel.model_identifier || !newModel.name"
-      @confirm="confirmAddModel"
-    >
-      <div class="config-field">
-        <label>
-          模型标识符
-          <span class="field-hint">API 服务商提供的模型标识符</span>
-        </label>
-        <div style="display: flex; gap: 8px;">
-          <Input 
-            v-model="newModel.model_identifier"
-            placeholder="例如: deepseek-chat, gpt-4"
-            style="flex: 1;"
-          />
+    <div v-if="showAddModelModal" class="modal-overlay" @click.self="showAddModelModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>
+            <Icon icon="lucide:bot" />
+            添加模型
+          </h3>
+          <button class="close-btn" @click="showAddModelModal = false">
+            <Icon icon="lucide:x" />
+          </button>
         </div>
-      </div>
-      <div class="config-field">
-        <label>
-          模型名称
-          <span class="field-hint">模型的自定义名称，在任务配置中使用</span>
-        </label>
-        <Input v-model="newModel.name" placeholder="例如: deepseek-v3" />
-      </div>
-      <div class="config-field">
-        <label>API 提供商</label>
-        <Select 
-          v-model="newModel.api_provider"
-          :options="[{ value: '', label: '请选择提供商' }].concat(
-            apiProviders.map(p => ({ value: p.name || '', label: p.name || '' }))
-          )"
-          @change="fetchAvailableModels"
-        />
-      </div>
+        <div class="modal-body">
+          <div class="config-field">
+            <label>
+              模型标识符
+              <span class="field-hint">API 服务商提供的模型标识符</span>
+            </label>
+            <div style="display: flex; gap: 8px;">
+              <input 
+                v-model="newModel.model_identifier" 
+                type="text" 
+                class="input" 
+                placeholder="例如: deepseek-chat, gpt-4"
+                style="flex: 1;"
+              />
+            </div>
+          </div>
+          <div class="config-field">
+            <label>
+              模型名称
+              <span class="field-hint">模型的自定义名称，在任务配置中使用</span>
+            </label>
+            <input v-model="newModel.name" type="text" class="input" placeholder="例如: deepseek-v3" />
+          </div>
+          <div class="config-field">
+            <label>API 提供商</label>
+            <select v-model="newModel.api_provider" class="input" @change="fetchAvailableModels">
+              <option value="">请选择提供商</option>
+              <option v-for="provider in apiProviders" :key="provider.name" :value="provider.name">
+                {{ provider.name }}
+              </option>
+            </select>
+          </div>
           
           <!-- 模型列表区域 -->
           <div v-if="newModel.api_provider && (fetchingModels || availableModels.length > 0 || fetchModelsError)" 
@@ -599,11 +614,11 @@
           <div class="config-field-row">
             <div class="config-field">
               <label>输入价格 (元/M token)</label>
-              <Input v-model.number="newModel.price_in" type="number" step="0.1" min="0" />
+              <input v-model.number="newModel.price_in" type="number" class="input" step="0.1" min="0" />
             </div>
             <div class="config-field">
               <label>输出价格 (元/M token)</label>
-              <Input v-model.number="newModel.price_out" type="number" step="0.1" min="0" />
+              <input v-model.number="newModel.price_out" type="number" class="input" step="0.1" min="0" />
             </div>
           </div>
 
@@ -663,7 +678,13 @@
                       <span class="feature-hint">防止模型输出被截断</span>
                     </div>
                   </div>
-                  <Switch v-model="newModel.anti_truncation" size="small" @click.stop />
+                  <label class="switch small" @click.stop>
+                    <input 
+                      type="checkbox" 
+                      v-model="newModel.anti_truncation"
+                    />
+                    <span class="slider"></span>
+                  </label>
                 </div>
                 <div class="feature-toggle" @click="newModel.enable_prompt_perturbation = !newModel.enable_prompt_perturbation">
                   <div class="feature-toggle-info">
@@ -675,12 +696,27 @@
                       <span class="feature-hint">对提示词进行微扰动，增加输出多样性</span>
                     </div>
                   </div>
-                  <Switch v-model="newModel.enable_prompt_perturbation" size="small" @click.stop />
+                  <label class="switch small" @click.stop>
+                    <input 
+                      type="checkbox" 
+                      v-model="newModel.enable_prompt_perturbation"
+                    />
+                    <span class="slider"></span>
+                  </label>
                 </div>
               </div>
             </div>
           </div>
-    </Modal>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showAddModelModal = false">取消</button>
+          <button class="btn btn-primary" @click="confirmAddModel" :disabled="!newModel.model_identifier || !newModel.name">
+            <Icon icon="lucide:check" />
+            添加
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -688,13 +724,6 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { providerPresets, modelTaskConfigs } from '@/config/configDescriptions'
-import Modal from '@/components/common/Modal.vue'
-import Input from '@/components/common/Input.vue'
-import Select from '@/components/common/Select.vue'
-import Switch from '@/components/common/Switch.vue'
-import { useToast } from '@/composables/useToast'
-
-const toast = useToast()
 
 // API 提供商接口
 interface ApiProvider {
@@ -949,22 +978,17 @@ function confirmAddProvider() {
   
   // 展开新添加的提供商
   selectedProvider.value = newProviders.length - 1
-  
-  toast.success(`提供商 "${newProvider.value.name}" 添加成功`)
 }
 
 function removeProvider(index: number) {
   if (!confirm('确定要删除此提供商吗？')) return
   
-  const providerName = apiProviders.value[index]?.name || '未命名提供商'
   const newProviders = apiProviders.value.filter((_, i) => i !== index)
   emit('update', 'api_providers', newProviders)
   
   if (selectedProvider.value === index) {
     selectedProvider.value = null
   }
-  
-  toast.success(`提供商 "${providerName}" 已删除`)
 }
 
 function confirmAddModel() {
@@ -1022,22 +1046,17 @@ function confirmAddModel() {
   
   // 展开新添加的模型
   selectedModel.value = newModels.length - 1
-  
-  toast.success(`模型 "${modelData.name}" 添加成功`)
 }
 
 function removeModel(index: number) {
   if (!confirm('确定要删除此模型吗？')) return
   
-  const modelName = models.value[index]?.name || '未命名模型'
   const newModels = models.value.filter((_, i) => i !== index)
   emit('update', 'models', newModels)
   
   if (selectedModel.value === index) {
     selectedModel.value = null
   }
-  
-  toast.success(`模型 "${modelName}" 已删除`)
 }
 
 // 任务模型配置

@@ -1,37 +1,32 @@
 <template>
-  <Modal 
-    v-model="isVisible"
-    title="连接失败"
-    icon="lucide:wifi-off"
-    width="320px"
-    :show-footer="false"
-    :close-on-click-outside="false"
-    @close="handleClose"
-  >
-    <div class="connection-error-content">
-      <p class="error-message">
-        无法连接到后端服务器
-      </p>
-      <p class="error-detail">
-        {{ message || '请检查服务是否正常运行' }}
-      </p>
-      <div class="error-actions">
-        <Button variant="primary" icon="lucide:refresh-cw" @click="handleRetry">
-          重试连接
-        </Button>
-        <Button variant="secondary" @click="handleClose">
-          关闭
-        </Button>
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="visible" class="modal-overlay" @click.self="handleClose">
+        <div class="m3-dialog modal-container">
+          <div class="modal-icon">
+            <span class="material-symbols-rounded">wifi_off</span>
+          </div>
+          <h2 class="modal-title">连接失败</h2>
+          <p class="modal-message">
+            无法连接到后端服务器<br>
+            <span class="modal-detail">{{ message || '请检查服务是否正常运行' }}</span>
+          </p>
+          <div class="modal-actions">
+            <button class="m3-button filled" @click="handleRetry">
+              <span class="material-symbols-rounded">refresh</span>
+              重试连接
+            </button>
+            <button class="m3-button text" @click="handleClose">
+              关闭
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-  </Modal>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import Modal from '@/components/common/Modal.vue'
-import Button from '@/components/common/Button.vue'
-
 interface Props {
   visible: boolean
   message?: string
@@ -42,17 +37,8 @@ interface Emits {
   (e: 'retry'): void
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<Emits>()
-
-const isVisible = computed({
-  get: () => props.visible,
-  set: (value) => {
-    if (!value) {
-      emit('close')
-    }
-  }
-})
 
 function handleClose() {
   emit('close')
@@ -64,28 +50,75 @@ function handleRetry() {
 </script>
 
 <style scoped>
-.connection-error-content {
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-container {
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 28px;
+  padding: 24px;
+  max-width: 320px;
+  width: 90%;
   text-align: center;
+  box-shadow: var(--md-sys-elevation-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.error-message {
+.modal-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  color: var(--md-sys-color-error);
+  font-size: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-icon .material-symbols-rounded {
+  font-size: 48px;
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
+  margin: 0 0 16px;
+}
+
+.modal-message {
   font-size: 14px;
-  color: #6b7280;
-  margin: 0 0 8px;
-}
-
-.error-detail {
-  font-size: 13px;
-  color: #ef4444;
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 24px;
+  line-height: 1.5;
 }
 
-.error-actions {
+.modal-detail {
+  font-size: 12px;
+  color: var(--md-sys-color-error);
+  margin-top: 4px;
+  display: block;
+}
+
+.modal-actions {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
 }
-</style>
 
 .m3-button {
   height: 40px;
@@ -138,3 +171,4 @@ function handleRetry() {
   transform: scale(0.9);
   opacity: 0;
 }
+</style>
