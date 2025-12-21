@@ -7,16 +7,14 @@
     </div>
     
     <!-- 布尔值 -->
-    <label v-if="field.type === 'boolean'" class="toggle-switch">
-      <input 
-        type="checkbox" 
-        :checked="Boolean(value)"
+    <div v-if="field.type === 'boolean'" class="boolean-field">
+      <Switch 
+        :model-value="Boolean(value)"
         :disabled="field.readonly"
-        @change="emit('update', ($event.target as HTMLInputElement).checked)"
+        @update:model-value="emit('update', $event)"
       />
-      <span class="toggle-slider"></span>
-      <span class="toggle-label">{{ Boolean(value) ? '启用' : '禁用' }}</span>
-    </label>
+      <span class="boolean-label">{{ Boolean(value) ? '启用' : '禁用' }}</span>
+    </div>
     
     <!-- 数字 -->
     <input 
@@ -37,42 +35,32 @@
       </div>
       
       <!-- 数组编辑弹窗 -->
-      <div v-if="showArrayModal" class="modal-overlay" @click.self="showArrayModal = false">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>
-              <Icon icon="lucide:list" />
-              编辑数组: {{ field.key }}
-            </h3>
-            <button class="close-btn" @click="showArrayModal = false">
-              <Icon icon="lucide:x" />
+      <Modal 
+        v-model="showArrayModal"
+        :title="`编辑数组: ${field.key}`"
+        icon="list"
+        width="600px"
+        :large="true"
+        @confirm="saveArrayEdit"
+      >
+        <div class="array-items">
+          <div v-for="(item, index) in arrayValue" :key="index" class="array-item">
+            <input 
+              type="text" 
+              class="input" 
+              :value="typeof item === 'object' ? JSON.stringify(item) : item"
+              @input="updateArrayItem(index, ($event.target as HTMLInputElement).value)"
+            />
+            <button class="btn btn-sm btn-ghost btn-danger" @click="removeArrayItem(index)">
+              <Icon icon="lucide:trash-2" />
             </button>
-          </div>
-          <div class="modal-body">
-            <div class="array-items">
-              <div v-for="(item, index) in arrayValue" :key="index" class="array-item">
-                <input 
-                  type="text" 
-                  class="input" 
-                  :value="typeof item === 'object' ? JSON.stringify(item) : item"
-                  @input="updateArrayItem(index, ($event.target as HTMLInputElement).value)"
-                />
-                <button class="btn btn-sm btn-ghost btn-danger" @click="removeArrayItem(index)">
-                  <Icon icon="lucide:trash-2" />
-                </button>
-              </div>
-            </div>
-            <button class="btn btn-sm btn-ghost add-item-btn" @click="addArrayItem">
-              <Icon icon="lucide:plus" />
-              添加项
-            </button>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showArrayModal = false">取消</button>
-            <button class="btn btn-primary" @click="saveArrayEdit">保存</button>
           </div>
         </div>
-      </div>
+        <button class="btn btn-sm btn-ghost add-item-btn" @click="addArrayItem">
+          <Icon icon="lucide:plus" />
+          添加项
+        </button>
+      </Modal>
     </div>
     
     <!-- 对象数组 -->
@@ -83,67 +71,57 @@
       </button>
       
       <!-- 对象数组编辑弹窗 -->
-      <div v-if="showObjectArrayModal" class="modal-overlay" @click.self="showObjectArrayModal = false">
-        <div class="modal-content modal-large">
-          <div class="modal-header">
-            <h3>
-              <Icon icon="lucide:layers" />
-              编辑: {{ field.key }}
-            </h3>
-            <button class="close-btn" @click="showObjectArrayModal = false">
+      <Modal 
+        v-model="showObjectArrayModal"
+        :title="`编辑: ${field.key}`"
+        icon="layers"
+        width="800px"
+        :large="true"
+        @confirm="saveObjectArrayEdit"
+      >
+        <div class="object-array-tabs">
+          <button 
+            v-for="(item, index) in objectArrayValue" 
+            :key="index"
+            :class="['tab-btn', { active: activeObjectIndex === index }]"
+            @click="activeObjectIndex = index"
+          >
+            {{ getObjectLabel(item, index) }}
+            <span class="tab-close" @click.stop="removeObjectArrayItem(index)">
               <Icon icon="lucide:x" />
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="object-array-tabs">
-              <button 
-                v-for="(item, index) in objectArrayValue" 
-                :key="index"
-                :class="['tab-btn', { active: activeObjectIndex === index }]"
-                @click="activeObjectIndex = index"
-              >
-                {{ getObjectLabel(item, index) }}
-                <span class="tab-close" @click.stop="removeObjectArrayItem(index)">
-                  <Icon icon="lucide:x" />
-                </span>
-              </button>
-              <button class="btn btn-sm btn-ghost add-tab-btn" @click="addObjectArrayItem">
-                <Icon icon="lucide:plus" />
-              </button>
+            </span>
+          </button>
+          <button class="btn btn-sm btn-ghost add-tab-btn" @click="addObjectArrayItem">
+            <Icon icon="lucide:plus" />
+          </button>
+        </div>
+        <div v-if="objectArrayValue.length > 0" class="object-fields">
+          <div 
+            v-for="(val, key) in objectArrayValue[activeObjectIndex]" 
+            :key="key" 
+            class="field-row"
+          >
+            <div class="field-label">
+              <span class="field-name">{{ key }}</span>
             </div>
-            <div v-if="objectArrayValue.length > 0" class="object-fields">
-              <div 
-                v-for="(val, key) in objectArrayValue[activeObjectIndex]" 
-                :key="key" 
-                class="field-row"
-              >
-                <div class="field-label">
-                  <span class="field-name">{{ key }}</span>
-                </div>
-                <div class="field-input">
-                  <input 
-                    v-if="typeof val !== 'object' || val === null"
-                    type="text"
-                    class="input"
-                    :value="formatObjectValue(val)"
-                    @input="updateObjectField(key as string, ($event.target as HTMLInputElement).value)"
-                  />
-                  <textarea 
-                    v-else
-                    class="input textarea"
-                    :value="JSON.stringify(val, null, 2)"
-                    @input="updateObjectField(key as string, ($event.target as HTMLInputElement).value, true)"
-                  ></textarea>
-                </div>
-              </div>
+            <div class="field-input">
+              <input 
+                v-if="typeof val !== 'object' || val === null"
+                type="text"
+                class="input"
+                :value="formatObjectValue(val)"
+                @input="updateObjectField(key as string, ($event.target as HTMLInputElement).value)"
+              />
+              <textarea 
+                v-else
+                class="input textarea"
+                :value="JSON.stringify(val, null, 2)"
+                @input="updateObjectField(key as string, ($event.target as HTMLInputElement).value, true)"
+              ></textarea>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showObjectArrayModal = false">取消</button>
-            <button class="btn btn-primary" @click="saveObjectArrayEdit">保存</button>
           </div>
         </div>
-      </div>
+      </Modal>
     </div>
     
     <!-- 对象 -->
@@ -180,6 +158,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import Modal from '@/components/common/Modal.vue'
+import Switch from '@/components/common/Switch.vue'
 import type { ConfigSchemaField } from '@/api'
 
 const props = defineProps<{
@@ -388,50 +368,14 @@ function openObjectEditor() {
   line-height: 1.5;
 }
 
-/* Toggle 开关 */
-.toggle-switch {
+/* 布尔值 */
+.boolean-field {
   display: flex;
   align-items: center;
   gap: 12px;
-  cursor: pointer;
 }
 
-.toggle-switch input {
-  display: none;
-}
-
-.toggle-slider {
-  width: 48px;
-  height: 26px;
-  background: var(--bg-hover);
-  border-radius: 13px;
-  position: relative;
-  transition: background var(--transition-fast);
-}
-
-.toggle-slider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  background: white;
-  border-radius: 50%;
-  transform: translateY(-50%);
-  transition: transform var(--transition-fast);
-  box-shadow: var(--shadow-sm);
-}
-
-.toggle-switch input:checked + .toggle-slider {
-  background: var(--primary);
-}
-
-.toggle-switch input:checked + .toggle-slider::after {
-  transform: translate(22px, -50%);
-}
-
-.toggle-label {
+.boolean-label {
   font-size: 14px;
   color: var(--text-secondary);
 }
@@ -514,94 +458,6 @@ function openObjectEditor() {
 .btn-danger:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-}
-
-/* 弹窗样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.modal-content {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow: hidden;
-  animation: modalIn 0.2s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-content.modal-large {
-  max-width: 800px;
-}
-
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.modal-header h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.close-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
 }
 
 /* 数组编辑 */

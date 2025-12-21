@@ -204,30 +204,27 @@
 
           <!-- 更新选项 -->
           <div class="update-options">
-            <label class="m3-checkbox-wrapper option-item">
-              <input type="checkbox" v-model="updateOptions.stashLocal" />
-              <span class="checkmark"></span>
+            <div class="option-item">
               <div class="option-text">
                 <span class="option-label">暂存本地修改</span>
                 <span class="option-desc">保护您的本地更改</span>
               </div>
-            </label>
-            <label class="m3-checkbox-wrapper option-item">
-              <input type="checkbox" v-model="updateOptions.createBackup" />
-              <span class="checkmark"></span>
+              <Switch v-model="updateOptions.stashLocal" />
+            </div>
+            <div class="option-item">
               <div class="option-text">
                 <span class="option-label">创建备份点</span>
                 <span class="option-desc">可随时回滚</span>
               </div>
-            </label>
-            <label class="m3-checkbox-wrapper option-item">
-              <input type="checkbox" v-model="updateOptions.force" />
-              <span class="checkmark"></span>
+              <Switch v-model="updateOptions.createBackup" />
+            </div>
+            <div class="option-item">
               <div class="option-text">
                 <span class="option-label">强制更新</span>
                 <span class="option-desc">覆盖所有本地修改</span>
               </div>
-            </label>
+              <Switch v-model="updateOptions.force" />
+            </div>
           </div>
 
           <!-- 更新按钮 -->
@@ -289,123 +286,117 @@
     </div>
 
     <!-- 成功弹窗 -->
-    <Transition name="dialog">
-      <div v-if="showSuccessModal" class="m3-dialog-overlay" @click.self="showSuccessModal = false">
-        <div class="m3-dialog success-modal">
-          <div class="success-icon-wrapper">
-            <span class="material-symbols-rounded success-icon">check_circle</span>
-          </div>
-          <h2>更新成功</h2>
-          <p>{{ lastUpdateResult?.message || 'MoFox-Bot已成功更新到最新版本' }}</p>
-          
-          <div v-if="lastUpdateResult?.updated_files && lastUpdateResult.updated_files.length > 0" class="updated-summary">
-            <span class="material-symbols-rounded">file_present</span>
-            <span>已更新 {{ lastUpdateResult.updated_files.length }} 个文件</span>
-          </div>
+    <Modal 
+      v-model="showSuccessModal"
+      title="更新成功"
+      icon="check_circle"
+      :show-footer="false"
+    >
+      <div class="success-content">
+        <div class="success-icon-wrapper">
+          <span class="material-symbols-rounded success-icon">check_circle</span>
+        </div>
+        <p>{{ lastUpdateResult?.message || 'MoFox-Bot已成功更新到最新版本' }}</p>
+        
+        <div v-if="lastUpdateResult?.updated_files && lastUpdateResult.updated_files.length > 0" class="updated-summary">
+          <span class="material-symbols-rounded">file_present</span>
+          <span>已更新 {{ lastUpdateResult.updated_files.length }} 个文件</span>
+        </div>
 
-          <div class="modal-actions">
-            <button class="m3-button filled" @click="closeSuccessModal">
-              <span class="material-symbols-rounded">check</span>
-              <span>确定</span>
-            </button>
-            <button v-if="lastUpdateResult?.backup_commit" class="m3-button tonal" @click="rollbackFromModal">
-              <span class="material-symbols-rounded">undo</span>
-              <span>回滚</span>
-            </button>
-          </div>
+        <div class="modal-actions">
+          <button class="m3-button filled" @click="closeSuccessModal">
+            <span class="material-symbols-rounded">check</span>
+            <span>确定</span>
+          </button>
+          <button v-if="lastUpdateResult?.backup_commit" class="m3-button tonal" @click="rollbackFromModal">
+            <span class="material-symbols-rounded">undo</span>
+            <span>回滚</span>
+          </button>
         </div>
       </div>
-    </Transition>
+    </Modal>
 
     <!-- Git 安装指南弹窗 -->
-    <Transition name="dialog">
-      <div v-if="showInstallGuide" class="m3-dialog-overlay" @click.self="showInstallGuide = false">
-        <div class="m3-dialog guide-modal">
-          <div class="dialog-header">
-            <h3>Git 安装指南</h3>
-            <button class="m3-icon-button" @click="showInstallGuide = false">
-              <span class="material-symbols-rounded">close</span>
-            </button>
-          </div>
-          <div class="dialog-body center-content">
-            <div class="guide-icon">
-              <span class="material-symbols-rounded">menu_book</span>
-            </div>
-            <p>请访问 Git 官网下载并安装适合您系统的版本</p>
-            <a href="https://git-scm.com/downloads" target="_blank" class="m3-button filled guide-link">
-              <span class="material-symbols-rounded">open_in_new</span>
-              <span>git-scm.com/downloads</span>
-            </a>
-          </div>
+    <Modal 
+      v-model="showInstallGuide"
+      title="Git 安装指南"
+      icon="menu_book"
+      :show-footer="false"
+    >
+      <div class="guide-content center-content">
+        <div class="guide-icon">
+          <span class="material-symbols-rounded">menu_book</span>
         </div>
+        <p>请访问 Git 官网下载并安装适合您系统的版本</p>
+        <a href="https://git-scm.com/downloads" target="_blank" class="m3-button filled guide-link">
+          <span class="material-symbols-rounded">open_in_new</span>
+          <span>git-scm.com/downloads</span>
+        </a>
       </div>
-    </Transition>
+    </Modal>
 
     <!-- 设置 Git 路径弹窗 -->
-    <Transition name="dialog">
-      <div v-if="showSetPathModal" class="m3-dialog-overlay" @click.self="closeSetPathModal">
-        <div class="m3-dialog path-modal">
-          <div class="dialog-header">
-            <h3>设置 Git 路径</h3>
-            <button class="m3-icon-button" @click="closeSetPathModal">
-              <span class="material-symbols-rounded">close</span>
-            </button>
-          </div>
-          <div class="dialog-body">
-            <div class="modal-icon">
-              <span class="material-symbols-rounded">folder</span>
-            </div>
-            <p class="modal-desc">请输入 Git 可执行文件的完整路径，或者选择自动下载安装</p>
-            
-            <div class="path-input-group">
-              <label class="m3-label" for="git-path-input">Git 可执行文件路径</label>
-              <input 
-                id="git-path-input"
-                v-model="customGitPath" 
-                type="text" 
-                class="m3-input"
-                placeholder="例如: C:\Program Files\Git\bin\git.exe"
-                :disabled="settingPath"
-                @keyup.enter="handleSetGitPath"
-              />
-              <span class="input-hint">
-                Windows: git.exe | Linux/macOS: git
-              </span>
-            </div>
+    <Modal 
+      v-model="showSetPathModal"
+      title="设置 Git 路径"
+      icon="folder"
+      :show-footer="false"
+      :large="true"
+    >
+      <div class="path-content">
+        <div class="modal-icon">
+          <span class="material-symbols-rounded">folder</span>
+        </div>
+        <p class="modal-desc">请输入 Git 可执行文件的完整路径，或者选择自动下载安装</p>
+        
+        <div class="path-input-group">
+          <label class="m3-label" for="git-path-input">Git 可执行文件路径</label>
+          <input 
+            id="git-path-input"
+            v-model="customGitPath" 
+            type="text" 
+            class="m3-input"
+            placeholder="例如: C:\Program Files\Git\bin\git.exe"
+            :disabled="settingPath"
+            @keyup.enter="handleSetGitPath"
+          />
+          <span class="input-hint">
+            Windows: git.exe | Linux/macOS: git
+          </span>
+        </div>
 
-            <div v-if="updateError" class="error-message">
-              <span class="material-symbols-rounded">error</span>
-              <p>{{ updateError }}</p>
-            </div>
-          </div>
-          <div class="dialog-actions">
-            <button class="m3-button text" @click="closeSetPathModal">
-              取消
-            </button>
-            <button 
-              class="m3-button tonal" 
-              @click="handleAutoDetectGit"
-              :disabled="installing"
-            >
-              <span class="material-symbols-rounded" :class="{ spinning: installing }">
-                {{ installing ? 'progress_activity' : 'search' }}
-              </span>
-              {{ installing ? '处理中...' : '自动识别' }}
-            </button>
-            <button 
-              class="m3-button filled" 
-              @click="handleSetGitPath"
-              :disabled="!customGitPath.trim() || settingPath"
-            >
-              <span class="material-symbols-rounded" :class="{ spinning: settingPath }">
-                {{ settingPath ? 'progress_activity' : 'check' }}
-              </span>
-              {{ settingPath ? '验证中...' : '确认设置' }}
-            </button>
-          </div>
+        <div v-if="updateError" class="error-message">
+          <span class="material-symbols-rounded">error</span>
+          <p>{{ updateError }}</p>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="m3-button text" @click="closeSetPathModal">
+            取消
+          </button>
+          <button 
+            class="m3-button tonal" 
+            @click="handleAutoDetectGit"
+            :disabled="installing"
+          >
+            <span class="material-symbols-rounded" :class="{ spinning: installing }">
+              {{ installing ? 'progress_activity' : 'search' }}
+            </span>
+            {{ installing ? '处理中...' : '自动识别' }}
+          </button>
+          <button 
+            class="m3-button filled" 
+            @click="handleSetGitPath"
+            :disabled="!customGitPath.trim() || settingPath"
+          >
+            <span class="material-symbols-rounded" :class="{ spinning: settingPath }">
+              {{ settingPath ? 'progress_activity' : 'check' }}
+            </span>
+            {{ settingPath ? '验证中...' : '确认设置' }}
+          </button>
         </div>
       </div>
-    </Transition>
+    </Modal>
 
     <!-- Toast 通知 -->
     <div class="toast-container">
