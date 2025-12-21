@@ -319,6 +319,48 @@
                 <label>简短印象</label>
                 <input v-model="newUser.short_impression" type="text" class="m3-input" placeholder="例如: 活泼开朗" />
               </div>
+
+              <div class="input-group">
+                <div class="label-row">
+                  <label>记忆点</label>
+                  <button class="m3-button text small" @click="addMemoryPoint(newUser.memory_points)">
+                    <span class="material-symbols-rounded">add</span>
+                    添加
+                  </button>
+                </div>
+                <div class="memory-points-list">
+                  <div v-for="(point, index) in newUser.memory_points" :key="index" class="memory-point-item">
+                    <div class="point-header">
+                      <span class="point-label">记忆点 #{{ index + 1 }}</span>
+                      <button class="m3-icon-button small" @click="removeMemoryPoint(newUser.memory_points, index)">
+                        <span class="material-symbols-rounded">delete</span>
+                      </button>
+                    </div>
+                    <div class="point-content">
+                      <textarea 
+                        v-model="point.content" 
+                        class="m3-input" 
+                        rows="2"
+                        placeholder="输入记忆内容..."
+                      ></textarea>
+                    </div>
+                    <div class="point-weight">
+                      <label>重要度: {{ point.weight }}</label>
+                      <input 
+                        v-model.number="point.weight" 
+                        type="range" 
+                        min="0.1" 
+                        max="2.0" 
+                        step="0.1" 
+                        class="m3-slider"
+                      />
+                    </div>
+                  </div>
+                  <div v-if="newUser.memory_points.length === 0" class="empty-points">
+                    暂无记忆点
+                  </div>
+                </div>
+              </div>
               
               <div class="input-group">
                 <label>态度值 (-100 到 100)</label>
@@ -377,6 +419,48 @@
               <div class="input-group">
                 <label>简短印象</label>
                 <input v-model="editUser.short_impression" type="text" class="m3-input" placeholder="用简短词语概括" />
+              </div>
+
+              <div class="input-group">
+                <div class="label-row">
+                  <label>记忆点</label>
+                  <button class="m3-button text small" @click="addMemoryPoint(editUser.memory_points)">
+                    <span class="material-symbols-rounded">add</span>
+                    添加
+                  </button>
+                </div>
+                <div class="memory-points-list">
+                  <div v-for="(point, index) in editUser.memory_points" :key="index" class="memory-point-item">
+                    <div class="point-header">
+                      <span class="point-label">记忆点 #{{ index + 1 }}</span>
+                      <button class="m3-icon-button small" @click="removeMemoryPoint(editUser.memory_points, index)">
+                        <span class="material-symbols-rounded">delete</span>
+                      </button>
+                    </div>
+                    <div class="point-content">
+                      <textarea 
+                        v-model="point.content" 
+                        class="m3-input" 
+                        rows="2"
+                        placeholder="输入记忆内容..."
+                      ></textarea>
+                    </div>
+                    <div class="point-weight">
+                      <label>重要度: {{ point.weight }}</label>
+                      <input 
+                        v-model.number="point.weight" 
+                        type="range" 
+                        min="0.1" 
+                        max="2.0" 
+                        step="0.1" 
+                        class="m3-slider"
+                      />
+                    </div>
+                  </div>
+                  <div v-if="editUser.memory_points.length === 0" class="empty-points">
+                    暂无记忆点
+                  </div>
+                </div>
               </div>
               
               <div class="input-group">
@@ -478,6 +562,11 @@ import type { Ref } from 'vue'
 
 // ========== 数据类型定义 ==========
 
+interface MemoryPoint {
+  content: string
+  weight: number
+}
+
 interface User {
   user_id: string
   nickname: string
@@ -486,6 +575,7 @@ interface User {
   avatar: string
   attitude?: number | null
   person_id?: string
+  memory_points?: MemoryPoint[]
   created_at: number
   updated_at: number
 }
@@ -498,6 +588,7 @@ interface CopyableUser {
   impression: string
   short_impression: string
   attitude: number | null
+  memory_points?: MemoryPoint[]
 }
 
 interface Message {
@@ -550,7 +641,8 @@ const newUser = ref({
   impression: '',
   short_impression: '',
   avatar: '',
-  attitude: null as number | null
+  attitude: null as number | null,
+  memory_points: [] as MemoryPoint[]
 })
 
 const editUser = ref({
@@ -558,7 +650,8 @@ const editUser = ref({
   impression: '',
   short_impression: '',
   avatar: '',
-  attitude: null as number | null
+  attitude: null as number | null,
+  memory_points: [] as MemoryPoint[]
 })
 
 // 操作状态
@@ -669,7 +762,8 @@ function selectUser(user: User) {
     impression: user.impression,
     short_impression: user.short_impression || '',
     avatar: user.avatar,
-    attitude: user.attitude ?? null
+    attitude: user.attitude ?? null,
+    memory_points: user.memory_points ? JSON.parse(JSON.stringify(user.memory_points)) : []
   }
 }
 
@@ -685,6 +779,9 @@ async function createUser() {
     return
   }
   
+  // 过滤空记忆点
+  newUser.value.memory_points = newUser.value.memory_points.filter(p => p.content.trim())
+
   creating.value = true
   try {
     const response = await api.post('chatroom/users', newUser.value)
@@ -699,8 +796,10 @@ async function createUser() {
         impression: '',
         short_impression: '',
         avatar: '',
-        attitude: null
+        attitude: null,
+        memory_points: []
       }
+      newUserMemoryPointsStr.value = ''
       await loadUsers()
     } else {
       showToast(response.error || '创建用户失败', 'error')
@@ -716,6 +815,9 @@ async function createUser() {
 async function updateUser() {
   if (!selectedUser.value) return
   
+  // 过滤空记忆点
+  editUser.value.memory_points = editUser.value.memory_points.filter(p => p.content.trim())
+
   updating.value = true
   try {
     const response = await api.put<{ user: User }>(`chatroom/users/${selectedUser.value.user_id}`, editUser.value)
@@ -875,6 +977,7 @@ function onCopyUserSelect() {
     newUser.value.impression = user.impression || ''
     newUser.value.short_impression = user.short_impression || ''
     newUser.value.attitude = user.attitude
+    newUser.value.memory_points = user.memory_points ? JSON.parse(JSON.stringify(user.memory_points)) : []
     // 头像暂时不复制，因为PersonInfo里可能没有avatar字段，或者格式不一样
   }
 }
@@ -1028,6 +1131,14 @@ function formatTime(timestamp: number): string {
     hour: '2-digit', 
     minute: '2-digit' 
   })
+}
+
+function addMemoryPoint(list: MemoryPoint[]) {
+  list.push({ content: '', weight: 1.0 })
+}
+
+function removeMemoryPoint(list: MemoryPoint[], index: number) {
+  list.splice(index, 1)
 }
 
 // Toast 提示函数
@@ -1813,6 +1924,104 @@ textarea.m3-input {
 .m3-button.error:hover {
   background-color: var(--md-sys-color-error);
   filter: brightness(1.1);
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.m3-button.small {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.m3-icon-button.small {
+  width: 32px;
+  height: 32px;
+}
+
+.m3-icon-button.small .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.memory-points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.memory-point-item {
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.point-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.point-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+}
+
+.point-content {
+  margin-bottom: 8px;
+}
+
+.point-weight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.point-weight label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  min-width: 80px;
+}
+
+.m3-slider {
+  flex: 1;
+  height: 4px;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.m3-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.m3-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.empty-points {
+  text-align: center;
+  padding: 20px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border-radius: 12px;
+  border: 1px dashed var(--md-sys-color-outline);
 }
 
 /* ========== 动画 ========== */

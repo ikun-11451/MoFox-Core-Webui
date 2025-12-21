@@ -9,6 +9,7 @@ UI Chatroom 路由组件
 
 import time
 import uuid
+import orjson
 from typing import Any
 
 from fastapi import HTTPException
@@ -41,6 +42,12 @@ class SendMessageRequest(BaseModel):
     reply_to: str | None = None
 
 
+class MemoryPoint(BaseModel):
+    """记忆点模型"""
+    content: str
+    weight: float = 1.0
+
+
 class CreateUserRequest(BaseModel):
     """创建用户请求"""
     user_id: str
@@ -49,6 +56,7 @@ class CreateUserRequest(BaseModel):
     short_impression: str = ""
     avatar: str = ""
     attitude: int | None = None
+    memory_points: list[MemoryPoint] = []
 
 
 class UpdateUserRequest(BaseModel):
@@ -58,6 +66,7 @@ class UpdateUserRequest(BaseModel):
     short_impression: str | None = None
     avatar: str | None = None
     attitude: int | None = None
+    memory_points: list[MemoryPoint] | None = None
 
 
 class MessageResponse(BaseModel):
@@ -314,7 +323,8 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     impression=request.impression,
                     short_impression=request.short_impression,
                     avatar=request.avatar,
-                    attitude=request.attitude
+                    attitude=request.attitude,
+                    memory_points=request.memory_points
                 )
 
                 # 在person_info中创建对应记录
@@ -323,7 +333,8 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     nickname=request.nickname,
                     impression=request.impression,
                     short_impression=request.short_impression,
-                    attitude=request.attitude
+                    attitude=request.attitude,
+                    memory_points=request.memory_points
                 )
 
                 return {
@@ -370,6 +381,13 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     await self.person_manager.update_one_field(person_id, "short_impression", update_data["short_impression"])
                 if "attitude" in update_data:
                     await self.person_manager.update_one_field(person_id, "attitude", update_data["attitude"])
+                if "memory_points" in update_data:
+                    # 转换记忆点格式: [content, weight, timestamp]
+                    points_data = [
+                        [point.content, point.weight, time.time()] 
+                        for point in request.memory_points
+                    ]
+                    await self.person_manager.update_one_field(person_id, "points", orjson.dumps(points_data).decode('utf-8'))
 
                 return {
                     "success": True,
@@ -488,6 +506,24 @@ class ChatroomRouterComponent(BaseRouterComponent):
                     
                     users = []
                     for p in persons:
+                        # 解析记忆点
+                        memory_points = []
+                        if p.points:
+                            try:
+                                if isinstance(p.points, str):
+                                    points_data = orjson.loads(p.points)
+                                else:
+                                    points_data = p.points
+                                
+                                for point in points_data:
+                                    if isinstance(point, (list, tuple)) and len(point) >= 1:
+                                        memory_points.append({
+                                            "content": str(point[0]),
+                                            "weight": float(point[1]) if len(point) > 1 else 1.0
+                                        })
+                            except Exception:
+                                pass
+
                         users.append({
                             "person_id": p.person_id,
                             "nickname": p.nickname or p.person_name or "Unknown",
@@ -495,7 +531,8 @@ class ChatroomRouterComponent(BaseRouterComponent):
                             "user_id": p.user_id,
                             "impression": p.impression,
                             "short_impression": p.short_impression,
-                            "attitude": p.attitude
+                            "attitude": p.attitude,
+                            "memory_points": memory_points
                         })
                         
                     return {
@@ -567,7 +604,8 @@ class ChatroomRouterComponent(BaseRouterComponent):
         nickname: str, 
         impression: str = "",
         short_impression: str = "",
-        attitude: int | None = None
+        attitude: int | None = None,
+        memory_points: list[MemoryPoint] | None = None
     ) -> str:
         """确保person_info中存在该用户，并更新所有相关字段"""
         # 直接使用 get_or_create_person，它会自动生成正确的 person_id
@@ -589,5 +627,12 @@ class ChatroomRouterComponent(BaseRouterComponent):
             await self.person_manager.update_one_field(person_id, "short_impression", short_impression)
         if attitude is not None and person_info:
             await self.person_manager.update_one_field(person_id, "attitude", attitude)
+        if memory_points is not None and person_info:
+            # 转换记忆点格式: [content, weight, timestamp]
+            points_data = [
+                [point.content, point.weight, time.time()] 
+                for point in memory_points
+            ]
+            await self.person_manager.update_one_field(person_id, "points", orjson.dumps(points_data).decode('utf-8'))
 
         return person_id

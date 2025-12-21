@@ -73,7 +73,8 @@ class ChatroomStorage:
         impression: str = "", 
         short_impression: str = "",
         avatar: str = "",
-        attitude: int | None = None
+        attitude: int | None = None,
+        memory_points: list[str] | None = None
     ) -> dict[str, Any]:
         """创建虚拟用户"""
         if user_id in self._users:
@@ -86,6 +87,7 @@ class ChatroomStorage:
             "short_impression": short_impression,
             "avatar": avatar,
             "attitude": attitude,
+            "memory_points": memory_points or [],
             "created_at": time.time(),
             "updated_at": time.time(),
         }
@@ -118,7 +120,8 @@ class ChatroomStorage:
             "impression", 
             "short_impression",
             "avatar", 
-            "attitude"
+            "attitude",
+            "memory_points"
         }
         for key, value in kwargs.items():
             if key in allowed_fields:
