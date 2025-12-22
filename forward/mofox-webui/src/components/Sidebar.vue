@@ -160,7 +160,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import { restartBot, shutdownBot } from '@/api'
@@ -175,6 +175,7 @@ interface MenuItem {
 }
 
 const route = useRoute()
+const router = useRouter()
 const themeStore = useThemeStore()
 const userStore = useUserStore()
 
@@ -224,6 +225,7 @@ const handleShutdown = async () => {
 
 const handleLogout = () => {
   userStore.logout()
+  router.push('/login')
 }
 
 const menuItems: MenuItem[] = [
