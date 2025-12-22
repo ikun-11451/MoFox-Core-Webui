@@ -1773,6 +1773,13 @@ watch(() => props.parsedData, () => {
   padding: 16px 18px;
   cursor: pointer;
   transition: background 0.15s ease;
+  border-radius: var(--radius);
+}
+
+.provider-item.active .provider-row,
+.model-item.active .model-row {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .provider-row:hover,
@@ -1884,6 +1891,8 @@ watch(() => props.parsedData, () => {
   padding: 20px;
   background: var(--bg-primary);
   border-top: 1px dashed var(--border-color);
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
 }
 
 .detail-grid {
