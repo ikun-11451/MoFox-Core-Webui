@@ -309,23 +309,43 @@ class EmojiManagerRouterComponent(BaseRouterComponent):
                 # 获取完整图片（支持GIF动图）
                 full_image = ""
                 try:
-                    with Image.open(emoji.full_path) as img:
-                        # 检查是否是GIF动图
-                        is_gif = img.format == 'GIF'
-                        
-                        if is_gif:
-                            # GIF保持原格式
-                            buffer = io.BytesIO()
-                            with open(emoji.full_path, 'rb') as f:
-                                buffer.write(f.read())
-                            img_base64 = base64.b64encode(buffer.getvalue()).decode()
-                            full_image = f"data:image/gif;base64,{img_base64}"
-                        else:
-                            # 其他格式使用原有方法
-                            full_image = image_path_to_base64(emoji.full_path)
+                    # 获取图片格式
+                    img_format = "JPEG"
+                    try:
+                        with Image.open(emoji.full_path) as img:
+                            img_format = img.format
+                    except:
+                        pass
+
+                    # 读取文件内容
+                    with open(emoji.full_path, 'rb') as f:
+                        file_content = f.read()
+                    
+                    img_base64 = base64.b64encode(file_content).decode()
+                    
+                    # 确定 MIME type
+                    mime_type = "image/jpeg" # 默认
+                    if img_format:
+                        fmt = img_format.upper()
+                        if fmt == 'GIF':
+                            mime_type = "image/gif"
+                        elif fmt == 'PNG':
+                            mime_type = "image/png"
+                        elif fmt in ['JPEG', 'JPG']:
+                            mime_type = "image/jpeg"
+                        elif fmt == 'WEBP':
+                            mime_type = "image/webp"
+                        elif fmt == 'BMP':
+                            mime_type = "image/bmp"
+                    
+                    full_image = f"data:{mime_type};base64,{img_base64}"
+
                 except Exception as e:
                     logger.error(f"读取图片失败: {e}")
-                    full_image = image_path_to_base64(emoji.full_path)
+                    try:
+                        full_image = image_path_to_base64(emoji.full_path)
+                    except:
+                        full_image = ""
 
                 # 解析情感标签
                 emotions = []

@@ -16,7 +16,7 @@
               <img
                 v-if="emojiDetail.full_image"
                 :src="emojiDetail.full_image"
-                :alt="emojiDetail.description"
+                alt="表情包图片"
                 class="full-image"
               />
             </div>

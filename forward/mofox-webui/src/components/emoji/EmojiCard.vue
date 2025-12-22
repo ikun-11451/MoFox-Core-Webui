@@ -13,7 +13,7 @@
       <img
         v-if="emoji.thumbnail"
         :src="emoji.thumbnail"
-        :alt="emoji.description"
+        alt="表情包缩略图"
         class="emoji-image"
         loading="lazy"
       />
