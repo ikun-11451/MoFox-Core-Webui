@@ -337,6 +337,8 @@ const isGroupActive = (item: MenuItem) => {
   transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
   box-shadow: var(--md-sys-elevation-2);
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .sidebar.collapsed {

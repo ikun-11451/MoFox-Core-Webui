@@ -37,6 +37,34 @@ body {
   min-width: 320px;
   min-height: 100vh;
   color: var(--md-sys-color-on-background);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 恢复输入框、文本区域和可编辑元素的选择 */
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-user-drag: auto;
+}
+
+/* 恢复日志和代码块的选择 */
+.log-content-panel, 
+.log-container, 
+.terminal-message, 
+.log-entry,
+pre, 
+code, 
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 确保图片和图标不可拖拽 */
+img, .material-symbols-rounded {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 
