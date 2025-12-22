@@ -20,12 +20,11 @@
                 <h3>消息统计</h3>
               </div>
               <div class="header-actions">
-                <select v-model="messageStatsPeriod" @change="fetchMessageStats" class="m3-select">
-                  <option value="last_hour">最近1小时</option>
-                  <option value="last_24_hours">最近24小时</option>
-                  <option value="last_7_days">最近7天</option>
-                  <option value="last_30_days">最近30天</option>
-                </select>
+                <M3Select 
+                  v-model="messageStatsPeriod" 
+                  :options="messageStatsOptions"
+                  @change="fetchMessageStats"
+                />
               </div>
             </div>
             <div class="card-body chart-body">
@@ -238,6 +237,7 @@ import type {
   ComponentItem
 } from '@/api'
 import ConnectionError from '@/components/ConnectionError.vue'
+import M3Select from '@/components/M3Select.vue'
 import { useThemeStore } from '@/stores/theme'
 
 // 注册 ECharts 组件
@@ -253,6 +253,13 @@ const monthlyPlans = ref<MonthlyPlanResponse | null>(null)
 const llmStats = ref<LLMStatsResponse | null>(null)
 const messageStats = ref<MessageStatsResponse | null>(null)
 const messageStatsPeriod = ref<'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days'>('last_24_hours')
+
+const messageStatsOptions = [
+  { label: '最近1小时', value: 'last_hour' },
+  { label: '最近24小时', value: 'last_24_hours' },
+  { label: '最近7天', value: 'last_7_days' },
+  { label: '最近30天', value: 'last_30_days' }
+]
 
 // 弹窗状态
 const showPluginDetail = ref(false)
@@ -1110,16 +1117,7 @@ onMounted(() => {
   height: 100%;
 }
 
-.m3-select {
-  background: var(--md-sys-color-surface-container-highest);
-  color: var(--md-sys-color-on-surface);
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  outline: none;
-  cursor: pointer;
-}
+
 
 /* 弹窗样式 */
 .m3-dialog-overlay {
