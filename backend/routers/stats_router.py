@@ -54,6 +54,11 @@ class ChatStatsResponse(BaseModel):
     qq_streams: int
 
 
+class ModelUsageStatsResponse(BaseModel):
+    """模型使用统计响应"""
+    stats: dict[str, dict[str, int]]
+
+
 class SystemStatsResponse(BaseModel):
     """系统统计响应"""
 
@@ -254,6 +259,49 @@ class WebUIStatsRouter(BaseRouterComponent):
                     chats=ChatStatsResponse(total_streams=0, group_streams=0, private_streams=0, qq_streams=0),
                     system=SystemStatsResponse(uptime_seconds=0, memory_usage_mb=0, cpu_percent=0),
                 )
+
+        @self.router.get("/model_usage", summary="获取模型使用统计", response_model=ModelUsageStatsResponse)
+        async def get_model_usage_stats(_=VerifiedDep):
+            """获取模型使用统计（最近24小时）"""
+            try:
+                # 使用 StatisticOutputTask 获取真实统计数据
+                now = datetime.now()
+                start_time = now - timedelta(days=1)
+                
+                stats_data = await StatisticOutputTask._collect_model_request_for_period([("custom", start_time)])
+                period_stats = stats_data.get("custom", {})
+                
+                if not period_stats:
+                    return ModelUsageStatsResponse(stats={"Debug: No Data": {"total_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}})
+                
+                # 调试日志：查看数据结构
+                logger.debug(f"StatisticOutputTask keys: {list(period_stats.keys())}")
+                
+                # 整合数据
+                tokens_by_model = period_stats.get("tokens_by_model", {})
+                in_tokens_by_model = period_stats.get("in_tokens_by_model", {})
+                out_tokens_by_model = period_stats.get("out_tokens_by_model", {})
+                # 尝试获取调用次数统计（如果存在）
+                requests_by_model = period_stats.get("requests_by_model", {})
+                
+                result = {}
+                
+                # 获取所有涉及的模型名称
+                all_models = set(tokens_by_model.keys()) | set(in_tokens_by_model.keys()) | set(out_tokens_by_model.keys())
+                
+                for model in all_models:
+                    model_key = str(model) if model else "Unknown"
+                    result[model_key] = {
+                        "total_calls": requests_by_model.get(model, 0),
+                        "prompt_tokens": in_tokens_by_model.get(model, 0),
+                        "completion_tokens": out_tokens_by_model.get(model, 0),
+                        "total_tokens": tokens_by_model.get(model, 0)
+                    }
+                    
+                return ModelUsageStatsResponse(stats=result)
+            except Exception as e:
+                logger.error(f"获取模型使用统计失败: {e}", exc_info=True)
+                return ModelUsageStatsResponse(stats={f"Error: {str(e)}": {"total_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}})
 
         @self.router.get("/plugins", summary="获取插件列表", response_model=PluginListResponse)
         def get_plugins_list(_=VerifiedDep):

@@ -34,6 +34,45 @@
               <v-chart class="chart" :option="messageChartOption" autoresize />
             </div>
           </div>
+
+          <!-- 模型使用统计 -->
+          <div class="m3-card model-usage-card">
+            <div class="card-header">
+              <div class="header-title">
+                <span class="material-symbols-rounded">memory</span>
+                <h3>模型消耗统计</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="model-usage-list" v-if="modelUsageStats && Object.keys(modelUsageStats).length > 0">
+                <div class="model-usage-item" v-for="(stats, model) in modelUsageStats" :key="model">
+                  <div class="model-header">
+                    <span class="model-name">{{ model }}</span>
+                    <span class="m3-badge secondary">{{ stats.total_calls }} 次调用</span>
+                  </div>
+                  <div class="usage-details">
+                    <div class="usage-stat">
+                      <span class="label">Prompt</span>
+                      <span class="value">{{ stats.prompt_tokens }}</span>
+                    </div>
+                    <div class="usage-stat">
+                      <span class="label">Completion</span>
+                      <span class="value">{{ stats.completion_tokens }}</span>
+                    </div>
+                    <div class="usage-stat total">
+                      <span class="label">Total</span>
+                      <span class="value">{{ stats.total_tokens }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-state">
+                <span class="material-symbols-rounded empty-icon">data_usage</span>
+                <p>暂无模型使用数据</p>
+                <span class="empty-hint">请尝试进行一次对话以生成统计数据</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 右侧列：月度计划 & 日程 -->
@@ -224,7 +263,8 @@ import {
   getLLMStats,
   getMessageStats,
   getPluginsByStatus,
-  getComponentsByType
+  getComponentsByType,
+  getModelUsageStats
 } from '@/api'
 import type { 
   DashboardOverview, 
@@ -252,6 +292,7 @@ const schedule = ref<ScheduleResponse | null>(null)
 const monthlyPlans = ref<MonthlyPlanResponse | null>(null)
 const llmStats = ref<LLMStatsResponse | null>(null)
 const messageStats = ref<MessageStatsResponse | null>(null)
+const modelUsageStats = ref<Record<string, Record<string, number>> | null>(null)
 const messageStatsPeriod = ref<'last_hour' | 'last_24_hours' | 'last_7_days' | 'last_30_days'>('last_24_hours')
 
 const messageStatsOptions = [
@@ -287,11 +328,12 @@ async function fetchAllData() {
   
   try {
     // 并行获取所有数据
-    const [overviewRes, scheduleRes, plansRes, llmRes] = await Promise.all([
+    const [overviewRes, scheduleRes, plansRes, llmRes, modelUsageRes] = await Promise.all([
       getDashboardOverview(),
       getTodaySchedule(),
       getMonthlyPlans(),
-      getLLMStats('last_24_hours')
+      getLLMStats('last_24_hours'),
+      getModelUsageStats()
     ])
     
     // 检查是否全部失败（连接问题）
@@ -315,6 +357,10 @@ async function fetchAllData() {
     
     if (llmRes.success && llmRes.data) {
       llmStats.value = llmRes.data
+    }
+    
+    if (modelUsageRes.success && modelUsageRes.data) {
+      modelUsageStats.value = modelUsageRes.data.stats
     }
     
     // 获取消息统计
@@ -810,7 +856,7 @@ onMounted(() => {
 .chart-column {
   display: flex;
   flex-direction: column;
-  height: 55vh;
+  /* 移除固定高度，允许内容自适应 */
   min-height: 500px;
 }
 
@@ -818,7 +864,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  height: 55vh;
+  /* 移除固定高度，允许内容自适应 */
   min-height: 500px;
 }
 
@@ -1085,8 +1131,8 @@ onMounted(() => {
 
 /* 图表卡片 */
 .chart-card {
-  min-height: 240px;
-  height: 100%;
+  min-height: 350px;
+  /* height: 100%;  移除 100% 高度，避免在 flex column 中失效或导致问题 */
   display: flex;
   flex-direction: column;
   overflow: hidden; /* 确保圆角 */
@@ -1272,6 +1318,87 @@ onMounted(() => {
 .empty-icon {
   font-size: 48px;
   opacity: 0.5;
+}
+
+.empty-hint {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.7;
+}
+
+/* 模型使用统计卡片 */
+.model-usage-card {
+  /* 移除 margin-top，使用 grid gap */
+}
+
+.model-usage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.model-usage-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.model-usage-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.model-usage-list::-webkit-scrollbar-thumb {
+  background-color: var(--md-sys-color-outline-variant);
+  border-radius: 3px;
+}
+
+.model-usage-item {
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.model-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.model-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.usage-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.usage-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.usage-stat .label {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.usage-stat .value {
+  font-size: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--md-sys-color-on-surface);
+}
+
+.usage-stat.total .value {
+  color: var(--md-sys-color-primary);
+  font-weight: 600;
 }
 
 /* 响应式 */

@@ -140,3 +140,39 @@ class BackendStorage:
         """
         storage = cls._get_storage()
         return storage.get_all()
+
+    # ==================== 模型统计相关 ====================
+
+    @classmethod
+    def add_model_usage(cls, model_name: str, usage: dict[str, int]):
+        """
+        添加模型使用记录
+        
+        Args:
+            model_name: 模型名称
+            usage: 使用量信息，如 {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
+        """
+        storage = cls._get_storage()
+        stats = storage.get("model_usage_stats", {})
+        
+        if model_name not in stats:
+            stats[model_name] = {
+                "total_calls": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0
+            }
+            
+        stats[model_name]["total_calls"] += 1
+        stats[model_name]["prompt_tokens"] += usage.get("prompt_tokens", 0)
+        stats[model_name]["completion_tokens"] += usage.get("completion_tokens", 0)
+        stats[model_name]["total_tokens"] += usage.get("total_tokens", 0)
+        
+        storage.set("model_usage_stats", stats)
+
+    @classmethod
+    def get_model_usage_stats(cls) -> dict[str, Any]:
+        """获取模型使用统计"""
+        storage = cls._get_storage()
+        return storage.get("model_usage_stats", {})
+
