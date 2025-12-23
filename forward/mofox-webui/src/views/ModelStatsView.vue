@@ -262,8 +262,9 @@ const analyzeModelTasks = (config: Record<string, any>) => {
         else if (taskName === 'summary') taskName = '总结 (Summary)'
         
         // 如果是 generic 的 section，加上 key 的提示
-        if (!['llm', 'emoji', 'vision', 'embedding', 'speech', 'tts', 'stt', 'translation', 'summary'].includes(path[0])) {
-           const sectionName = path[0].charAt(0).toUpperCase() + path[0].slice(1)
+        const rootSection = path[0]
+        if (rootSection && !['llm', 'emoji', 'vision', 'embedding', 'speech', 'tts', 'stt', 'translation', 'summary'].includes(rootSection)) {
+           const sectionName = rootSection.charAt(0).toUpperCase() + rootSection.slice(1)
            taskName = `${sectionName}`
            if (path.length > 1) {
              taskName += ` (${path.slice(1).join('.')})`
