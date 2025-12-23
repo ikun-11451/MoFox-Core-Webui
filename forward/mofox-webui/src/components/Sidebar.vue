@@ -262,6 +262,7 @@ const menuItems: MenuItem[] = [
     children: [
       { name: '机器人配置', path: '/dashboard/bot-config', icon: 'smart_toy' },
       { name: '模型配置', path: '/dashboard/model-config', icon: 'psychology' },
+      { name: '模型统计', path: '/dashboard/model-stats', icon: 'bar_chart' },
       { name: '插件配置', path: '/dashboard/plugin-config', icon: 'extension' },
       { name: '表达方式', path: '/dashboard/expression', icon: 'record_voice_over' },
       { name: '关系管理', path: '/dashboard/relationship', icon: 'group' },

@@ -19,6 +19,7 @@ import ThemeConfigView from '@/views/ThemeConfigView.vue'
 import ChatroomView from '@/views/ChatroomView.vue'
 import GitHubView from '@/views/GitHubView.vue'
 import EmojiManager from '@/components/emoji/EmojiManager.vue'
+import ModelStatsView from '@/views/ModelStatsView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -40,6 +41,11 @@ const routes: Array<RouteRecordRaw> = [
         path: '',
         name: 'DashboardHome',
         component: DashboardHome
+      },
+      {
+        path: 'model-stats',
+        name: 'ModelStats',
+        component: ModelStatsView
       },
       {
         path: 'theme',
