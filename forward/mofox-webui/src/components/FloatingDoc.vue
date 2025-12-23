@@ -78,8 +78,15 @@ const onDrag = (e: MouseEvent) => {
   const dx = e.clientX - startX
   const dy = e.clientY - startY
   
-  x.value = initialLeft + dx
-  y.value = initialTop + dy
+  const newX = initialLeft + dx
+  const newY = initialTop + dy
+  
+  // 限制在屏幕范围内
+  const maxX = window.innerWidth - width.value
+  const maxY = window.innerHeight - height.value
+  
+  x.value = Math.max(0, Math.min(newX, maxX))
+  y.value = Math.max(0, Math.min(newY, maxY))
 }
 
 const stopDrag = () => {
