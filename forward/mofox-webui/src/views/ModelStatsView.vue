@@ -172,6 +172,27 @@ const fetchData = async () => {
 const analyzeModelTasks = (config: Record<string, any>) => {
   const tasks: Record<string, string[]> = { ...modelTasks.value } // 保留已有的任务
   
+  // 0. 建立 模型别名(name) -> 模型标识符(model_identifier) 的映射
+  const nameToIdMap: Record<string, string> = {}
+  if (Array.isArray(config.models)) {
+    config.models.forEach((m: any) => {
+      if (m.name && m.model_identifier) {
+        nameToIdMap[m.name] = m.model_identifier
+      }
+    })
+  }
+
+  // 辅助函数：添加任务
+  const addTask = (modelRef: string, taskName: string) => {
+    // 尝试解析为真实ID，如果找不到则使用原名（可能是直接填写的ID）
+    const realId = nameToIdMap[modelRef] || modelRef
+    
+    if (!tasks[realId]) tasks[realId] = []
+    if (!tasks[realId].includes(taskName)) {
+      tasks[realId].push(taskName)
+    }
+  }
+
   // 1. 处理 model_task_config (标准结构)
   if (config.model_task_config && typeof config.model_task_config === 'object') {
     const taskConfig = config.model_task_config as Record<string, any>
@@ -209,10 +230,7 @@ const analyzeModelTasks = (config: Record<string, any>) => {
         let taskName = taskNameMap[taskKey] || (taskKey.charAt(0).toUpperCase() + taskKey.slice(1))
 
         for (const modelName of modelList) {
-          if (!tasks[modelName]) tasks[modelName] = []
-          if (!tasks[modelName].includes(taskName)) {
-            tasks[modelName].push(taskName)
-          }
+          addTask(modelName, taskName)
         }
       }
     }
@@ -225,12 +243,11 @@ const analyzeModelTasks = (config: Record<string, any>) => {
     // 跳过 model_task_config，因为上面已经处理过了
     if (path.length === 0 && obj === config.model_task_config) return 
     if (path.includes('model_task_config')) return
+    // 跳过 models 定义列表
+    if (path.length === 0 && obj === config.models) return
 
     for (const [key, value] of Object.entries(obj)) {
       if (typeof value === 'string' && (key === 'model' || key.endsWith('_model') || key === 'model_name')) {
-        const modelName = value
-        if (!tasks[modelName]) tasks[modelName] = []
-        
         // 格式化任务名称
         let taskName = path[0] || 'Unknown'
         
@@ -253,9 +270,7 @@ const analyzeModelTasks = (config: Record<string, any>) => {
            }
         }
 
-        if (!tasks[modelName].includes(taskName)) {
-          tasks[modelName].push(taskName)
-        }
+        addTask(value, taskName)
       } else if (typeof value === 'object') {
         traverse(value, [...path, key])
       }
@@ -277,22 +292,7 @@ const closeDetail = () => {
 
 const getTasksForModel = (modelName: string) => {
   if (!modelTasks.value) return []
-  
-  // 1. 精确匹配
-  if (modelTasks.value[modelName]) return modelTasks.value[modelName]
-  
-  // 2. 模糊匹配 (忽略大小写，或者包含关系)
-  const lowerModelName = modelName.toLowerCase()
-  for (const [key, tasks] of Object.entries(modelTasks.value)) {
-    const lowerKey = key.toLowerCase()
-    // 如果配置中的名字包含在统计名字中，或者统计名字包含在配置名字中
-    // 例如配置: "gemini-pro", 统计: "models/gemini-pro" -> 匹配
-    if (lowerModelName.includes(lowerKey) || lowerKey.includes(lowerModelName)) {
-      return tasks
-    }
-  }
-  
-  return []
+  return modelTasks.value[modelName] || []
 }
 
 onMounted(() => {
