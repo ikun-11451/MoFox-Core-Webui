@@ -82,7 +82,7 @@ export const useEmojiStore = defineStore('emoji', {
       try {
         const response = await emojiApi.getEmojiList(this.currentParams)
         
-        if (response.success) {
+        if (response?.success) {
           const { items, total, page, page_size, total_pages } = response.data
           this.items = items
           this.total = total
@@ -104,7 +104,7 @@ export const useEmojiStore = defineStore('emoji', {
     async getEmojiDetail(hash: string) {
       try {
         const response = await emojiApi.getEmojiDetail(hash)
-        return response.success ? response.data : null
+        return response?.success ? response.data : null
       } catch (error) {
         console.error('获取表情包详情失败:', error)
         throw error
@@ -117,7 +117,7 @@ export const useEmojiStore = defineStore('emoji', {
     async uploadEmojis(files: File[]) {
       try {
         const response = await emojiApi.uploadEmojis(files)
-        if (response.success) {
+        if (response?.success) {
           await this.fetchEmojiList()
           return response.data
         }
@@ -134,7 +134,7 @@ export const useEmojiStore = defineStore('emoji', {
     async deleteEmoji(hash: string) {
       try {
         const response = await emojiApi.deleteEmoji(hash)
-        if (response.success) {
+        if (response?.success) {
           await this.fetchEmojiList()
           this.selectedItems.delete(hash)
           return true
@@ -152,7 +152,7 @@ export const useEmojiStore = defineStore('emoji', {
     async updateEmoji(hash: string, data: { description?: string; emotions?: string[]; is_banned?: boolean }) {
       try {
         const response = await emojiApi.updateEmoji(hash, data)
-        if (response.success) {
+        if (response?.success) {
           await this.fetchEmojiList()
           return response.data
         }
@@ -169,7 +169,7 @@ export const useEmojiStore = defineStore('emoji', {
     async batchDelete(hashes: string[]) {
       try {
         const response = await emojiApi.batchOperationEmojis('delete', hashes)
-        if (response.success) {
+        if (response?.success) {
           await this.fetchEmojiList()
           hashes.forEach(hash => this.selectedItems.delete(hash))
           return response.data
@@ -187,7 +187,7 @@ export const useEmojiStore = defineStore('emoji', {
     async batchBan(hashes: string[]) {
       try {
         const response = await emojiApi.batchOperationEmojis('ban', hashes)
-        if (response.success) {
+        if (response?.success) {
           await this.fetchEmojiList()
           return response.data
         }
@@ -204,7 +204,7 @@ export const useEmojiStore = defineStore('emoji', {
     async batchUnban(hashes: string[]) {
       try {
         const response = await emojiApi.batchOperationEmojis('unban', hashes)
-        if (response.success) {
+        if (response?.success) {
           await this.fetchEmojiList()
           return response.data
         }
