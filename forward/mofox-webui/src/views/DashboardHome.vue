@@ -1392,7 +1392,7 @@ onMounted(() => {
 
 .usage-stat .value {
   font-size: 14px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Noto Sans SC', sans-serif;
   color: var(--md-sys-color-on-surface);
 }
 
