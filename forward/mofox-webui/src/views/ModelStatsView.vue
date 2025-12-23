@@ -70,7 +70,7 @@
 
     <!-- 详情弹窗 -->
     <div class="m3-dialog-overlay" v-if="selectedModel" @click="closeDetail">
-      <div class="m3-dialog" @click.stop>
+      <div class="m3-dialog" :class="{ 'has-tasks': getTasksForModel(selectedModel.name).length > 0 }" @click.stop>
         <div class="dialog-header">
           <h3>模型详情</h3>
           <button class="m3-icon-button" @click="closeDetail">
@@ -86,22 +86,36 @@
             </div>
           </div>
           
-          <div class="detail-grid">
-            <div class="detail-card filled">
-              <div class="detail-label">总计消耗 (Total)</div>
-              <div class="detail-value">{{ selectedModel.stats.total_tokens }}</div>
+          <div class="detail-body-layout">
+            <div class="stats-section">
+              <div class="detail-grid">
+                <div class="detail-card filled">
+                  <div class="detail-label">总计消耗 (Total)</div>
+                  <div class="detail-value">{{ selectedModel.stats.total_tokens }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">提示词 (Prompt)</div>
+                  <div class="detail-value">{{ selectedModel.stats.prompt_tokens }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">生成 (Completion)</div>
+                  <div class="detail-value">{{ selectedModel.stats.completion_tokens }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">平均消耗 / 次</div>
+                  <div class="detail-value">{{ Math.round(selectedModel.stats.total_tokens / (selectedModel.stats.total_calls || 1)) }}</div>
+                </div>
+              </div>
             </div>
-            <div class="detail-card">
-              <div class="detail-label">提示词 (Prompt)</div>
-              <div class="detail-value">{{ selectedModel.stats.prompt_tokens }}</div>
-            </div>
-            <div class="detail-card">
-              <div class="detail-label">生成 (Completion)</div>
-              <div class="detail-value">{{ selectedModel.stats.completion_tokens }}</div>
-            </div>
-            <div class="detail-card">
-              <div class="detail-label">平均消耗 / 次</div>
-              <div class="detail-value">{{ Math.round(selectedModel.stats.total_tokens / (selectedModel.stats.total_calls || 1)) }}</div>
+
+            <div class="tasks-section" v-if="getTasksForModel(selectedModel.name).length > 0">
+              <div class="section-title">应用场景</div>
+              <div class="tasks-grid">
+                <div v-for="task in getTasksForModel(selectedModel.name)" :key="task" class="task-card">
+                  <span class="material-symbols-rounded task-icon">check_circle</span>
+                  <span class="task-name">{{ task }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -112,21 +126,41 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getModelUsageStats } from '@/api'
+import { getModelUsageStats, getConfigList, getConfigContent, type ConfigFileInfo } from '@/api'
 import { showError } from '@/utils/dialog'
 
 const loading = ref(false)
 const statsData = ref<Record<string, Record<string, number>> | null>(null)
 const selectedModel = ref<{ name: string; stats: any } | null>(null)
+const modelTasks = ref<Record<string, string[]>>({})
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getModelUsageStats()
-    if (res.success && res.data) {
-      statsData.value = res.data.stats
+    const [statsRes, configListRes] = await Promise.all([
+      getModelUsageStats(),
+      getConfigList()
+    ])
+
+    if (statsRes.success && statsRes.data) {
+      statsData.value = statsRes.data.stats
     } else {
-      showError('获取数据失败: ' + (res.error || '未知错误'))
+      showError('获取数据失败: ' + (statsRes.error || '未知错误'))
+    }
+
+    // 获取模型配置以分析用途
+    if (configListRes.success && configListRes.data) {
+      // 扫描主配置和模型配置
+      const targetConfigs = configListRes.data.configs.filter((c: ConfigFileInfo) => 
+        c.type === 'model' || c.type === 'main'
+      )
+      
+      for (const config of targetConfigs) {
+        const contentRes = await getConfigContent(config.path)
+        if (contentRes.success && contentRes.data && contentRes.data.parsed) {
+          analyzeModelTasks(contentRes.data.parsed)
+        }
+      }
     }
   } catch (e) {
     showError('网络请求失败: ' + e)
@@ -135,12 +169,130 @@ const fetchData = async () => {
   }
 }
 
+const analyzeModelTasks = (config: Record<string, any>) => {
+  const tasks: Record<string, string[]> = { ...modelTasks.value } // 保留已有的任务
+  
+  // 1. 处理 model_task_config (标准结构)
+  if (config.model_task_config && typeof config.model_task_config === 'object') {
+    const taskConfig = config.model_task_config as Record<string, any>
+    
+    // 任务名称映射表
+    const taskNameMap: Record<string, string> = {
+      'replyer': '主回复 (Replyer)',
+      'planner': '规划 (Planner)',
+      'emotion': '情感分析 (Emotion)',
+      'mood': '心情 (Mood)',
+      'maizone': 'MaiZone',
+      'tool_use': '工具调用 (Tool Use)',
+      'anti_injection': '反注入 (Anti-Injection)',
+      'vlm': '视觉识别 (VLM)',
+      'emoji_vlm': '表情包识别 (Emoji VLM)',
+      'utils_video': '视频处理',
+      'voice': '语音 (Voice)',
+      'embedding': '向量 (Embedding)',
+      'memory_short_term_builder': '短时记忆构建',
+      'memory_short_term_decider': '短时记忆决策',
+      'memory_long_term_builder': '长时记忆构建',
+      'memory_judge': '记忆评判',
+      'lpmm_entity_extract': '实体提取',
+      'lpmm_rdf_build': '知识图谱构建',
+      'lpmm_qa': '知识库问答',
+      'schedule_generator': '日程生成',
+      'monthly_plan_generator': '月度计划',
+      'relationship_tracker': '关系追踪'
+    }
+
+    for (const [taskKey, taskSettings] of Object.entries(taskConfig)) {
+      if (taskSettings && Array.isArray(taskSettings.model_list)) {
+        const modelList = taskSettings.model_list as string[]
+        
+        let taskName = taskNameMap[taskKey] || (taskKey.charAt(0).toUpperCase() + taskKey.slice(1))
+
+        for (const modelName of modelList) {
+          if (!tasks[modelName]) tasks[modelName] = []
+          if (!tasks[modelName].includes(taskName)) {
+            tasks[modelName].push(taskName)
+          }
+        }
+      }
+    }
+  }
+
+  // 2. 通用遍历逻辑 (兼容旧格式或其他配置)
+  const traverse = (obj: any, path: string[]) => {
+    if (typeof obj !== 'object' || obj === null) return
+    
+    // 跳过 model_task_config，因为上面已经处理过了
+    if (path.length === 0 && obj === config.model_task_config) return 
+    if (path.includes('model_task_config')) return
+
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === 'string' && (key === 'model' || key.endsWith('_model') || key === 'model_name')) {
+        const modelName = value
+        if (!tasks[modelName]) tasks[modelName] = []
+        
+        // 格式化任务名称
+        let taskName = path[0] || 'Unknown'
+        
+        // 常见 Section 映射
+        if (taskName === 'llm') taskName = '主回复 (LLM)'
+        else if (taskName === 'emoji') taskName = '表情包识别 (Emoji)'
+        else if (taskName === 'vision') taskName = '视觉识别 (Vision)'
+        else if (taskName === 'embedding') taskName = '文本向量 (Embedding)'
+        else if (taskName === 'speech' || taskName === 'tts') taskName = '语音合成 (TTS)'
+        else if (taskName === 'stt') taskName = '语音转文字 (STT)'
+        else if (taskName === 'translation') taskName = '翻译 (Translation)'
+        else if (taskName === 'summary') taskName = '总结 (Summary)'
+        
+        // 如果是 generic 的 section，加上 key 的提示
+        if (!['llm', 'emoji', 'vision', 'embedding', 'speech', 'tts', 'stt', 'translation', 'summary'].includes(path[0])) {
+           const sectionName = path[0].charAt(0).toUpperCase() + path[0].slice(1)
+           taskName = `${sectionName}`
+           if (path.length > 1) {
+             taskName += ` (${path.slice(1).join('.')})`
+           }
+        }
+
+        if (!tasks[modelName].includes(taskName)) {
+          tasks[modelName].push(taskName)
+        }
+      } else if (typeof value === 'object') {
+        traverse(value, [...path, key])
+      }
+    }
+  }
+  
+  traverse(config, [])
+  console.log('[ModelStats] Analyzed tasks:', tasks)
+  modelTasks.value = tasks
+}
+
 const openDetail = (model: string, stats: any) => {
   selectedModel.value = { name: model, stats }
 }
 
 const closeDetail = () => {
   selectedModel.value = null
+}
+
+const getTasksForModel = (modelName: string) => {
+  if (!modelTasks.value) return []
+  
+  // 1. 精确匹配
+  if (modelTasks.value[modelName]) return modelTasks.value[modelName]
+  
+  // 2. 模糊匹配 (忽略大小写，或者包含关系)
+  const lowerModelName = modelName.toLowerCase()
+  for (const [key, tasks] of Object.entries(modelTasks.value)) {
+    const lowerKey = key.toLowerCase()
+    // 如果配置中的名字包含在统计名字中，或者统计名字包含在配置名字中
+    // 例如配置: "gemini-pro", 统计: "models/gemini-pro" -> 匹配
+    if (lowerModelName.includes(lowerKey) || lowerKey.includes(lowerModelName)) {
+      return tasks
+    }
+  }
+  
+  return []
 }
 
 onMounted(() => {
@@ -346,6 +498,11 @@ onMounted(() => {
   flex-direction: column;
   box-shadow: var(--md-sys-elevation-3);
   animation: dialogIn 0.3s cubic-bezier(0.2, 0, 0, 1);
+  transition: max-width 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.m3-dialog.has-tasks {
+  max-width: 800px;
 }
 
 @keyframes dialogIn {
@@ -417,11 +574,34 @@ onMounted(() => {
   line-height: 1.4;
 }
 
+.detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.task-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .detail-badge {
   display: inline-block;
   padding: 4px 12px;
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.task-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
@@ -467,5 +647,76 @@ onMounted(() => {
   font-family: 'Noto Sans SC', sans-serif;
   font-weight: 600;
   color: var(--md-sys-color-on-surface);
+}
+
+.detail-body-layout {
+  display: flex;
+  gap: 24px;
+}
+
+.stats-section {
+  flex: 1;
+  min-width: 300px;
+}
+
+.tasks-section {
+  flex: 1;
+  min-width: 250px;
+  border-left: 1px solid var(--md-sys-color-outline-variant);
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.task-card {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: transform 0.2s;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+}
+
+.task-icon {
+  font-size: 18px;
+  opacity: 0.8;
+}
+
+.task-name {
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  .detail-body-layout {
+    flex-direction: column;
+  }
+  
+  .tasks-section {
+    border-left: none;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+    padding-left: 0;
+    padding-top: 24px;
+  }
 }
 </style>
