@@ -52,15 +52,15 @@
                   </div>
                   <div class="usage-details">
                     <div class="usage-stat">
-                      <span class="label">Prompt</span>
+                      <span class="label">提示词</span>
                       <span class="value">{{ stats.prompt_tokens }}</span>
                     </div>
                     <div class="usage-stat">
-                      <span class="label">Completion</span>
+                      <span class="label">生成</span>
                       <span class="value">{{ stats.completion_tokens }}</span>
                     </div>
                     <div class="usage-stat total">
-                      <span class="label">Total</span>
+                      <span class="label">总计</span>
                       <span class="value">{{ stats.total_tokens }}</span>
                     </div>
                   </div>
