@@ -861,9 +861,14 @@ onMounted(() => {
 }
 
 .m3-assist-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 24px;
   padding: 0 8px;
   font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
 }
 
 .m3-assist-chip.system {
