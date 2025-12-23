@@ -767,7 +767,7 @@ onUnmounted(() => {
   overflow-x: auto;
   padding: 12px;
   min-height: 0;
-  background: rgba(30, 30, 30, 0.6); /* 半透明背景 */
+  background: #1e1e1e; /* 纯黑背景，确保浅色模式下也能看清 */
   border-radius: 12px; /* 圆角 */
   color: #d4d4d4; /* 浅色文字 */
   font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
@@ -884,7 +884,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #d4d4d4;
   height: 100%;
   font-family: 'Roboto Mono', 'Noto Sans SC', 'JetBrains Mono', monospace;
 }
@@ -894,14 +894,14 @@ onUnmounted(() => {
   font-size: 48px;
   margin-bottom: 12px;
   opacity: 0.5;
-  color: var(--md-sys-color-outline);
+  color: #808080;
 }
 
 .empty-state p,
 .loading-state p {
   font-size: 14px;
   margin: 0;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #d4d4d4;
 }
 
 .spinning {
