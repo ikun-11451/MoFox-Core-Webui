@@ -287,7 +287,12 @@ export const API_ENDPOINTS = {
     MONTHLY_PLANS: 'stats/monthly-plans',
     LLM_STATS: 'stats/llm-stats',
     MESSAGE_STATS: 'stats/message-stats',
-    MODEL_USAGE: 'stats/model_usage'
+    MODEL_USAGE: 'model_stats/model_usage',
+    MODEL_OVERVIEW: 'model_stats/model_overview',
+    MODEL_DETAIL: (modelName: string) => `model_stats/model_detail/${modelName}`,
+    PROVIDER_STATS: 'model_stats/provider_stats',
+    MODULE_STATS: 'model_stats/module_stats',
+    CHART_DATA: 'model_stats/chart_data'
   },
   CONFIG: {
     LIST: 'config/list',
@@ -488,13 +493,6 @@ export interface ComponentsByTypeResponse {
  */
 export async function getDashboardOverview() {
   return api.get<DashboardOverview>(API_ENDPOINTS.STATS.OVERVIEW)
-}
-
-/**
- * 获取模型使用统计
- */
-export async function getModelUsageStats() {
-  return api.get<{ stats: Record<string, Record<string, number>> }>(API_ENDPOINTS.STATS.MODEL_USAGE)
 }
 
 /**

@@ -10,6 +10,7 @@ from .expression_router import ExpressionRouterComponent
 from .git_update_router import GitUpdateRouterComponent
 from .log_viewer_router import LogViewerRouterComponent
 from .marketplace_router import MarketplaceRouterComponent
+from .model_stats_router import WebUIModelStatsRouter
 from .plugin_router import WebUIPluginRouter
 from .relationship_router import RelationshipRouterComponent
 from .stats_router import WebUIStatsRouter
@@ -27,6 +28,7 @@ __all__ = [
     "WebUIAuthRouter",
     "WebUIConfigRouter",
     "WebUIModelRouter",
+    "WebUIModelStatsRouter",
     "WebUIPluginRouter",
     "WebUIStatsRouter",
     "WebUISettingRouter",
