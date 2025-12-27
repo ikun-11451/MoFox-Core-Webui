@@ -133,19 +133,7 @@ class ApiClient {
       // 登录特殊处理
       if (endpoint === 'auth/login') {
         const body = options.body ? JSON.parse(options.body as string) : {}
-        if (body === 'mofox' || (typeof body === 'string' && body.includes('mofox'))) { // 简单判断，实际 body 可能是 JSON 字符串
-           // 实际上 post 方法传入的 body 已经被 JSON.stringify 了，所以这里 options.body 是字符串
-           // 如果直接传字符串给 post，body 就是 JSON 字符串。
-           // 让我们更严谨一点解析
-           let password = ''
-           try {
-             // 假设 body 是直接传的密码字符串，或者 { password: ... }
-             // 根据 Login.vue: api.get(API_ENDPOINTS.AUTH.LOGIN) 
-             // 等等，Login.vue 中是 api.get(API_ENDPOINTS.AUTH.LOGIN) 并且 api.setToken(password)
-             // 它是通过 Header 传密码的！
-             // 让我们再看一眼 Login.vue
-           } catch (e) {}
-        }
+        // Login.vue 通过 Header 传递密码，而不是通过 body
         
         // Login.vue 逻辑：
         // api.setToken(loginForm.password)
