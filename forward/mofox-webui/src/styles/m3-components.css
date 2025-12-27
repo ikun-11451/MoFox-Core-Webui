@@ -1,6 +1,32 @@
-/* Material 3 Expressive Components */
+/**
+ * @file m3-components.css
+ * @description Material Design 3 组件样式库
+ * 
+ * 本文件定义了基于 Material Design 3 设计规范的 UI 组件样式，
+ * 包括按钮、卡片、输入框、开关、标签等常用组件。
+ * 
+ * 组件列表：
+ * 1. 按钮 (Buttons) - .m3-button，支持 filled/tonal/outlined/text 变体
+ * 2. 图标按钮 (Icon Buttons) - .m3-icon-button
+ * 3. 卡片 (Cards) - .m3-card，支持 elevated/outlined 变体
+ * 4. 输入框 (Text Fields) - .m3-input，支持 outlined 变体
+ * 5. 开关 (Switch) - .m3-switch
+ * 6. 标签 (Chips) - .m3-chip，支持 selected 状态
+ * 
+ * 使用方式：
+ * - 所有组件使用 M3 主题变量（定义在 m3-theme.css）
+ * - 支持亮色/暗色主题自动切换
+ * - 包含悬停、焦点、禁用等交互状态样式
+ */
 
-/* Buttons */
+/* ==================== 按钮组件 (Buttons) ==================== */
+
+/**
+ * M3 按钮基础样式
+ * - 高度 40px，胶囊形圆角
+ * - 支持图标 + 文字组合
+ * - 平滑的过渡动画
+ */
 .m3-button {
   height: 40px;
   padding: 0 24px;
@@ -27,7 +53,11 @@
   opacity: 0.38;
 }
 
-/* Filled Button */
+/**
+ * Filled Button - 填充按钮
+ * 主要操作按钮，使用主题色填充
+ * 悬停时添加阴影和轻微的颜色变化
+ */
 .m3-button.filled {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
@@ -38,7 +68,11 @@
   background: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)), var(--md-sys-color-primary);
 }
 
-/* Tonal Button */
+/**
+ * Tonal Button - 色调按钮
+ * 次要操作按钮，使用次要容器色
+ * 比 Filled 更柔和，适合非核心操作
+ */
 .m3-button.tonal {
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
@@ -49,7 +83,11 @@
   background: linear-gradient(rgba(29, 25, 43, 0.08), rgba(29, 25, 43, 0.08)), var(--md-sys-color-secondary-container);
 }
 
-/* Outlined Button */
+/**
+ * Outlined Button - 轮廓按钮
+ * 透明背景加边框，适合取消类操作
+ * 悬停时边框变为主题色
+ */
 .m3-button.outlined {
   background: transparent;
   border: 1px solid var(--md-sys-color-outline);
@@ -61,7 +99,11 @@
   border-color: var(--md-sys-color-primary);
 }
 
-/* Text Button */
+/**
+ * Text Button - 文本按钮
+ * 纯文字按钮，无背景无边框
+ * 适合内联操作或低优先级操作
+ */
 .m3-button.text {
   background: transparent;
   color: var(--md-sys-color-primary);
@@ -72,7 +114,14 @@
   background: var(--md-sys-color-surface-container-highest);
 }
 
-/* Icon Button */
+/* ==================== 图标按钮 (Icon Buttons) ==================== */
+
+/**
+ * M3 图标按钮
+ * - 圆形 40x40px
+ * - 仅包含图标，无文字
+ * - 支持 filled/tonal 变体
+ */
 .m3-icon-button {
   width: 40px;
   height: 40px;
@@ -102,7 +151,14 @@
   color: var(--md-sys-color-on-secondary-container);
 }
 
-/* Cards */
+/* ==================== 卡片组件 (Cards) ==================== */
+
+/**
+ * M3 卡片
+ * - 大圆角 (32px) 以符合 M3 Expressive 风格
+ * - 悬停时上浮效果
+ * - 支持 elevated/outlined 变体
+ */
 .m3-card {
   background: var(--md-sys-color-surface-container);
   border-radius: 32px;
@@ -126,7 +182,12 @@
   border: 1px solid var(--md-sys-color-outline-variant);
 }
 
-/* Text Fields */
+/* ==================== 输入框组件 (Text Fields) ==================== */
+
+/**
+ * M3 输入框容器
+ * - 包含标签和输入区域
+ */
 .m3-text-field {
   position: relative;
   display: flex;
@@ -170,7 +231,14 @@
   border: 2px solid var(--md-sys-color-primary);
 }
 
-/* Switch */
+/* ==================== 开关组件 (Switch) ==================== */
+
+/**
+ * M3 开关
+ * - 宽 52px，高 32px
+ * - 包含轨道 (track) 和滑块 (thumb)
+ * - 选中时滑块放大并变色
+ */
 .m3-switch {
   position: relative;
   display: inline-block;
@@ -223,7 +291,14 @@
   left: 2px;
 }
 
-/* Chips */
+/* ==================== 标签组件 (Chips) ==================== */
+
+/**
+ * M3 标签/芯片
+ * - 小圆角 (8px) 的紧凑标签
+ * - 支持选中状态
+ * - 可包含前置图标
+ */
 .m3-chip {
   display: inline-flex;
   align-items: center;

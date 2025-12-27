@@ -1,6 +1,25 @@
+<!--
+  @file PluginDetailView.vue
+  @description 插件详情页面
+  
+  功能说明：
+  1. 显示插件详细信息（名称、版本、作者、描述等）
+  2. 插件状态管理（加载/卸载/重载/启用/禁用）
+  3. 查看插件的组件列表
+  4. 访问插件配置
+  5. 删除插件
+  
+  页面选项卡：
+  - overview: 插件概览信息
+  - components: 插件注册的组件
+  - config: 插件配置入口
+  
+  特殊处理：
+  - 系统插件显示"仅可查看"标记并禁用操作按钮
+-->
 <template>
   <div class="plugin-detail-view">
-    <!-- 返回按钮和标题 -->
+    <!-- 返回按钮和标题：显示插件名称和状态控制 -->
     <header class="page-header">
       <button class="m3-button text" @click="goBack">
         <span class="material-symbols-rounded">arrow_back</span>

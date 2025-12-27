@@ -1,6 +1,31 @@
+<!--
+  @file GitUpdateView.vue
+  @description Git 更新管理页面
+  
+  功能说明：
+  1. 检查 MoFox-Bot 主程序更新
+  2. 分支管理（切换分支）
+  3. Git 路径配置（系统/便携/自定义）
+  4. 一键安装 Git（Windows）
+  5. 执行更新操作
+  
+  系统信息显示：
+  - Git 可用状态
+  - 当前分支
+  - 操作系统
+  
+  更新检查：
+  - 显示当前版本和最新版本
+  - 显示更新日志（提交历史）
+  - 支持一键更新
+  
+  特殊处理：
+  - 非 Git 仓库显示错误提示
+  - Git 未安装显示安装指引
+-->
 <template>
   <div class="git-update-view">
-    <!-- 非 Git 仓库错误提示 -->
+    <!-- 非 Git 仓库错误提示：当主程序目录不是 Git 仓库时显示 -->
     <div v-if="gitStatus && !gitStatus.is_git_repo" class="not-git-repo-error">
       <div class="error-icon">
         <span class="material-symbols-rounded">error</span>

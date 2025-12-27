@@ -1,6 +1,25 @@
+<!--
+  @file ConfigManager.vue
+  @description 统一配置管理器
+  
+  功能说明：
+  1. 集中管理所有配置文件（核心配置 + 插件配置）
+  2. 左侧显示配置文件列表，右侧显示编辑器
+  3. 支持可视化编辑和源码编辑
+  4. 根据配置类型自动选择合适的编辑器组件
+  
+  配置分类：
+  - 核心配置：主配置(main)、模型配置(model)
+  - 插件配置：各插件的配置文件
+  
+  编辑器组件：
+  - MainConfigEditor: 主配置专用
+  - ModelConfigEditor: 模型配置专用
+  - 通用编辑器: 其他配置
+-->
 <template>
   <div class="config-manager">
-    <!-- 配置文件列表侧边栏 -->
+    <!-- 配置文件列表侧边栏：分类显示所有配置 -->
     <aside class="config-sidebar">
       <div class="sidebar-header">
         <h3>

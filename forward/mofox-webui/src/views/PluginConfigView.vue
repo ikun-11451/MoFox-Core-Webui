@@ -1,6 +1,26 @@
+<!--
+  @file PluginConfigView.vue
+  @description 插件配置编辑页面
+  
+  功能说明：
+  1. 编辑单个插件的配置文件
+  2. 支持可视化编辑和源码编辑
+  3. 自动解析配置结构生成表单
+  4. 支持多种字段类型（布尔、文本、数组等）
+  
+  路由参数：
+  - path: 配置文件路径（URL 编码）
+  
+  字段类型支持：
+  - boolean: 开关切换
+  - string/number: 文本输入
+  - array: 列表编辑
+  - array_of_objects: 对象数组编辑
+  - object: 嵌套对象编辑
+-->
 <template>
   <div class="plugin-config-view">
-    <!-- 顶部操作栏 -->
+    <!-- 顶部操作栏：返回按钮、标题、编辑模式切换、保存 -->
     <header class="config-header">
       <div class="header-left">
         <button class="m3-icon-button" @click="goBack" title="返回">

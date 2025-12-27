@@ -1,6 +1,31 @@
+<!--
+  @file ChatroomView.vue
+  @description UI 聊天室页面
+  
+  功能说明：
+  1. 创建和管理虚拟用户
+  2. 与 Bot 进行对话测试
+  3. 查看聊天历史
+  4. 编辑用户信息和印象
+  5. 重置用户关系
+  
+  布局结构：
+  - 左侧：虚拟用户列表
+  - 右侧：聊天界面（消息列表 + 输入框）
+  
+  消息类型：
+  - 普通消息：用户/Bot 发送的消息
+  - 系统消息：状态通知横幅
+  - 引用消息：回复特定消息
+  
+  用户管理：
+  - 创建虚拟用户（昵称、头像、印象）
+  - 编辑用户信息
+  - 删除用户
+-->
 <template>
   <div class="chatroom-view">
-    <!-- 左侧：用户列表 -->
+    <!-- 左侧：虚拟用户列表面板 -->
     <aside class="user-panel m3-card">
       <div class="panel-header">
         <div class="header-content">

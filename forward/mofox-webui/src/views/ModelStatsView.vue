@@ -1,3 +1,29 @@
+<!--
+  @file ModelStatsView.vue
+  @description 模型统计页面
+  
+  功能说明：
+  1. 查看 AI 模型使用情况
+  2. 成本分析和效率指标
+  3. 按模型/提供商/模块分类统计
+  4. 图表可视化分析
+  
+  统计总览：
+  - 总调用次数
+  - 总 Token 消耗
+  - Token 效率（输出/输入比）
+  - 总成本
+  - 平均单次 Token
+  
+  页面选项卡：
+  - models: 按模型统计
+  - providers: 按提供商分析
+  - modules: 按模块使用情况
+  - charts: 图表分析
+  
+  时间范围：
+  - 支持选择不同时间段的统计数据
+-->
 <template>
   <div class="model-stats-view">
     <div class="view-header">

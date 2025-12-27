@@ -1,35 +1,73 @@
+/**
+ * @file m3-theme.css
+ * @description Material Design 3 主题变量定义
+ * 
+ * 本文件定义了基于 Material Design 3 规范的设计令牌（Design Tokens），
+ * 包括颜色系统、排版系统、形状系统等。
+ * 
+ * 主题色系（基于 Deep Purple 种子色）：
+ * - Primary: 主要操作和强调元素
+ * - Secondary: 次要元素和辅助操作
+ * - Tertiary: 第三层次的装饰元素
+ * - Error: 错误状态
+ * - Surface: 背景和容器
+ * 
+ * 主题模式：
+ * - :root - 亮色主题（默认）
+ * - [data-theme="dark"] - 暗色主题
+ * 
+ * 使用方式：
+ * - 所有颜色使用 var(--md-sys-color-*) 引用
+ * - 支持运行时动态切换主题
+ */
+
+/* ==================== 亮色主题 (Light Theme) ==================== */
 :root {
-  /* Color Scheme - Seed: Deep Purple */
+  /* ---------- 主色调 (Primary) ---------- */
+  /* 主要操作按钮、链接、焦点元素 */
   --md-sys-color-primary: #6750A4;
   --md-sys-color-on-primary: #FFFFFF;
   --md-sys-color-primary-container: #EADDFF;
   --md-sys-color-on-primary-container: #21005D;
   
+  /* ---------- 次要色调 (Secondary) ---------- */
+  /* 次要按钮、筛选标签、辅助元素 */
   --md-sys-color-secondary: #625B71;
   --md-sys-color-secondary-container: #E8DEF8;
   --md-sys-color-on-secondary-container: #1D192B;
   
+  /* ---------- 第三色调 (Tertiary) ---------- */
+  /* 装饰元素、特殊标记 */
   --md-sys-color-tertiary: #7D5260;
   --md-sys-color-tertiary-container: #FFD8E4;
   --md-sys-color-on-tertiary-container: #31111D;
 
+  /* ---------- 错误色 (Error) ---------- */
+  /* 错误状态、删除操作、警告 */
   --md-sys-color-error: #B3261E;
   --md-sys-color-on-error: #FFFFFF;
   --md-sys-color-error-container: #F9DEDC;
   --md-sys-color-on-error-container: #410E0B;
   
+  /* ---------- 表面色 (Surface) ---------- */
+  /* 页面背景、卡片、容器 */
   --md-sys-color-background: #FEF7FF;
   --md-sys-color-on-background: #1D1B20;
   --md-sys-color-surface: #FEF7FF;
   --md-sys-color-surface-container: #F3EDF7;
   --md-sys-color-surface-container-high: #ECE6F0;
   
+  /* ---------- 表面上的内容色 ---------- */
   --md-sys-color-on-surface: #1D1B20;
   --md-sys-color-on-surface-variant: #49454F;
+  
+  /* ---------- 轮廓色 (Outline) ---------- */
+  /* 边框、分割线 */
   --md-sys-color-outline: #79747E;
   --md-sys-color-outline-variant: #CAC4D0;
 
-  /* Typography */
+  /* ==================== 排版系统 (Typography) ==================== */
+  /* 使用 Roboto 字体族，遵循 M3 排版规范 */
   --md-sys-typescale-display-large: 400 57px/64px 'Roboto', sans-serif;
   --md-sys-typescale-headline-medium: 400 28px/36px 'Roboto', sans-serif;
   --md-sys-typescale-title-medium: 500 16px/24px 'Roboto', sans-serif;
@@ -37,66 +75,89 @@
   --md-sys-typescale-body-medium: 400 14px/20px 'Roboto', sans-serif;
   --md-sys-typescale-label-large: 500 14px/20px 'Roboto', sans-serif;
 
-  /* Shape */
-  --md-sys-shape-corner-extra-small: 4px;
-  --md-sys-shape-corner-medium: 12px;
-  --md-sys-shape-corner-large: 16px;
-  --md-sys-shape-corner-extra-large: 28px;
-  --md-sys-shape-corner-full: 9999px;
+  /* ==================== 形状系统 (Shape) ==================== */
+  /* 圆角大小，从超小到全圆 */
+  --md-sys-shape-corner-extra-small: 4px;   /* 小型组件如 Chip */
+  --md-sys-shape-corner-medium: 12px;        /* 中型组件如按钮 */
+  --md-sys-shape-corner-large: 16px;         /* 大型组件如卡片 */
+  --md-sys-shape-corner-extra-large: 28px;   /* 超大组件如对话框 */
+  --md-sys-shape-corner-full: 9999px;        /* 完全圆形 */
 
-  /* Component Variable Mappings */
+  /* ==================== 语义化别名 (Semantic Aliases) ==================== */
+  /* 方便组件使用的语义化变量映射 */
+  
+  /* 背景色别名 */
   --bg-primary: var(--md-sys-color-surface);
   --bg-secondary: var(--md-sys-color-surface-container);
   --bg-tertiary: var(--md-sys-color-surface-container-high);
   --bg-hover: var(--md-sys-color-surface-container-highest);
   
+  /* 文本色别名 */
   --text-primary: var(--md-sys-color-on-surface);
   --text-secondary: var(--md-sys-color-on-surface-variant);
   --text-tertiary: var(--md-sys-color-outline);
   
+  /* 边框色别名 */
   --border-color: var(--md-sys-color-outline-variant);
   
+  /* 主题色别名 */
   --primary: var(--md-sys-color-primary);
   --primary-bg: var(--md-sys-color-primary-container);
   
+  /* 圆角别名 */
   --radius-sm: var(--md-sys-shape-corner-extra-small);
   --radius: var(--md-sys-shape-corner-medium);
   --radius-lg: var(--md-sys-shape-corner-large);
   
+  /* 其他 */
   --transition-fast: 0.2s ease;
-  --warning: #f59e0b;
+  --warning: #f59e0b;  /* 警告色 - 橙黄色 */
 }
 
+/* ==================== 暗色主题 (Dark Theme) ==================== */
+/**
+ * Gemini 混合风格暗色主题
+ * - 背景使用深色
+ * - 卡片使用浅色以突出内容
+ */
 [data-theme="dark"] {
-  /* Color Scheme - Dark (Gemini Hybrid Style) */
+  /* ---------- 主色调 (Primary) ---------- */
   --md-sys-color-primary: #6750A4;
   --md-sys-color-on-primary: #FFFFFF;
   --md-sys-color-primary-container: #EADDFF;
   --md-sys-color-on-primary-container: #21005D;
   
+  /* ---------- 次要色调 (Secondary) ---------- */
   --md-sys-color-secondary: #625B71;
   --md-sys-color-secondary-container: #E8DEF8;
   --md-sys-color-on-secondary-container: #1D192B;
   
+  /* ---------- 第三色调 (Tertiary) ---------- */
   --md-sys-color-tertiary: #7D5260;
   --md-sys-color-tertiary-container: #FFD8E4;
   --md-sys-color-on-tertiary-container: #31111D;
 
+  /* ---------- 错误色 (Error) ---------- */
   --md-sys-color-error: #B3261E;
   --md-sys-color-on-error: #FFFFFF;
   --md-sys-color-error-container: #F9DEDC;
   --md-sys-color-on-error-container: #410E0B;
   
+  /* ---------- 表面色 (Surface) ---------- */
+  /* 暗色主题背景 */
   --md-sys-color-background: #121212;
   --md-sys-color-on-background: #E6E1E5;
   
-  /* Cards are white in this specific style */
+  /* 卡片在此风格中使用浅色，形成反差 */
   --md-sys-color-surface: #FFFFFF;
   --md-sys-color-surface-container: #FFFFFF;
   --md-sys-color-surface-container-high: #F3EDF7;
   
+  /* ---------- 表面上的内容色 ---------- */
   --md-sys-color-on-surface: #1C1B1F;
   --md-sys-color-on-surface-variant: #49454F;
+  
+  /* ---------- 轮廓色 (Outline) ---------- */
   --md-sys-color-outline: #79747E;
   --md-sys-color-outline-variant: #CAC4D0;
 }

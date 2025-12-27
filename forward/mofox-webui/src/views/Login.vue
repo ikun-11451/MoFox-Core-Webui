@@ -1,6 +1,23 @@
+<!--
+  @file Login.vue
+  @description 登录页面视图
+  
+  功能说明：
+  1. 用户身份验证 - 通过访问密钥登录系统
+  2. 主题切换 - 支持亮色/暗色主题切换
+  3. 记住登录 - 可选择保持登录状态
+  4. GitHub 链接 - 快速访问项目仓库
+  
+  组件特性：
+  - Material Design 3 风格的登录卡片
+  - 渐变装饰背景动画
+  - 密码可见性切换
+  - 错误提示反馈
+  - 加载状态指示
+-->
 <template>
   <div class="login-wrapper" :class="{ 'dark-mode': themeStore.theme === 'dark' }">
-    <!-- 背景装饰 -->
+    <!-- 背景装饰：渐变圆球动画 -->
     <div class="bg-decoration">
       <div class="gradient-orb orb-1"></div>
       <div class="gradient-orb orb-2"></div>

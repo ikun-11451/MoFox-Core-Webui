@@ -1,6 +1,28 @@
+<!--
+  @file PluginMarketplace.vue
+  @description 插件市场页面
+  
+  功能说明：
+  1. 浏览 MoFox 社区插件
+  2. 搜索和筛选插件
+  3. 一键安装插件
+  4. 查看插件详情
+  
+  数据来源：
+  - getMarketplacePlugins: 获取市场插件列表
+  - installPlugin: 安装插件
+  
+  分类筛选：
+  - 全部/工具/娱乐/管理/其他
+  
+  插件卡片显示：
+  - 插件名称、描述、作者、版本
+  - 安装状态标记
+  - 关键词标签
+-->
 <template>
   <div class="plugin-marketplace-view">
-    <!-- 顶部 -->
+    <!-- 顶部标题和搜索栏 -->
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">

@@ -1,6 +1,28 @@
+<!--
+  @file DashboardHome.vue
+  @description 仪表盘首页视图
+  
+  功能说明：
+  1. 系统概览 - 显示系统运行状态和关键指标
+  2. 统计卡片 - LLM调用、聊天会话、插件系统、组件系统等
+  3. 消息统计图表 - 可视化显示消息收发趋势
+  4. 月度计划 - 显示当月计划列表
+  5. 今日日程 - 显示当日活动安排
+  
+  数据来源：
+  - getDashboardOverview: 获取系统概览数据
+  - getTodaySchedule: 获取今日日程
+  - getMonthlyPlans: 获取月度计划
+  - getLLMStats: 获取 LLM 统计
+  - getMessageStats: 获取消息统计
+  
+  交互功能：
+  - 点击统计卡片可查看详情弹窗
+  - 支持切换消息统计的时间范围
+-->
 <template>
   <div class="dashboard-home">
-    <!-- 连接错误弹窗 -->
+    <!-- 连接错误弹窗：当后端服务不可用时显示 -->
     <ConnectionError 
       :visible="showConnectionError"
       :message="connectionErrorMsg"
