@@ -585,7 +585,7 @@ class WebUIConfigRouter(BaseRouterComponent):
                 
                 # 创建备份
                 if request.create_backup and config_path.exists():
-                    backup_dir = config_path.parent / "backup"
+                    backup_dir = config_path.parent / "backups_from_webui"
                     backup_dir.mkdir(exist_ok=True)
                     
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -656,7 +656,7 @@ class WebUIConfigRouter(BaseRouterComponent):
                 
                 # 创建备份
                 if request.create_backup:
-                    backup_dir = config_path.parent / "backup"
+                    backup_dir = config_path.parent / "backups_from_webui"
                     backup_dir.mkdir(exist_ok=True)
                     
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -708,7 +708,7 @@ class WebUIConfigRouter(BaseRouterComponent):
                         error="非法路径"
                     )
                 
-                backup_dir = config_path.parent / "backup"
+                backup_dir = config_path.parent / "backups_from_webui"
                 backups = []
                 
                 if backup_dir.exists():
@@ -756,7 +756,7 @@ class WebUIConfigRouter(BaseRouterComponent):
                         error="非法路径"
                     )
                 
-                backup_dir = config_path.parent / "backup"
+                backup_dir = config_path.parent / "backups_from_webui"
                 backup_file = backup_dir / backup_name
                 
                 if not backup_file.exists():

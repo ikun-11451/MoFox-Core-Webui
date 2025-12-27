@@ -110,11 +110,11 @@ def create_backup(config_path: Path) -> Optional[str]:
     if not config_path.exists():
         return None
     
-    backup_dir = config_path.parent / "backups"
+    backup_dir = config_path.parent / "backups_from_webui"
     backup_dir.mkdir(exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_name = f"{config_path.stem}_backup_{timestamp}{config_path.suffix}"
+    backup_name = f"{config_path.stem}_webinit_backup_{timestamp}{config_path.suffix}"
     backup_path = backup_dir / backup_name
     
     shutil.copy2(config_path, backup_path)
