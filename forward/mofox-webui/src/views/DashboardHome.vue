@@ -30,34 +30,7 @@
       @retry="fetchAllData"
     />
 
-    <!-- 统计卡片 -->
-    <section class="stats-section">
-      <div class="stats-grid">
-        <div 
-          class="m3-card stat-card" 
-          v-for="stat in statsData" 
-          :key="stat.label"
-          :class="{ 'clickable': !!stat.action }"
-          @click="stat.action && stat.action()"
-        >
-          <div class="stat-icon-container" :style="{ backgroundColor: stat.bgColor, color: stat.color }">
-            <span class="material-symbols-rounded stat-icon">{{ stat.icon }}</span>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value-row">
-              <span class="stat-value">{{ stat.value }}</span>
-            </div>
-            <span class="stat-label">{{ stat.label }}</span>
-          </div>
-          <div v-if="stat.subValue" class="stat-sub">
-            <span class="material-symbols-rounded sub-icon">info</span>
-            <span>{{ stat.subValue }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 主要内容区 -->
+    <!-- 主要内容区：消息统计、月度计划、今日日程 -->
     <section class="main-section">
       <div class="content-grid">
         <!-- 左侧列：消息统计 -->
@@ -83,8 +56,6 @@
               <v-chart class="chart" :option="messageChartOption" autoresize />
             </div>
           </div>
-
-
         </div>
 
         <!-- 右侧列：月度计划 & 日程 -->
@@ -153,6 +124,33 @@
                 <p>暂无日程安排</p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 统计卡片 -->
+    <section class="stats-section">
+      <div class="stats-grid">
+        <div 
+          class="m3-card stat-card" 
+          v-for="stat in statsData" 
+          :key="stat.label"
+          :class="{ 'clickable': !!stat.action }"
+          @click="stat.action && stat.action()"
+        >
+          <div class="stat-icon-container" :style="{ backgroundColor: stat.bgColor, color: stat.color }">
+            <span class="material-symbols-rounded stat-icon">{{ stat.icon }}</span>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value-row">
+              <span class="stat-value">{{ stat.value }}</span>
+            </div>
+            <span class="stat-label">{{ stat.label }}</span>
+          </div>
+          <div v-if="stat.subValue" class="stat-sub">
+            <span class="material-symbols-rounded sub-icon">info</span>
+            <span>{{ stat.subValue }}</span>
           </div>
         </div>
       </div>
