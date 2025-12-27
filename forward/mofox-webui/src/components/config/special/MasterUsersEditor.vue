@@ -52,7 +52,7 @@
             placeholder="用户ID"
           />
         </div>
-        <button class="btn-icon delete-btn" @click="removeUser(index)" title="删除">
+        <button type="button" class="btn-icon delete-btn" @click="removeUser(index)" title="删除">
           <Icon icon="lucide:trash-2" />
         </button>
       </div>
@@ -63,7 +63,7 @@
       </div>
     </div>
     
-    <button class="btn btn-outline add-btn" @click="addUser">
+    <button type="button" class="btn btn-outline add-btn" @click="addUser">
       <Icon icon="lucide:plus" />
       添加主人用户
     </button>

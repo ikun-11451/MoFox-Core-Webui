@@ -17,7 +17,7 @@
         配置表单
         @submit.prevent: 阻止表单默认提交行为，使用自定义的 handleSubmit 方法
       -->
-      <form class="config-form" @submit.prevent="handleSubmit">
+      <form class="config-form" :class="{ 'form-loading': isLoadingConfig }" @submit.prevent="handleSubmit">
         <!-- ========== QQ账号输入框 ========== -->
         <div class="form-field">
           <label class="field-label">
@@ -34,6 +34,7 @@
             type="number"
             class="m3-input"
             placeholder="请输入机器人的QQ账号"
+            :disabled="isLoadingConfig"
             required
           />
           <span class="field-hint">机器人所使用的QQ账号</span>
@@ -55,29 +56,23 @@
             type="text"
             class="m3-input"
             placeholder="例如：墨狐"
+            :disabled="isLoadingConfig"
             required
           />
           <span class="field-hint">机器人的主要称呼</span>
         </div>
         
-        <!-- ========== 别名输入框（可选） ========== -->
+        <!-- ========== 别名配置（可选） ========== -->
         <div class="form-field">
-          <label class="field-label">
-            <span class="material-symbols-rounded">label</span>
-            别名（可选）
-          </label>
-          <!-- 
-            v-model: 绑定到单独的 aliasInput 字符串
-            不使用 required，因为别名是可选的
-            提交时会被解析为数组存入 formData.alias_names
-          -->
-          <input
-            v-model="aliasInput"
-            type="text"
-            class="m3-input"
-            placeholder="例如：狐狐、墨墨（用逗号分隔）"
+          <StringArrayEditor
+            :value="formData.alias_names"
+            title="别名（可选）"
+            description="其他可以称呼机器人的名字"
+            placeholder="例如：狐狐"
+            emptyText="暂无别名"
+            addButtonText="添加别名"
+            @update="formData.alias_names = $event"
           />
-          <span class="field-hint">其他可以称呼机器人的名字</span>
         </div>
         
         <!-- ========== 人格核心输入框 ========== -->
@@ -98,6 +93,7 @@
             class="m3-textarea"
             placeholder="例如：是一个积极向上的女大学生"
             rows="2"
+            :disabled="isLoadingConfig"
             required
           ></textarea>
           <span class="field-hint">用一句话描述机器人的核心人格特质（建议50字以内）</span>
@@ -118,6 +114,7 @@
             class="m3-textarea"
             placeholder="例如：年龄为19岁，是女孩子，身高为160cm，有黑色的短发"
             rows="2"
+            :disabled="isLoadingConfig"
             required
           ></textarea>
           <span class="field-hint">描述外貌、年龄、性别、职业等</span>
@@ -138,25 +135,35 @@
             class="m3-textarea"
             placeholder="例如：回复可以简短一些，语气轻松自然"
             rows="3"
+            :disabled="isLoadingConfig"
             required
           ></textarea>
           <span class="field-hint">描述机器人的说话方式和表达习惯</span>
         </div>
         
+        <!-- ========== 主人用户配置（可选） ========== -->
+        <div class="form-field">
+          <MasterUsersEditor
+            :value="formData.master_users"
+            @update="formData.master_users = $event"
+          />
+        </div>
+        
         <!-- ========== 按钮组 ========== -->
         <div class="button-group">
           <!-- 跳过按钮：使用 outlined 样式 -->
-          <button type="button" class="m3-button outlined" @click="$emit('skip')" :disabled="loading">
+          <button type="button" class="m3-button outlined" @click="$emit('skip')" :disabled="loading || isLoadingConfig">
             <span>跳过此步</span>
           </button>
           <!-- 
             提交按钮：使用 filled 样式
             type="submit": 触发表单提交事件
-            :disabled: 提交中时禁用按钮
+            :disabled: 提交中或加载配置时禁用按钮
             v-if/v-else: 根据加载状态显示不同文本
           -->
-          <button type="submit" class="m3-button filled" :disabled="loading">
-            <span v-if="!loading">保存并继续</span>
+          <button type="submit" class="m3-button filled" :disabled="loading || isLoadingConfig">
+            <span v-if="isLoadingConfig">加载中...</span>
+            <span v-else-if="!loading">保存并继续</span>
             <span v-else>保存中...</span>
             <span class="material-symbols-rounded">arrow_forward</span>
           </button>
@@ -189,8 +196,10 @@
  * - 保存前的数据处理（如别名解析）
  */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { saveBotConfig, getBotConfig, type BotConfigRequest } from '@/api/initialization'
+import StringArrayEditor from '@/components/config/StringArrayEditor.vue'
+import MasterUsersEditor from '@/components/config/special/MasterUsersEditor.vue'
 
 // === 事件定义 ===
 /** 向父组件发送的事件 */
@@ -210,6 +219,12 @@ const emit = defineEmits<{
  */
 const loading = ref(false)
 
+/**
+ * 是否正在加载配置
+ * 用于控制表单输入的禁用状态，确保配置加载完成后才允许用户输入
+ */
+const isLoadingConfig = ref(true)
+
 /** 
  * 表单数据对象
  * 
@@ -227,18 +242,9 @@ const formData = ref<BotConfigRequest>({
   alias_names: [],
   personality_core: '',
   identity: '',
-  reply_style: ''
+  reply_style: '',
+  master_users: []
 })
-
-/** 
- * 别名输入字符串（用逗号分隔多个别名）
- * 
- * 说明：
- * 用户在表单中输入的是字符串（如"狐狐，墨墨"），
- * 提交时会被解析为数组存入 formData.alias_names
- * 加载配置时会将数组转换回字符串显示在输入框中
- */
-const aliasInput = ref('')
 
 // === 输入验证和提示 ===
 /**
@@ -333,10 +339,16 @@ async function loadExistingConfig() {
         formData.value.reply_style = configData.reply_style
       }
       
-      // 特殊处理：将别名数组转换为逗号分隔的字符串以便编辑
-      if (configData.alias_names && configData.alias_names.length > 0) {
-        aliasInput.value = configData.alias_names.join('，')
-        console.log('[BotConfigStep] 别名已加载:', aliasInput.value)
+      // 加载别名数组
+      if (configData.alias_names && Array.isArray(configData.alias_names)) {
+        formData.value.alias_names = configData.alias_names
+        console.log('[BotConfigStep] 别名已加载:', formData.value.alias_names)
+      }
+      
+      // 加载主人用户配置
+      if (configData.master_users && Array.isArray(configData.master_users)) {
+        formData.value.master_users = configData.master_users
+        console.log('[BotConfigStep] 主人用户已加载:', formData.value.master_users)
       }
       
       console.log('[BotConfigStep] 配置加载完成')
@@ -345,6 +357,9 @@ async function loadExistingConfig() {
     }
   } catch (error) {
     console.error('[BotConfigStep] 加载机器人配置失败:', error)
+  } finally {
+    // 无论成功失败，都允许用户开始输入
+    isLoadingConfig.value = false
   }
 }
 
@@ -357,18 +372,11 @@ async function loadExistingConfig() {
  * 
  * 处理流程：
  * 1. 设置加载状态，禁用提交按钮
- * 2. 解析别名字符串为数组（支持中英文逗号分隔）
- * 3. 调用 saveBotConfig API 保存配置
- * 4. 根据保存结果执行相应操作：
+ * 2. 调用 saveBotConfig API 保存配置
+ * 3. 根据保存结果执行相应操作：
  *    - 成功：触发 next 事件，进入下一步
  *    - 失败：显示错误提示
- * 5. 无论成功失败，最终都会恢复加载状态
- * 
- * 别名解析逻辑：
- * - 支持中文逗号（，）和英文逗号（,）作为分隔符
- * - 自动去除每个别名前后的空白字符
- * - 过滤掉空字符串
- * - 如果输入为空，不处理
+ * 4. 无论成功失败，最终都会恢复加载状态
  * 
  * @触发时机 表单提交事件（@submit.prevent）
  * @副作用 修改 loading 状态，可能触发 next 事件
@@ -378,15 +386,7 @@ async function handleSubmit() {
   loading.value = true
   
   try {
-    // 解析别名输入：按中英文逗号分隔，去除空白，过滤空字符串
-    if (aliasInput.value.trim()) {
-      formData.value.alias_names = aliasInput.value
-        .split(/[,，]/)           // 使用正则表达式匹配中英文逗号
-        .map(s => s.trim())       // 去除每个别名的前后空白
-        .filter(s => s.length > 0) // 过滤掉空字符串
-    }
-    
-    // 调用 API 保存配置
+    // 调用 API 保存配置（数据已经是正确的格式）
     const result = await saveBotConfig(formData.value)
     
     // 根据保存结果执行相应操作
@@ -489,6 +489,29 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+/* 加载中的表单禁用交互 */
+.config-form.form-loading {
+  pointer-events: none;
+  opacity: 0.6;
+  position: relative;
+}
+
+.config-form.form-loading::after {
+  content: '加载配置中...';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--md-sys-color-surface);
+  padding: 16px 32px;
+  border-radius: 12px;
+  box-shadow: var(--md-sys-elevation-3);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  z-index: 10;
 }
 
 /* 表单字段容器 */

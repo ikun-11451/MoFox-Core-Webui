@@ -65,14 +65,13 @@
         
         <!-- Step Content -->
         <div class="step-content">
-          <transition :name="transitionName" mode="out-in">
             <component 
-              :is="currentComponent" 
+              :is="currentComponent"
+              :key="currentStep"
               @next="handleNext" 
               @skip="handleSkip" 
               @toast="handleToast"
             />
-          </transition>
         </div>
       </div>
     </div>
@@ -148,14 +147,18 @@ const stepContent = {
 
 // Components Map
 const currentComponent = computed(() => {
+  console.log('[InitializationView] currentStep:', currentStep.value)
+  let component
   switch (currentStep.value) {
-    case 0: return WelcomePage
-    case 1: return BotConfigStep
-    case 2: return ModelConfigStep
-    case 3: return GitConfigStep
-    case 4: return CompletePage
-    default: return WelcomePage
+    case 0: component = WelcomePage; break
+    case 1: component = BotConfigStep; break
+    case 2: component = ModelConfigStep; break
+    case 3: component = GitConfigStep; break
+    case 4: component = CompletePage; break
+    default: component = WelcomePage; break
   }
+  console.log('[InitializationView] currentComponent:', component)
+  return component
 })
 
 // Update greeting based on step
@@ -709,6 +712,21 @@ onUnmounted(() => {
 }
 
 /* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
 .slide-left-enter-active,
 .slide-left-leave-active {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);

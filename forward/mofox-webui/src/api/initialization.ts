@@ -23,6 +23,7 @@ export interface BotConfigRequest {
   personality_core: string
   identity: string
   reply_style: string
+  master_users?: string[][]  // 主人用户列表，格式为 [[platform, user_id], ...]
 }
 
 /**

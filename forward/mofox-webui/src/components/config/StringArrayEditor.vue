@@ -32,6 +32,7 @@
           @input="updateItem(index, ($event.target as HTMLInputElement).value)"
         />
         <button 
+          type="button"
           class="btn-icon delete-btn" 
           @click="removeItem(index)" 
           title="删除"
@@ -46,7 +47,7 @@
       </div>
     </div>
     
-    <button class="btn btn-outline add-btn" @click="addItem">
+    <button type="button" class="btn btn-outline add-btn" @click="addItem">
       <Icon icon="lucide:plus" />
       {{ addButtonText || '添加项' }}
     </button>

@@ -54,6 +54,7 @@ class BotConfigRequest(BaseModel):
     personality_core: str
     identity: str
     reply_style: str
+    master_users: list[list[str]] = []  # 主人用户列表，格式为 [[platform, user_id], ...]
 
 
 class ModelConfigRequest(BaseModel):
@@ -136,6 +137,15 @@ def save_bot_config(config: BotConfigRequest) -> None:
         with open(BOT_CONFIG_PATH, "r", encoding="utf-8") as f:
             doc = tomlkit.load(f)
         logger.info(f"已读取现有配置，包含的顶级键: {list(doc.keys())}")
+    else:
+        # 配置文件不存在，从模板创建
+        logger.info("配置文件不存在，从模板创建")
+        if template_path.exists():
+            with open(template_path, "r", encoding="utf-8") as f:
+                doc = tomlkit.load(f)
+        else:
+            logger.warning("模板文件不存在，创建空配置")
+            doc = tomlkit.document()
     
     # 更新配置
     logger.debug(f"开始更新配置，bot section 存在: {'bot' in doc}")
@@ -159,6 +169,15 @@ def save_bot_config(config: BotConfigRequest) -> None:
     doc["personality"]["identity"] = config.identity
     doc["personality"]["reply_style"] = config.reply_style
     logger.debug("已更新 personality section")
+    
+    # 更新主人用户配置
+    if config.master_users:
+        logger.debug(f"开始更新主人用户配置，共 {len(config.master_users)} 个用户")
+        if "security" not in doc:
+            logger.info("创建新的 security section")
+            doc["security"] = tomlkit.table()
+        doc["security"]["master_users"] = config.master_users
+        logger.info(f"已更新主人用户配置: {config.master_users}")
     
     # 保存
     logger.info(f"保存配置到文件: {BOT_CONFIG_PATH}")
@@ -354,6 +373,7 @@ class InitializationRouter(BaseRouterComponent):
                 
                 bot_section = doc.get("bot", {})
                 personality_section = doc.get("personality", {})
+                security_section = doc.get("security", {})
                 
                 config_data = {
                     "qq_account": bot_section.get("qq_account", 0),
@@ -361,7 +381,8 @@ class InitializationRouter(BaseRouterComponent):
                     "alias_names": bot_section.get("alias_names", []),
                     "personality_core": personality_section.get("personality_core", ""),
                     "identity": personality_section.get("identity", ""),
-                    "reply_style": personality_section.get("reply_style", "")
+                    "reply_style": personality_section.get("reply_style", ""),
+                    "master_users": security_section.get("master_users", [])
                 }
                 
                 return {"success": True, "data": config_data}
