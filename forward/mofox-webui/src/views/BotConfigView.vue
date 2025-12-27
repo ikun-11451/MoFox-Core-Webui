@@ -9,7 +9,7 @@
   4. 配置备份和还原功能
   
   编辑模式：
-  - visual: 可视化表单编辑，使用 MainConfigEditor 组件
+  - visual: 可视化表单编辑，使用 BotConfigEditor 组件
   - source: 源码编辑，使用 Monaco Editor
   
   配置管理：
@@ -74,7 +74,7 @@
         {{ loadError }}
       </div>
       <template v-else>
-        <MainConfigEditor 
+        <BotConfigEditor 
           :parsed-data="originalParsed"
           :edited-values="editedValues"
           :config-schema="configSchema"
@@ -166,7 +166,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useThemeStore } from '@/stores/theme'
-import MainConfigEditor from '@/components/config/MainConfigEditor.vue'
+import BotConfigEditor from '@/components/config/BotConfigEditor.vue'
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { 
   getConfigContent, 
@@ -254,7 +254,7 @@ async function loadConfig() {
 // 更新字段值
 function updateFieldValue(sectionOrFullKey: string, keyOrValue: string | any, value?: any) {
   // 支持两种调用方式：
-  // 1. updateFieldValue(fullKey, value) - 来自 MainConfigEditor 的特殊编辑器
+  // 1. updateFieldValue(fullKey, value) - 来自 BotConfigEditor 的特殊编辑器
   // 2. updateFieldValue(section, key, value) - 传统方式
   
   if (value === undefined) {

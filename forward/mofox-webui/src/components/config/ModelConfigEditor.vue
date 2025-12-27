@@ -1576,6 +1576,10 @@ watch(() => props.parsedData, () => {
   padding: 12px 16px;
   gap: 16px;
   flex-wrap: wrap;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  margin: 12px;
+  margin-bottom: 0;
 }
 
 .nav-tabs {
@@ -1693,6 +1697,9 @@ watch(() => props.parsedData, () => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  margin: 12px;
 }
 
 /* 空状态 */

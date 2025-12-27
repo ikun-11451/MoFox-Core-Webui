@@ -1,5 +1,5 @@
 <template>
-  <div class="main-config-editor">
+  <div class="bot-config-editor">
     <!-- 顶部导航栏 -->
     <div class="config-nav-bar">
       <div class="nav-tabs">
@@ -680,7 +680,7 @@ function parseArrayValue(value: string): string[] {
 </script>
 
 <style scoped>
-.main-config-editor {
+.bot-config-editor {
   /* Map MD3 variables to component variables */
   --bg-primary: var(--md-sys-color-surface);
   --bg-secondary: var(--md-sys-color-surface-container);

@@ -434,7 +434,8 @@ onMounted(() => {
   justify-content: space-between;
   padding: 20px 24px;
   background: var(--md-sys-color-surface);
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 16px;
+  margin: 16px 16px 0 16px;
 }
 
 .header-left {
@@ -517,6 +518,8 @@ onMounted(() => {
   overflow: auto;
   padding: 24px;
   background: var(--md-sys-color-surface-container-low);
+  border-radius: 16px;
+  margin: 16px;
 }
 
 /* 源码编辑器 */
