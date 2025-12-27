@@ -1,3 +1,26 @@
+<!--
+  @file GitHubView.vue
+  @description GitHub 仓库信息页面
+  
+  功能说明：
+  1. 显示 MoFox Core 的 GitHub 仓库信息
+  2. 快速访问仓库、Issues、Pull Requests
+  3. 显示仓库统计（Stars、Forks、Issues 数量）
+  
+  数据来源：
+  - GitHub API: 获取仓库实时统计数据
+  
+  快速链接：
+  - 访问仓库
+  - 提交问题 (Issues)
+  - Pull Requests
+  
+  信息卡片：
+  - 源代码
+  - 参与贡献
+  - 文档
+  - 讨论
+-->
 <template>
   <div class="github-view">
     <div class="github-container">

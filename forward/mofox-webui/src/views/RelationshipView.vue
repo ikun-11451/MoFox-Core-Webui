@@ -1,6 +1,27 @@
+<!--
+  @file RelationshipView.vue
+  @description 用户关系管理页面
+  
+  功能说明：
+  1. 搜索和查看用户关系信息
+  2. 编辑用户关系分数和描述
+  3. 管理对用户的印象
+  4. 查看用户基础信息
+  
+  信息展示：
+  - 基础信息：用户名、昵称、认识次数、态度
+  - 关系信息：关系分数、关系描述
+  - 印象：详细印象、简短印象
+  - 聊天历史和重要记忆
+  
+  编辑功能：
+  - 编辑关系分数和描述
+  - 编辑印象内容
+  - 管理重要记忆
+-->
 <template>
   <div class="relationship-view">
-    <!-- 返回按钮 (详情页时) -->
+    <!-- 返回按钮：在详情页时显示 -->
     <div v-if="personDetail" class="top-bar">
       <button class="m3-button tonal" @click="backToList">
         <span class="material-symbols-rounded">arrow_back</span>

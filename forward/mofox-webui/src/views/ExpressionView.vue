@@ -1,6 +1,25 @@
+<!--
+  @file ExpressionView.vue
+  @description 表达方式管理页面
+  
+  功能说明：
+  1. 管理 Bot 的语言风格和表达习惯
+  2. 创建/编辑/删除表达方式
+  3. 查看表达方式的使用统计
+  4. 搜索和筛选表达方式
+  
+  表达类型：
+  - style: 语言风格（如：活泼、严肃、可爱等）
+  - grammar: 句法特点（如：通常加"喵"结尾）
+  
+  列表操作：
+  - 类型筛选（全部/语言风格/句法特点）
+  - 排序（最后使用/使用次数/创建时间）
+  - 关键词搜索
+-->
 <template>
   <div class="expression-view">
-    <!-- 顶部操作栏 -->
+    <!-- 顶部操作栏：标题、统计、新建按钮 -->
     <header class="page-header">
       <div class="header-content">
         <div class="title-group">

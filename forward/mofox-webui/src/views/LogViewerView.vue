@@ -1,6 +1,27 @@
+<!--
+  @file LogViewerView.vue
+  @description 历史日志查看器页面
+  
+  功能说明：
+  1. 查看历史日志文件列表
+  2. 搜索和筛选日志内容
+  3. 按日志级别筛选
+  4. 按模块（logger）筛选
+  5. 高级筛选（时间范围等）
+  
+  布局结构：
+  - 左侧：日志文件列表（名称、大小、修改时间）
+  - 右侧：日志内容显示和工具栏
+  
+  工具栏功能：
+  - 关键词搜索
+  - 级别筛选（debug/info/warning/error/critical）
+  - 模块筛选
+  - 高级筛选（时间范围、行数限制）
+-->
 <template>
   <div class="log-viewer-view">
-    <!-- 页面标题 -->
+    <!-- 页面标题：图标、标题、说明 -->
     <header class="page-header">
       <div class="header-content">
         <div class="title-group">

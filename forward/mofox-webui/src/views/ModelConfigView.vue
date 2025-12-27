@@ -1,6 +1,24 @@
+<!--
+  @file ModelConfigView.vue
+  @description AI 模型配置页面
+  
+  功能说明：
+  1. 配置 AI 模型提供商（OpenAI、Azure 等）
+  2. 管理 API 密钥和端点
+  3. 设置模型参数（temperature、max_tokens 等）
+  4. 支持可视化编辑和源码编辑
+  
+  编辑模式：
+  - visual: 可视化表单编辑，使用 ModelConfigEditor 组件
+  - source: 源码编辑，使用 Monaco Editor
+  
+  安全特性：
+  - API 密钥默认隐藏显示
+  - 支持配置备份和还原
+-->
 <template>
   <div class="model-config-view">
-    <!-- 顶部操作栏 -->
+    <!-- 顶部操作栏：标题、编辑模式切换、备份、保存 -->
     <header class="config-header">
       <div class="header-left">
         <div class="header-icon-container">

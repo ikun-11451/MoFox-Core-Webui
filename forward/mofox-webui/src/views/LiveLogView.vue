@@ -1,6 +1,30 @@
+<!--
+  @file LiveLogView.vue
+  @description 实时日志查看页面
+  
+  功能说明：
+  1. 实时接收和显示系统日志（SSE 连接）
+  2. 日志级别筛选（DEBUG/INFO/WARNING/ERROR/CRITICAL）
+  3. 关键词搜索
+  4. 自动滚动到最新日志
+  
+  连接状态：
+  - 显示当前连接状态（已连接/未连接）
+  - 支持手动开始/停止监听
+  
+  工具栏功能：
+  - 开始/断开连接
+  - 清空日志
+  - 自动滚动开关
+  - 日志级别筛选
+  - 内容搜索
+  
+  统计信息：
+  - 日志总数、已筛选数量、各级别数量
+-->
 <template>
   <div class="live-log-view">
-    <!-- 页面标题 -->
+    <!-- 页面标题：标题和连接状态指示 -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-group">

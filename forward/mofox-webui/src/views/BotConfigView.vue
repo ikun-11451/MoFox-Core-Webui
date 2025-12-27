@@ -1,6 +1,25 @@
+<!--
+  @file BotConfigView.vue
+  @description 机器人配置页面
+  
+  功能说明：
+  1. 机器人基础信息配置（名称、人格等）
+  2. 聊天行为参数设置
+  3. 支持可视化编辑和源码编辑两种模式
+  4. 配置备份和还原功能
+  
+  编辑模式：
+  - visual: 可视化表单编辑，使用 MainConfigEditor 组件
+  - source: 源码编辑，使用 Monaco Editor
+  
+  配置管理：
+  - 自动检测配置变更
+  - 保存前验证配置格式
+  - 支持查看和还原历史备份
+-->
 <template>
   <div class="bot-config-view">
-    <!-- 顶部操作栏 -->
+    <!-- 顶部操作栏：标题、编辑模式切换、保存按钮 -->
     <header class="config-header">
       <div class="header-left">
         <div class="header-icon-container">
@@ -179,7 +198,6 @@ const backups = ref<any[]>([])
 const toast = ref({ visible: false, message: '', type: 'success' })
 
 const themeStore = useThemeStore()
-const isDarkMode = computed(() => themeStore.theme === 'dark')
 
 // 配置 Schema
 const configSchema = ref<any>(botConfigGroups)
@@ -288,7 +306,7 @@ function formatSource() {
 }
 
 // Monaco 挂载
-function onEditorMount(editor: any) {
+function onEditorMount(_editor: any) {
   // 可以在这里配置快捷键等
 }
 

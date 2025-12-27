@@ -1,6 +1,22 @@
+<!--
+  @file PluginConfigList.vue
+  @description 插件配置列表页面
+  
+  功能说明：
+  1. 显示所有插件的配置文件列表
+  2. 点击配置项跳转到配置编辑页面
+  3. 支持刷新列表
+  
+  数据来源：
+  - getConfigList: 获取所有配置文件
+  - 过滤 type === 'plugin' 的配置
+  
+  导航：
+  - 点击配置卡片跳转到 /dashboard/plugin-config/:path
+-->
 <template>
   <div class="plugin-config-list">
-    <!-- 顶部 -->
+    <!-- 顶部标题和操作栏 -->
     <header class="page-header">
       <div class="header-left">
         <div class="header-icon-container">

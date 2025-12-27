@@ -1,6 +1,25 @@
+<!--
+  @file PluginMarketplaceDetail.vue
+  @description 插件市场详情页
+  
+  功能说明：
+  1. 显示市场插件的完整信息
+  2. 安装插件操作
+  3. 查看插件 README 文档
+  4. 查看依赖和使用说明
+  
+  详情内容：
+  - 基本信息：名称、版本、作者、许可证
+  - 描述：插件功能说明
+  - 关键词和分类
+  - Python 依赖列表
+  - 使用说明
+  - README 文档（Markdown 渲染）
+  - 仓库链接
+-->
 <template>
   <div class="plugin-marketplace-detail">
-    <!-- 顶部导航 -->
+    <!-- 顶部导航：返回按钮和安装/配置按钮 -->
     <header class="page-header">
       <button class="m3-button text" @click="goBack">
         <span class="material-symbols-rounded">arrow_back</span>

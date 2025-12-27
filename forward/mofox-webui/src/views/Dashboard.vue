@@ -1,6 +1,26 @@
+<!--
+  @file Dashboard.vue
+  @description 仪表盘布局容器
+  
+  功能说明：
+  1. 作为登录后的主布局容器
+  2. 包含侧边栏导航 (Sidebar)
+  3. 包含浮动文档按钮 (FloatingDoc)
+  4. 提供路由视图容器，渲染子页面
+  
+  布局结构：
+  - 左侧：可折叠的侧边栏导航
+  - 右侧：主内容区域（由 router-view 渲染）
+  - 背景：支持自定义壁纸和模糊效果
+  
+  动画效果：
+  - 页面切换时的淡入淡出动画
+-->
 <template>
   <div class="dashboard-wrapper">
+    <!-- 侧边栏导航组件 -->
     <Sidebar />
+    <!-- 主布局区域 -->
     <div class="main-layout">
       <main class="dashboard-content">
         <router-view v-slot="{ Component }">

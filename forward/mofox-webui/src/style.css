@@ -1,55 +1,116 @@
+/**
+ * @file style.css
+ * @description 全局样式表
+ * 
+ * 该文件负责：
+ * 1. 导入 Material Design 3 主题和组件样式
+ * 2. 配置全局字体（Google Fonts）
+ * 3. 重置浏览器默认样式
+ * 4. 定义全局工具类
+ * 5. 配置自定义滚动条样式
+ * 6. 定义全局过渡动画
+ */
+
+/* ==================== 样式导入 ==================== */
+
+/* Material Design 3 主题变量（颜色、阴影等） */
 @import './styles/m3-theme.css';
+
+/* Material Design 3 组件样式（按钮、卡片等） */
 @import './styles/m3-components.css';
 
-/* 现代化字体 */
+/* ==================== 字体导入 ==================== */
+
+/* Roboto - Material Design 官方推荐英文字体 */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Roboto Mono - 等宽字体，用于代码和输入框 */
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap');
+
+/* Noto Sans SC - 思源黑体，中文显示 */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 
-/* 全局字体强制覆盖 - 针对输入框 */
+/* ==================== 输入框字体覆盖 ==================== */
+
+/**
+ * 强制输入类元素使用等宽字体
+ * 确保 API Key 等敏感信息对齐显示
+ */
 input, textarea, .input, .textarea, .api-key-input {
   font-family: 'Roboto Mono', 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', monospace !important;
 }
 
+/* ==================== 全局重置 ==================== */
+
+/**
+ * 通用盒模型重置
+ * - 移除默认边距和内边距
+ * - 使用 border-box 盒模型
+ */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* ==================== 根元素样式 ==================== */
+
+/**
+ * :root 伪类设置全局默认样式
+ * - 配置字体栈（中文优先）
+ * - 应用 M3 颜色变量
+ * - 优化字体渲染
+ */
 :root {
   font-family: 'Noto Sans SC', 'Roboto', sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
+  /* 使用 M3 主题颜色变量 */
   color: var(--md-sys-color-on-background);
   background-color: var(--md-sys-color-background);
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* 字体渲染优化 */
+  font-synthesis: none;                    /* 禁止合成粗体/斜体 */
+  text-rendering: optimizeLegibility;      /* 优化可读性 */
+  -webkit-font-smoothing: antialiased;     /* macOS 字体平滑 */
+  -moz-osx-font-smoothing: grayscale;      /* Firefox 字体平滑 */
 }
 
+/* ==================== Body 样式 ==================== */
+
+/**
+ * 页面主体样式
+ * - 禁用文本选择（防止误选）
+ * - 设置最小尺寸
+ */
 body {
   margin: 0;
   display: flex;
   min-width: 320px;
   min-height: 100vh;
   color: var(--md-sys-color-on-background);
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-user-drag: none;
+  -webkit-user-select: none;   /* 禁用 WebKit 浏览器文本选择 */
+  user-select: none;           /* 禁用标准文本选择 */
+  -webkit-user-drag: none;     /* 禁用元素拖拽 */
 }
 
-/* 恢复输入框、文本区域和可编辑元素的选择 */
+/* ==================== 可选择元素恢复 ==================== */
+
+/**
+ * 恢复输入框和可编辑元素的文本选择功能
+ * 这些元素需要用户能够选择和复制文本
+ */
 input, textarea, [contenteditable="true"] {
   -webkit-user-select: text;
   user-select: text;
   -webkit-user-drag: auto;
 }
 
-/* 恢复日志和代码块的选择 */
+/**
+ * 恢复日志和代码区域的文本选择
+ * 用户需要能够复制日志内容和代码
+ */
 .log-content-panel, 
 .log-container, 
 .terminal-message, 
@@ -61,19 +122,32 @@ code,
   user-select: text;
 }
 
-/* 确保图片和图标不可拖拽 */
+/**
+ * 禁止图片和图标拖拽
+ * 防止用户意外拖动 UI 元素
+ */
 img, .material-symbols-rounded {
   -webkit-user-drag: none;
   user-select: none;
 }
 
+/* ==================== 应用容器 ==================== */
 
+/**
+ * #app 根容器
+ * 占满整个视口
+ */
 #app {
   width: 100%;
   height: 100vh;
 }
 
-/* Material Symbols */
+/* ==================== Material Symbols 图标 ==================== */
+
+/**
+ * Google Material Symbols Rounded 图标字体配置
+ * 使用可变字体特性支持不同的填充、粗细等
+ */
 .material-symbols-rounded {
   font-family: 'Material Symbols Rounded';
   font-weight: normal;
@@ -86,44 +160,70 @@ img, .material-symbols-rounded {
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
-  -webkit-font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';    /* 启用连字 */
   -webkit-font-smoothing: antialiased;
+  /* 可变字体设置: 填充0, 粗细400, 渐变0, 光学尺寸24 */
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+/**
+ * 填充样式的图标变体
+ * 用于选中/激活状态
+ */
 .material-symbols-rounded.filled {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Custom Scrollbar */
+/* ==================== 自定义滚动条 ==================== */
+
+/**
+ * WebKit 浏览器滚动条样式
+ * 使用 M3 颜色变量，与主题保持一致
+ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 8px;    /* 垂直滚动条宽度 */
+  height: 8px;   /* 水平滚动条高度 */
 }
 
+/* 滚动条轨道 - 透明背景 */
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
+/* 滚动条滑块 - 使用轮廓变体色 */
 ::-webkit-scrollbar-thumb {
   background: var(--md-sys-color-outline-variant);
   border-radius: 4px;
 }
 
+/* 滑块悬停状态 - 使用更深的轮廓色 */
 ::-webkit-scrollbar-thumb:hover {
   background: var(--md-sys-color-outline);
 }
 
-/* Utility Classes */
-.text-primary { color: var(--md-sys-color-primary); }
-.text-secondary { color: var(--md-sys-color-secondary); }
-.text-tertiary { color: var(--md-sys-color-tertiary); }
-.text-error { color: var(--md-sys-color-error); }
+/* ==================== 工具类 ==================== */
 
-.bg-surface { background-color: var(--md-sys-color-surface); }
-.bg-surface-container { background-color: var(--md-sys-color-surface-container); }
+/**
+ * 文本颜色工具类
+ * 使用 M3 主题颜色
+ */
+.text-primary { color: var(--md-sys-color-primary); }      /* 主色文本 */
+.text-secondary { color: var(--md-sys-color-secondary); }  /* 次要色文本 */
+.text-tertiary { color: var(--md-sys-color-tertiary); }    /* 第三色文本 */
+.text-error { color: var(--md-sys-color-error); }          /* 错误色文本 */
 
-/* Transitions */
+/**
+ * 背景颜色工具类
+ */
+.bg-surface { background-color: var(--md-sys-color-surface); }                    /* 表面背景 */
+.bg-surface-container { background-color: var(--md-sys-color-surface-container); } /* 容器背景 */
+
+/* ==================== 过渡动画 ==================== */
+
+/**
+ * 淡入淡出过渡
+ * 用于 Vue <Transition> 组件
+ */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
