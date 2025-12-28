@@ -44,8 +44,9 @@ class SPAStaticFiles(StaticFiles):
             return await super().get_response(path, scope)
         except Exception:
             # 如果文件不存在，返回index.html
-            # 但排除API路径
-            if path.startswith("api/"):
+            # 但排除API路径和插件路径
+            if path.startswith("api/") or path.startswith("plugins/"):
+                logger.info("raise!")
                 raise
             return await super().get_response("index.html", scope)
 
@@ -103,10 +104,12 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         )
     
     # 🌟 核心功能：代理所有对主程序的 API 请求
+    # 注意：这个路由必须在静态文件挂载之前定义
     @app.api_route(
         "/plugins/{path:path}",
         methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
-        summary="代理主程序 API 请求"
+        summary="代理主程序 API 请求",
+        include_in_schema=True
     )
     async def proxy_to_main_server(request: Request, path: str):
         """
@@ -171,7 +174,6 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         index_file = static_dir / "index.html"
         if index_file.exists():
             logger.info(f"发现编译好的前端文件，将托管静态文件: {static_dir}")
-            # 挂载静态文件目录到根路径，使用SPA模式支持前端路由
             app.mount("/", SPAStaticFiles(directory=str(static_dir), html=True), name="static")
         else:
             logger.info("静态目录存在但未找到index.html，不托管静态文件")

@@ -298,6 +298,15 @@ class ApiClient {
 
     const url = await this.buildUrl(endpoint)
     
+    // 🐛 DEBUG: 打印请求详情
+    console.log('[API Request]', {
+      endpoint,
+      url,
+      method: options.method || 'GET',
+      hasToken: !!this.token,
+      timestamp: new Date().toISOString()
+    })
+    
     const headers = new Headers(options.headers)
     
     // 添加认证头
@@ -318,15 +327,45 @@ class ApiClient {
       })
 
       const status = response.status
+      
+      // 🐛 DEBUG: 打印响应状态
+      console.log('[API Response]', {
+        endpoint,
+        status,
+        ok: response.ok,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      })
+
+      // 🐛 DEBUG: 读取原始响应文本
+      const responseText = await response.text()
+      console.log('[API Response Text]', {
+        endpoint,
+        text: responseText,
+        length: responseText.length,
+        preview: responseText.substring(0, 1000) // 只显示前1000字符
+      })
 
       // 尝试解析 JSON 响应
       // 大多数 API 返回 JSON 格式，但也可能返回其他格式
       let data: T | undefined
       try {
-        data = await response.json()
-      } catch {
+        data = responseText ? JSON.parse(responseText) : undefined
+        // 🐛 DEBUG: 打印响应数据
+        console.log('[API Data]', {
+          endpoint,
+          data,
+          dataType: typeof data,
+          dataKeys: data && typeof data === 'object' ? Object.keys(data) : null
+        })
+      } catch (parseError) {
         // 响应不是 JSON 格式（如纯文本、HTML、或空响应）
-        // 静默处理，data 保持为 undefined
+        console.error('[API Parse Error]', {
+          endpoint,
+          error: parseError,
+          contentType: response.headers.get('content-type'),
+          responseText: responseText.substring(0, 1000) // 显示更多文本用于调试
+        })
       }
 
       // 根据 HTTP 状态码判断请求是否成功
@@ -336,7 +375,7 @@ class ApiClient {
       } else {
         // 非 2xx 状态码表示失败
         // 详细记录错误信息，便于调试
-        console.error(`[API] 请求失败 ${options.method || 'GET'} ${endpoint}:`, {
+        console.error(`[API Error] 请求失败 ${options.method || 'GET'} ${endpoint}:`, {
           status,
           statusText: response.statusText,
           data,
@@ -353,7 +392,15 @@ class ApiClient {
       }
     } catch (error) {
       // 捕获网络错误（如断网、超时、CORS 错误等）
-      console.error('[API] 请求错误:', error)
+      console.error('[API Network Error]', {
+        endpoint,
+        url,
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        } : error
+      })
       return { 
         success: false, 
         error: error instanceof Error ? error.message : '网络请求失败',

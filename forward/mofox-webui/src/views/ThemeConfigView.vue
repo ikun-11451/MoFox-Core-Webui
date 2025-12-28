@@ -320,7 +320,6 @@ import {
   argbFromHex, 
   themeFromSourceColor, 
   hexFromArgb,
-  sourceColorFromImage,
   QuantizerCelebi,
   Score,
   argbFromRgb
