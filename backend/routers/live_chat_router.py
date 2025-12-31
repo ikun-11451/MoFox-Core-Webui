@@ -116,8 +116,8 @@ class LiveChatRouterComponent(BaseRouterComponent):
     5. 获取图片/表情包
 
     零侵入原理:
-    - 使用 send_api 发送消息（MMC 公开接口）
-    - 使用 message_api 查询消息（MMC 公开接口）
+    - 使用 send_api 发送消息（MoFox-Bot 公开接口）
+    - 使用 message_api 查询消息（MoFox-Bot 公开接口）
     - 数据库只读查询
     """
 
