@@ -18,12 +18,13 @@ from src.common.logger import get_logger
 from src.plugin_system import BasePlugin, ComponentInfo, register_plugin
 from src.plugin_system.base.config_types import ConfigField
 
-from .handlers import WebUIShutdownHandler, WebUIStartupHandler
+from .handlers import WebUIShutdownHandler, WebUIStartupHandler, LiveChatEventHandler
 from .routers import (
     ChatroomRouterComponent,
     EmojiManagerRouterComponent,
     ExpressionRouterComponent,
     GitUpdateRouterComponent,
+    LiveChatRouterComponent,
     LogViewerRouterComponent,
     InitializationRouter,
     MarketplaceRouterComponent,
@@ -115,6 +116,7 @@ class WebUIAuthPlugin(BasePlugin):
             # 事件处理器
             (WebUIStartupHandler.get_handler_info(), WebUIStartupHandler),
             (WebUIShutdownHandler.get_handler_info(), WebUIShutdownHandler),
+            (LiveChatEventHandler.get_handler_info(), LiveChatEventHandler),
             # HTTP路由组件
             (WebUIAuthRouter.get_router_info(), WebUIAuthRouter),
             (WebUIConfigRouter.get_router_info(), WebUIConfigRouter),
@@ -128,6 +130,7 @@ class WebUIAuthPlugin(BasePlugin):
             (RelationshipRouterComponent.get_router_info(), RelationshipRouterComponent),
             (EmojiManagerRouterComponent.get_router_info(), EmojiManagerRouterComponent),
             (ChatroomRouterComponent.get_router_info(), ChatroomRouterComponent),
+            (LiveChatRouterComponent.get_router_info(), LiveChatRouterComponent),
              (InitializationRouter.get_router_info(),     InitializationRouter),           
             (UIChatroomAdapter.get_adapter_info(), UIChatroomAdapter),
             (WebUIModelRouter.get_router_info(),WebUIModelRouter),

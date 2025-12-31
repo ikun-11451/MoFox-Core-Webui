@@ -9,6 +9,7 @@ from .emoji_manager_router import EmojiManagerRouterComponent
 from .expression_router import ExpressionRouterComponent
 from .git_update_router import GitUpdateRouterComponent
 from .initialization_router import InitializationRouter
+from .live_chat_router import LiveChatRouterComponent
 from .log_viewer_router import LogViewerRouterComponent
 from .marketplace_router import MarketplaceRouterComponent
 from .model_stats_router import WebUIModelStatsRouter
@@ -24,6 +25,7 @@ __all__ = [
     "ExpressionRouterComponent",
     "GitUpdateRouterComponent",
     "InitializationRouter",
+    "LiveChatRouterComponent",
     "LogViewerRouterComponent",
     "MarketplaceRouterComponent",
     "RelationshipRouterComponent",

@@ -253,6 +253,7 @@ const handleLogout = () => {
 const menuItems: MenuItem[] = [
   { name: '仪表盘', path: '/dashboard', icon: 'dashboard' },
   { name: 'UI 聊天室', path: '/dashboard/chatroom', icon: 'forum' },
+  { name: '实时消息', path: '/dashboard/live-chat', icon: 'chat' },
   { 
     name: '配置管理', 
     path: '/dashboard/config', 

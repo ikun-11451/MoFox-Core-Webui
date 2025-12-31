@@ -17,6 +17,7 @@ import ExpressionView from '@/views/ExpressionView.vue'
 import RelationshipView from '@/views/RelationshipView.vue'
 import ThemeConfigView from '@/views/ThemeConfigView.vue'
 import ChatroomView from '@/views/ChatroomView.vue'
+import LiveChatView from '@/views/LiveChatView.vue'
 import GitHubView from '@/views/GitHubView.vue'
 import EmojiManager from '@/components/emoji/EmojiManager.vue'
 import ModelStatsView from '@/views/ModelStatsView.vue'
@@ -121,6 +122,11 @@ const routes: Array<RouteRecordRaw> = [
         path: 'chatroom',
         name: 'Chatroom',
         component: ChatroomView
+      },
+      {
+        path: 'live-chat',
+        name: 'LiveChat',
+        component: LiveChatView
       },
       {
         path: 'git-update',
