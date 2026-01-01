@@ -466,7 +466,7 @@ const isGroupActive = (item: MenuItem) => {
 .nav-item-content:hover {
   background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
-  transform: translateX(4px);
+  transform: scale(1.02);
 }
 
 .nav-item.active .nav-item-content,
@@ -640,34 +640,4 @@ const isGroupActive = (item: MenuItem) => {
   padding-left: 0;
 }
 
-/* 折叠状态下的悬停提示 */
-.sidebar.collapsed .nav-item:hover .nav-item-content::after,
-.sidebar.collapsed .footer-button:hover::after {
-  content: attr(title);
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--md-sys-color-inverse-surface);
-  color: var(--md-sys-color-inverse-on-surface);
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  z-index: 1000;
-  box-shadow: var(--md-sys-elevation-2);
-  animation: tooltipFadeIn 0.2s ease;
-}
-
-@keyframes tooltipFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-50%) translateX(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0);
-  }
-}
 </style>
