@@ -163,11 +163,6 @@ const greetingMessage = computed(() => {
   padding: 16px;
   background: var(--md-sys-color-surface-variant);
   border-radius: 16px;
-  transition: transform 0.2s ease;
-}
-
-.feature-list li:hover {
-  transform: translateX(4px);
 }
 
 .feature-list .icon {
