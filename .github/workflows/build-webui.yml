@@ -28,10 +28,15 @@ jobs:
           git fetch origin webui-dist:webui-dist 2>/dev/null || true
           
           if git rev-parse webui-dist >/dev/null 2>&1; then
-            LAST_BUILD_COMMIT=$(git log webui-dist -1 --format="%s" | grep -oP 'Source: \K[a-f0-9]+' || echo "")
+            # 从提交消息中提取 Source commit（使用 sed 替代 grep -P）
+            LAST_BUILD_COMMIT=$(git log webui-dist -1 --format="%s" | sed -n 's/.*Source: \([a-f0-9]\{7,40\}\).*/\1/p' || echo "")
             if [ -n "$LAST_BUILD_COMMIT" ]; then
               COMMITS_SINCE=$(git rev-list ${LAST_BUILD_COMMIT}..HEAD --count 2>/dev/null || echo "999")
-              [ "$COMMITS_SINCE" -gt "0" ] && echo "has_new_commits=true" >> $GITHUB_OUTPUT || echo "has_new_commits=false" >> $GITHUB_OUTPUT
+              if [ "$COMMITS_SINCE" -gt "0" ]; then
+                echo "has_new_commits=true" >> $GITHUB_OUTPUT
+              else
+                echo "has_new_commits=false" >> $GITHUB_OUTPUT
+              fi
             else
               echo "has_new_commits=true" >> $GITHUB_OUTPUT
             fi
@@ -39,8 +44,10 @@ jobs:
             echo "has_new_commits=true" >> $GITHUB_OUTPUT
           fi
           
-          # 手动触发时始终构建
-          [ "${{ github.event_name }}" = "workflow_dispatch" ] && echo "has_new_commits=true" >> $GITHUB_OUTPUT
+          # 手动触发或 push 时始终构建
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "push" ]; then
+            echo "has_new_commits=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Node.js
         if: steps.check_commits.outputs.has_new_commits == 'true'
