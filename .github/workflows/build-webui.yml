@@ -72,43 +72,62 @@ jobs:
           VERSION=$(date -u '+%Y.%m%d.%H%M')
           
           # 创建临时目录用于构建分发包
-          mkdir -p /tmp/dist_root
+          mkdir -p /tmp/dist_content
           
           # 复制后端代码到根目录（排除 __pycache__），不要 backend 这层文件夹
-          rsync -av --exclude='__pycache__' --exclude='*.pyc' backend/ /tmp/dist_root/
+          rsync -av --exclude='__pycache__' --exclude='*.pyc' backend/ /tmp/dist_content/
           
           # 复制编译后的前端到 static/（discovery_server.py 期望的位置）
-          mkdir -p /tmp/dist_root/static
-          cp -r forward/mofox-webui/dist/* /tmp/dist_root/static/
+          mkdir -p /tmp/dist_content/static
+          cp -r forward/mofox-webui/dist/* /tmp/dist_content/static/
           
           # 复制必要的配置文件
-          cp -f LICENSE /tmp/dist_root/ 2>/dev/null || true
-          cp -f README.md /tmp/dist_root/ 2>/dev/null || true
-          cp -f requirements.txt /tmp/dist_root/ 2>/dev/null || true
-          
-          # 进入分发目录
-          cd /tmp/dist_root
+          cp -f LICENSE /tmp/dist_content/ 2>/dev/null || true
+          cp -f README.md /tmp/dist_content/ 2>/dev/null || true
+          cp -f requirements.txt /tmp/dist_content/ 2>/dev/null || true
           
           # 配置 Git
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 初始化新仓库并创建分支
+          # 创建工作目录用于 git 操作
+          mkdir -p /tmp/dist_repo
+          cd /tmp/dist_repo
+          
+          # 初始化并设置远程
           git init
-          git checkout -b webui-dist
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          
+          # 尝试拉取现有分支以保留历史记录
+          if git ls-remote --exit-code --heads origin webui-dist >/dev/null 2>&1; then
+            git fetch origin webui-dist
+            git checkout -b webui-dist origin/webui-dist
+            # 清理旧文件但保留 .git
+            find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          else
+            git checkout -b webui-dist
+          fi
+          
+          # 复制构建结果到当前目录
+          cp -r /tmp/dist_content/* .
+          
+          # 添加所有文件
           git add -A
           
-          # 提交并推送
-          git commit -m "Build: v${VERSION}
+          # 检查是否有变化需要提交
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Build: v${VERSION}
 
           Source: ${{ github.sha }}
           Branch: ${{ github.ref_name }}
 
           Recent changes:
           $(cat /tmp/changelog.txt)"
-          
-          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git push -f origin webui-dist
+            
+            git push origin webui-dist
+          fi
 
       - name: Skip build notification
         if: steps.check_commits.outputs.has_new_commits != 'true'
