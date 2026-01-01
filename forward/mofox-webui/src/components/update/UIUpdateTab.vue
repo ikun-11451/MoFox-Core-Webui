@@ -7,11 +7,26 @@
   2. 检查 UI 更新
   3. 执行 UI 更新
   4. 管理 UI 备份和回滚
+  
+  注意：
+  - 只有在 webui-dist 分支上才能更新
+  - 非 Git 仓库时更新功能被禁用
 -->
 <template>
   <div class="ui-update-tab">
-    <!-- 当前版本信息 -->
-    <div class="m3-card version-card">
+    <!-- 更新禁用提示 -->
+    <div v-if="updateDisabled" class="m3-card disabled-card">
+      <div class="disabled-content">
+        <span class="material-symbols-rounded icon-warning">info</span>
+        <div class="disabled-text">
+          <h4>更新功能已禁用</h4>
+          <p>{{ disabledReason }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 当前版本信息 (仅在更新未禁用时显示) -->
+    <div v-if="!updateDisabled" class="m3-card version-card">
       <div class="card-header">
         <span class="material-symbols-rounded">web</span>
         <h3>当前版本</h3>
@@ -39,15 +54,15 @@
       </div>
     </div>
 
-    <!-- 检查更新 -->
-    <div class="m3-card update-check-card">
+    <!-- 检查更新 (仅在更新未禁用时显示) -->
+    <div v-if="!updateDisabled" class="m3-card update-check-card">
       <div class="card-header">
         <span class="material-symbols-rounded">sync</span>
         <h3>检查更新</h3>
         <button 
           class="m3-button tonal" 
           @click="handleCheckUpdate"
-          :disabled="checking"
+          :disabled="checking || updateDisabled"
         >
           <span class="material-symbols-rounded" :class="{ spinning: checking }">
             {{ checking ? 'progress_activity' : 'refresh' }}
@@ -57,18 +72,18 @@
       </div>
 
       <!-- 更新检查结果 -->
-      <div v-if="updateInfo" class="update-result">
+      <div v-if="statusInfo && !updateDisabled" class="update-result">
         <!-- 有更新 -->
-        <div v-if="updateInfo.has_update" class="has-update">
+        <div v-if="statusInfo.has_update" class="has-update">
           <div class="update-badge">
             <span class="material-symbols-rounded">auto_awesome</span>
-            <span>发现新版本 v{{ updateInfo.latest_version }}</span>
+            <span>发现新版本 v{{ statusInfo.latest_version }}</span>
           </div>
           
-          <div class="changelog" v-if="updateInfo.changelog?.length">
+          <div class="changelog" v-if="statusInfo.changelog?.length">
             <h4>更新内容:</h4>
             <ul>
-              <li v-for="(log, index) in updateInfo.changelog.slice(0, 5)" :key="index">
+              <li v-for="(log, index) in statusInfo.changelog.slice(0, 5)" :key="index">
                 {{ log }}
               </li>
             </ul>
@@ -102,8 +117,8 @@
       </div>
     </div>
 
-    <!-- 备份管理 -->
-    <div class="m3-card backup-card">
+    <!-- 备份管理 (仅在更新未禁用时显示) -->
+    <div v-if="!updateDisabled" class="m3-card backup-card">
       <div class="card-header">
         <span class="material-symbols-rounded">inventory_2</span>
         <h3>备份管理</h3>
@@ -144,15 +159,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { 
-  getUIVersion, 
-  checkUIUpdate, 
+  getUIStatus, 
   updateUI, 
   getUIBackups, 
   rollbackUI,
-  type UIVersionInfo,
-  type UIUpdateCheckResult,
+  type UIStatusResult,
   type UIBackupInfo
 } from '@/api/ui_update'
 import { showSuccess, showError, showConfirm } from '@/utils/dialog'
@@ -163,14 +176,50 @@ const emit = defineEmits<{
 }>()
 
 // State
-const currentVersion = ref<UIVersionInfo | null>(null)
-const updateInfo = ref<UIUpdateCheckResult | null>(null)
+const statusInfo = ref<UIStatusResult | null>(null)
 const backups = ref<UIBackupInfo[]>([])
 const checking = ref(false)
 const updating = ref(false)
 const rolling = ref(false)
 const loadingBackups = ref(false)
 const error = ref('')
+
+// 计算当前版本（用于显示）
+const currentVersion = computed(() => {
+  if (!statusInfo.value) return null
+  return {
+    version: statusInfo.value.current_version || '未安装',
+    build_time: null, // 从 changelog 或其他地方获取
+    branch: statusInfo.value.current_branch,
+    commit: statusInfo.value.current_commit
+  }
+})
+
+// 计算是否禁用更新
+const updateDisabled = computed(() => {
+  if (statusInfo.value) {
+    return statusInfo.value.update_enabled === false
+  }
+  return false
+})
+
+// 计算禁用原因
+const disabledReason = computed(() => {
+  if (!statusInfo.value) return ''
+  
+  // 优先使用后端返回的 message
+  if (statusInfo.value.message) {
+    return statusInfo.value.message
+  }
+  
+  // 如果没有 message，根据 update_enabled 状态生成提示
+  if (statusInfo.value.update_enabled === false) {
+    const branch = statusInfo.value.current_branch || '未知'
+    return `当前分支为 "${branch}"，更新功能已禁用。仅 webui-dist 分支支持自动更新。`
+  }
+  
+  return ''
+})
 
 // 格式化时间
 function formatTime(time: string | null): string {
@@ -189,39 +238,31 @@ function formatSize(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
-// 加载当前版本
-async function loadCurrentVersion() {
-  try {
-    const result = await getUIVersion()
-    if (result.success && result.data?.data) {
-      currentVersion.value = result.data.data
-    }
-  } catch (e) {
-    console.error('加载版本信息失败:', e)
-  }
-}
-
-// 检查更新
-async function handleCheckUpdate() {
+// 加载 UI 状态（包含版本信息和更新检查）
+async function loadStatus() {
   checking.value = true
   error.value = ''
-  updateInfo.value = null
   
   try {
-    const result = await checkUIUpdate()
+    const result = await getUIStatus()
     if (result.success && result.data) {
-      updateInfo.value = result.data
+      statusInfo.value = result.data
       if (!result.data.success) {
-        error.value = result.data.error || '检查更新失败'
+        error.value = result.data.error || '获取状态失败'
       }
     } else {
-      error.value = result.error || '检查更新失败'
+      error.value = result.error || '获取状态失败'
     }
   } catch (e: any) {
-    error.value = e.message || '检查更新失败'
+    error.value = e.message || '获取状态失败'
   } finally {
     checking.value = false
   }
+}
+
+// 检查更新（实际上就是重新加载状态）
+async function handleCheckUpdate() {
+  await loadStatus()
 }
 
 // 执行更新
@@ -296,14 +337,14 @@ async function handleRollback(backupName: string) {
 
 // 初始化
 onMounted(() => {
-  loadCurrentVersion()
+  loadStatus()
   loadBackups()
 })
 
 // 暴露刷新方法
 defineExpose({
   refresh: () => {
-    loadCurrentVersion()
+    loadStatus()
     loadBackups()
   }
 })
@@ -320,6 +361,41 @@ defineExpose({
   padding: 20px;
   background: var(--md-sys-color-surface-container-low);
   border-radius: 16px;
+}
+
+/* 禁用提示卡片 */
+.disabled-card {
+  background: var(--md-sys-color-tertiary-container);
+}
+
+.disabled-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.disabled-content .icon-warning {
+  font-size: 28px;
+  color: var(--md-sys-color-on-tertiary-container);
+  flex-shrink: 0;
+}
+
+.disabled-text {
+  flex: 1;
+}
+
+.disabled-text h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.disabled-text p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--md-sys-color-on-tertiary-container);
+  opacity: 0.9;
 }
 
 .card-header {

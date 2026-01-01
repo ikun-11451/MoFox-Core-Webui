@@ -4,8 +4,6 @@ UI 版本管理器
 支持同时更新前端和后端代码
 """
 
-import json
-import shutil
 import subprocess
 import zipfile
 from datetime import datetime
@@ -45,7 +43,7 @@ class UIVersionManager:
         # Git 可执行文件路径
         self._git_path: Optional[str] = None
         
-        logger.info(f"UI 版本管理器初始化: project_root={self.project_root}")
+        logger.debug(f"UI 版本管理器初始化: project_root={self.project_root}")
 
     def _get_git_path(self) -> Optional[str]:
         """获取 Git 可执行文件路径"""
@@ -332,13 +330,10 @@ class UIVersionManager:
             if not self._is_git_repo():
                 return {
                     "success": True,
-                    "has_update": True,
+                    "has_update": False,
                     "current_version": "未安装",
-                    "latest_version": "unknown",
-                    "changelog": [],
-                    "commits_behind": 0,
-                    "need_init": True,  # 需要初始化仓库
-                    "update_enabled": True,
+                    "update_enabled": False,
+                    "message": "当前目录不是 Git 仓库，更新功能已禁用"
                 }
             
             # Fetch 远程更新

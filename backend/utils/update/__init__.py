@@ -15,7 +15,7 @@ from .models import (
     GitSetPathRequest,
     GitSetPathResponse,
     UIVersionInfo,
-    UIUpdateCheckResponse,
+    UIStatsCheckResponse,
     UIUpdateResponse,
     UIBackupInfo,
 )
@@ -38,7 +38,7 @@ __all__ = [
     "GitSetPathRequest",
     "GitSetPathResponse",
     "UIVersionInfo",
-    "UIUpdateCheckResponse",
+    "UIStatsCheckResponse",
     "UIUpdateResponse",
     "UIBackupInfo",
     # Utils

@@ -31,20 +31,15 @@ PROJECT_PATH = Path(PROJECT_ROOT)
 class GitEnvRouterComponent(BaseRouterComponent):
     """Git 环境管理路由组件"""
 
-    # ==================== 路由注册信息 ====================
+    # ==================== 组件元数据 ====================
 
-    @classmethod
-    def get_router_info(cls):
-        return {
-            "name": "git_env_router",
-            "prefix": "/git_env",
-            "description": "Git 环境管理接口",
-        }
+    component_name = "git_env"
+    component_description = "Git 环境管理接口"
 
-    def register_routes(self, router: APIRouter):
+    def register_endpoints(self) -> None:
         """注册路由"""
 
-        @router.get("/status", summary="获取 Git 环境状态")
+        @self.router.get("/status", summary="获取 Git 环境状态")
         async def get_git_status(_ = VerifiedDep) -> GitStatusResponse:
             """获取当前 Git 环境状态"""
             try:
@@ -80,7 +75,7 @@ class GitEnvRouterComponent(BaseRouterComponent):
                     system_os=platform.system(),
                 )
 
-        @router.post("/install", summary="安装 Git")
+        @self.router.post("/install", summary="安装 Git")
         async def install_git(_ = VerifiedDep) -> GitInstallResponse:
             """自动安装 Git（Windows 便携版）"""
             try:
@@ -94,7 +89,7 @@ class GitEnvRouterComponent(BaseRouterComponent):
                     error=str(e)
                 )
 
-        @router.post("/set-path", summary="设置自定义 Git 路径")
+        @self.router.post("/set-path", summary="设置自定义 Git 路径")
         async def set_git_path(request: GitSetPathRequest,_ = VerifiedDep) -> GitSetPathResponse:
             """设置自定义 Git 可执行文件路径"""
             try:
@@ -156,7 +151,7 @@ class GitEnvRouterComponent(BaseRouterComponent):
                     error=str(e)
                 )
 
-        @router.delete("/clear-path", summary="清除自定义 Git 路径")
+        @self.router.delete("/clear-path", summary="清除自定义 Git 路径")
         async def clear_git_path(_ = VerifiedDep) -> GitSetPathResponse:
             """清除自定义 Git 路径，恢复自动检测"""
             try:
@@ -183,7 +178,7 @@ class GitEnvRouterComponent(BaseRouterComponent):
                     error=str(e)
                 )
 
-        @router.get("/install-guide", summary="获取安装指南")
+        @self.router.get("/install-guide", summary="获取安装指南")
         async def get_install_guide(_ = VerifiedDep):
             """获取当前系统的 Git 安装指南"""
             try:

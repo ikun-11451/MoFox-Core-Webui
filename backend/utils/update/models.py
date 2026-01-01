@@ -129,16 +129,25 @@ class UIVersionInfo(BaseModel):
     changelog: List[str] = []
 
 
-class UIUpdateCheckResponse(BaseModel):
-    """UI 更新检查响应"""
+class UIStatsCheckResponse(BaseModel):
+    """UI 版本状态响应"""
 
     success: bool
     has_update: bool = False
     current_version: Optional[str] = None
+    current_commit: Optional[str] = None
     latest_version: Optional[str] = None
+    latest_commit: Optional[str] = None
     changelog: List[str] = []
+    commits_behind: int = 0
     download_size: Optional[int] = None
     error: Optional[str] = None
+    # 更新功能是否启用
+    update_enabled: bool = True
+    # 当前分支
+    current_branch: Optional[str] = None
+    # 提示信息
+    message: Optional[str] = None
 
 
 class UIUpdateResponse(BaseModel):

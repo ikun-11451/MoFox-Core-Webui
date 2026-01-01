@@ -6,21 +6,29 @@ import { api } from './index'
 
 // ==================== 类型定义 ====================
 
-export interface UIVersionInfo {
-  version: string
-  build_time: string | null
-  commit: string | null
-  branch: string | null
-  changelog: string[]
-}
-
-export interface UIUpdateCheckResult {
+/**
+ * UI 状态响应（合并了版本信息和更新检查）
+ */
+export interface UIStatusResult {
   success: boolean
+  // 是否有更新
   has_update: boolean
+  // 当前版本
   current_version?: string
+  current_commit?: string
+  // 远程版本
   latest_version?: string
+  latest_commit?: string
+  // 更新日志
   changelog: string[]
-  download_size?: number
+  commits_behind?: number
+  // 更新功能是否启用
+  update_enabled?: boolean
+  // 当前分支
+  current_branch?: string
+  // 提示信息
+  message?: string
+  // 错误信息
   error?: string
 }
 
@@ -42,17 +50,10 @@ export interface UIBackupInfo {
 // ==================== API 函数 ====================
 
 /**
- * 获取当前 UI 版本
+ * 获取 UI 状态（包含版本信息和更新检查）
  */
-export function getUIVersion() {
-  return api.get<{ success: boolean; data: UIVersionInfo; error?: string }>('ui_update/version')
-}
-
-/**
- * 检查 UI 更新
- */
-export function checkUIUpdate() {
-  return api.get<UIUpdateCheckResult>('ui_update/check')
+export function getUIStatus() {
+  return api.get<UIStatusResult>('ui_update/status')
 }
 
 /**
