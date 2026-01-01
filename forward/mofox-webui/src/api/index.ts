@@ -291,6 +291,9 @@ class ApiClient {
       if (endpoint === 'plugins/list') return { success: true, data: MOCK_DATA.plugins.data as unknown as T, status: 200 }
       if (endpoint === 'components/list') return { success: true, data: MOCK_DATA.components.data as unknown as T, status: 200 }
       if (endpoint === 'logs/list') return { success: true, data: MOCK_DATA.logs.data as unknown as T, status: 200 }
+      
+      // 初始化状态：Demo 模式下直接返回已初始化，跳过配置页
+      if (endpoint === 'initialization/status') return { success: true, data: { is_initialized: true } as unknown as T, status: 200 }
 
       // 默认返回成功
       return { success: true, data: { success: true } as unknown as T, status: 200 }
