@@ -3,16 +3,11 @@
  */
 import { api } from './index'
 
-export interface GitStatus {
-  git_available: boolean
-  git_version?: string
-  git_path?: string
-  git_source: 'custom' | 'portable' | 'system' | 'unknown'
-  is_portable: boolean
-  system_os: string
+export interface RepoStatus {
   is_git_repo: boolean
   current_branch?: string
   available_branches: string[]
+  error?: string
 }
 
 export interface UpdateCheck {
@@ -35,17 +30,10 @@ export interface UpdateResult {
 }
 
 /**
- * 获取 Git 状态
+ * 获取主程序仓库状态
  */
-export function getGitStatus() {
-  return api.get<GitStatus>('git_update/status')
-}
-
-/**
- * 安装 Git
- */
-export function installGit() {
-  return api.post<{ success: boolean; message: string; install_path?: string }>('git_update/install')
+export function getRepoStatus() {
+  return api.get<RepoStatus>('git_update/status')
 }
 
 /**
@@ -87,32 +75,6 @@ export function switchBranch(branch: string) {
   }>('git_update/switch-branch', {
     branch
   })
-}
-
-/**
- * 设置自定义 Git 路径
- */
-export function setGitPath(path: string) {
-  return api.post<{
-    success: boolean
-    message: string
-    git_path?: string
-    git_version?: string
-    error?: string
-  }>('git_update/set-path', {
-    path
-  })
-}
-
-/**
- * 清除自定义 Git 路径
- */
-export function clearGitPath() {
-  return api.delete<{
-    success: boolean
-    message: string
-    error?: string
-  }>('git_update/clear-path')
 }
 
 // ==================== 历史版本管理 ====================

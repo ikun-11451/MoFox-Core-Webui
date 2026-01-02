@@ -11,12 +11,22 @@
 <template>
   <div class="main-update-tab">
     <!-- 分支管理 -->
-    <div v-if="gitStatus?.git_available && gitStatus?.available_branches?.length > 0" class="m3-card branch-card">
+    <div class="m3-card branch-card">
       <div class="card-header">
         <span class="material-symbols-rounded">fork_right</span>
         <h3>分支管理</h3>
       </div>
-      <div class="branch-selector">
+      <!-- 加载中 -->
+      <div v-if="initialLoading" class="loading-placeholder">
+        <span class="material-symbols-rounded spinning">progress_activity</span>
+        <span>加载中...</span>
+      </div>
+      <!-- Git 不可用或没有分支 -->
+      <div v-else-if="!gitEnvStatus?.git_available || (repoStatus?.available_branches?.length ?? 0) === 0" class="card-disabled-hint">
+        <span class="material-symbols-rounded">info</span>
+        <span>{{ !gitEnvStatus?.git_available ? 'Git 环境不可用' : '无可用分支' }}</span>
+      </div>
+      <div v-else class="branch-selector">
         <label class="m3-label">当前分支:</label>
         <div class="select-wrapper" ref="branchSelectWrapper">
           <div 
@@ -32,7 +42,7 @@
           
           <div v-if="showBranchDropdown" class="m3-select-dropdown m3-card">
             <div 
-              v-for="branch in gitStatus.available_branches" 
+              v-for="branch in repoStatus?.available_branches ?? []" 
               :key="branch" 
               class="m3-select-option"
               :class="{ 'selected': branch === selectedBranch }"
@@ -58,7 +68,7 @@
         <button 
           class="m3-button tonal" 
           @click="handleCheckUpdate"
-          :disabled="checking || !gitStatus?.git_available"
+          :disabled="initialLoading || checking || !gitEnvStatus?.git_available"
         >
           <span class="material-symbols-rounded" :class="{ spinning: checking }">
             {{ checking ? 'progress_activity' : 'refresh' }}
@@ -67,14 +77,20 @@
         </button>
       </div>
 
+      <!-- 加载中 -->
+      <div v-if="initialLoading || checking" class="loading-placeholder">
+        <span class="material-symbols-rounded spinning">progress_activity</span>
+        <span>{{ initialLoading ? '加载中...' : '检查更新中...' }}</span>
+      </div>
+
       <!-- Git 不可用警告 -->
-      <div v-if="gitStatus && !gitStatus.git_available" class="alert alert-warning">
+      <div v-else-if="gitEnvStatus && !gitEnvStatus.git_available" class="alert alert-warning">
         <span class="material-symbols-rounded">warning</span>
         <span>Git 不可用，请先在"Git 设置"中配置 Git 环境</span>
       </div>
 
       <!-- 非 Git 仓库警告 -->
-      <div v-else-if="gitStatus && !gitStatus.is_git_repo" class="alert alert-warning">
+      <div v-else-if="repoStatus && !repoStatus.is_git_repo" class="alert alert-warning">
         <span class="material-symbols-rounded">warning</span>
         <span>主程序目录不是 Git 仓库，无法使用自动更新功能</span>
       </div>
@@ -149,16 +165,26 @@
     </div>
 
     <!-- 历史版本管理 -->
-    <div v-if="gitStatus?.git_available && gitStatus?.is_git_repo" class="m3-card backup-card">
+    <div class="m3-card backup-card">
       <div class="card-header">
         <span class="material-symbols-rounded">history</span>
         <h3>历史版本</h3>
-        <button class="m3-icon-button" @click="loadBackups" :disabled="loadingBackups">
+        <button class="m3-icon-button" @click="loadBackups" :disabled="initialLoading || loadingBackups || !gitEnvStatus?.git_available">
           <span class="material-symbols-rounded" :class="{ spinning: loadingBackups }">refresh</span>
         </button>
       </div>
 
-      <div class="backup-list" v-if="backups.length">
+      <!-- 加载中 -->
+      <div v-if="initialLoading || loadingBackups" class="loading-placeholder">
+        <span class="material-symbols-rounded spinning">progress_activity</span>
+        <span>加载中...</span>
+      </div>
+      <!-- Git 不可用或非仓库 -->
+      <div v-else-if="!gitEnvStatus?.git_available || !repoStatus?.is_git_repo" class="card-disabled-hint">
+        <span class="material-symbols-rounded">info</span>
+        <span>{{ !gitEnvStatus?.git_available ? 'Git 环境不可用' : '当前目录非 Git 仓库' }}</span>
+      </div>
+      <div v-else-if="backups.length" class="backup-list">
         <div 
           v-for="backup in backups" 
           :key="backup.commit"
@@ -265,18 +291,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { 
-  getGitStatus, 
+  getRepoStatus, 
   checkUpdates, 
   updateMainProgram, 
   switchBranch,
   rollbackVersion,
   getMainBackups,
   getMainCommitDetail,
-  type GitStatus,
+  type RepoStatus,
   type UpdateCheck,
   type MainBackupInfo,
   type MainCommitDetail
 } from '@/api/git_update'
+import { getGitEnvStatus, type GitEnvStatus } from '@/api/git_env'
 import { showSuccess, showError, showConfirm } from '@/utils/dialog'
 
 // Props & Emits
@@ -285,11 +312,13 @@ const emit = defineEmits<{
 }>()
 
 // State
-const gitStatus = ref<GitStatus | null>(null)
+const gitEnvStatus = ref<GitEnvStatus | null>(null)  // Git 环境状态
+const repoStatus = ref<RepoStatus | null>(null)  // 仓库状态
 const updateInfo = ref<UpdateCheck | null>(null)
 const backups = ref<MainBackupInfo[]>([])
 const selectedBranch = ref('')
 const showBranchDropdown = ref(false)
+const initialLoading = ref(true)  // 初始加载状态
 const checking = ref(false)
 const updating = ref(false)
 const switching = ref(false)
@@ -304,18 +333,27 @@ const commitDetail = ref<MainCommitDetail | null>(null)
 
 const branchSelectWrapper = ref<HTMLElement | null>(null)
 
-// 加载 Git 状态
-async function loadGitStatus() {
+// 加载状态
+async function loadStatus() {
   try {
-    const result = await getGitStatus()
-    if (result.success && result.data) {
-      gitStatus.value = result.data
-      if (result.data.current_branch) {
-        selectedBranch.value = result.data.current_branch
+    // 并行加载环境状态和仓库状态
+    const [envResult, repoResult] = await Promise.all([
+      getGitEnvStatus(),
+      getRepoStatus()
+    ])
+    
+    if (envResult.success && envResult.data) {
+      gitEnvStatus.value = envResult.data
+    }
+    
+    if (repoResult.success && repoResult.data) {
+      repoStatus.value = repoResult.data
+      if (repoResult.data.current_branch) {
+        selectedBranch.value = repoResult.data.current_branch
       }
     }
   } catch (e) {
-    console.error('加载 Git 状态失败:', e)
+    console.error('加载状态失败:', e)
   }
 }
 
@@ -506,10 +544,19 @@ function handleClickOutside(e: MouseEvent) {
 }
 
 // 初始化
-onMounted(() => {
-  loadGitStatus()
-  loadBackups()
+onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
+  try {
+    await loadStatus()
+    // 并行加载历史版本
+    loadBackups()
+    // 加载完成后自动检查更新
+    if (gitEnvStatus.value?.git_available && repoStatus.value?.is_git_repo) {
+      handleCheckUpdate()
+    }
+  } finally {
+    initialLoading.value = false
+  }
 })
 
 onUnmounted(() => {
@@ -519,7 +566,7 @@ onUnmounted(() => {
 // 暴露刷新方法
 defineExpose({
   refresh: () => {
-    loadGitStatus()
+    loadStatus()
     loadBackups()
     updateInfo.value = null
   }
@@ -557,6 +604,27 @@ defineExpose({
 .card-header .material-symbols-rounded {
   font-size: 24px;
   color: var(--md-sys-color-primary);
+}
+
+/* 加载占位符 */
+.loading-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* 卡片禁用提示 */
+.card-disabled-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
 }
 
 /* 分支选择器 */

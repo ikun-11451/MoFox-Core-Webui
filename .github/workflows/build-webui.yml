@@ -95,6 +95,7 @@ jobs:
           cp -f LICENSE /tmp/dist_content/ 2>/dev/null || true
           cp -f README.md /tmp/dist_content/ 2>/dev/null || true
           cp -f requirements.txt /tmp/dist_content/ 2>/dev/null || true
+          cp -f .gitignore /tmp/dist_content/ 2>/dev/null || true
           
           # 配置 Git
           git config --global user.name "github-actions[bot]"

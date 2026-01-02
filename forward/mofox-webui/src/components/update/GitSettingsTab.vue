@@ -65,20 +65,43 @@
         </div>
         
         <div class="path-actions">
+          <!-- 自动寻找 Git -->
+          <button 
+            class="m3-button tonal"
+            @click="handleAutoDetect"
+            :disabled="autoDetecting"
+          >
+            <span class="material-symbols-rounded" :class="{ spinning: autoDetecting }">
+              {{ autoDetecting ? 'progress_activity' : 'search' }}
+            </span>
+            <span>{{ autoDetecting ? '检测中...' : '自动寻找' }}</span>
+          </button>
+          
           <button class="m3-button tonal" @click="showSetPathModal = true">
             <span class="material-symbols-rounded">edit</span>
             <span>设置路径</span>
           </button>
           
+          <!-- 安装 Git（全平台支持） -->
           <button 
-            v-if="gitStatus.git_source === 'custom'" 
-            class="m3-button text error"
-            @click="handleClearPath"
-            :disabled="clearing"
+            class="m3-button" 
+            :class="gitStatus.git_available ? 'tonal' : 'filled'"
+            @click="handleInstallGit"
+            :disabled="installing"
           >
-            <span class="material-symbols-rounded">close</span>
-            <span>清除自定义</span>
+            <span class="material-symbols-rounded" :class="{ spinning: installing }">
+              {{ installing ? 'progress_activity' : 'download' }}
+            </span>
+            <span>{{ installing ? '安装中...' : getInstallButtonText() }}</span>
           </button>
+          
+
+        </div>
+        
+        <!-- 未检测到 Git 提示 -->
+        <div class="portable-tip" v-if="!gitStatus.git_available">
+          <span class="material-symbols-rounded">info</span>
+          <span>{{ getInstallTipText() }}</span>
         </div>
       </div>
     </div>
@@ -86,7 +109,7 @@
     <!-- Git 安装（仅 Windows 未安装时显示） -->
     <div 
       class="m3-card install-card" 
-      v-if="gitStatus && !gitStatus.git_available && gitStatus.system_os === 'Windows'"
+      v-if="false"
     >
       <div class="card-header">
         <span class="material-symbols-rounded">download</span>
@@ -192,20 +215,20 @@ import {
   getGitEnvStatus, 
   installGit, 
   setGitPath, 
-  clearGitPath,
+  autoDetectGit,
   getGitInstallGuide,
   type GitEnvStatus,
   type GitInstallGuide
 } from '@/api/git_env'
-import { showSuccess, showError } from '@/utils/dialog'
+import { showSuccess, showError, showConfirm } from '@/utils/dialog'
 
 // State
 const gitStatus = ref<GitEnvStatus | null>(null)
 const installGuide = ref<GitInstallGuide | null>(null)
 const loading = ref(false)
 const installing = ref(false)
-const clearing = ref(false)
 const settingPath = ref(false)
+const autoDetecting = ref(false)
 const showSetPathModal = ref(false)
 const customPath = ref('')
 
@@ -218,6 +241,36 @@ function getSourceLabel(source: string): string {
     unknown: '未知'
   }
   return labels[source] || source
+}
+
+// 获取安装按钮文字
+function getInstallButtonText(): string {
+  const os = gitStatus.value?.system_os
+  switch (os) {
+    case 'Windows':
+      return '下载便携版'
+    case 'Linux':
+      return '安装 Git'
+    case 'Darwin':
+      return '安装 Git'
+    default:
+      return '安装 Git'
+  }
+}
+
+// 获取安装提示文字
+function getInstallTipText(): string {
+  const os = gitStatus.value?.system_os
+  switch (os) {
+    case 'Windows':
+      return '未检测到 Git，可以点击上方"下载便携版"按钮安装'
+    case 'Linux':
+      return '未检测到 Git，点击"安装 Git"将使用系统包管理器安装'
+    case 'Darwin':
+      return '未检测到 Git，点击"安装 Git"将使用 Homebrew 或 Xcode 安装'
+    default:
+      return '未检测到 Git，请手动安装'
+  }
 }
 
 // 加载 Git 状态
@@ -252,14 +305,58 @@ async function loadInstallGuide() {
   }
 }
 
+// 自动检测 Git（清除当前设置并重新检测）
+async function handleAutoDetect() {
+  autoDetecting.value = true
+  try {
+    const result = await autoDetectGit()
+    if (result.success && result.data?.success) {
+      showSuccess(result.data.message || '已检测到 Git')
+      await loadGitStatus()
+    } else {
+      showError(result.data?.error || result.error || '未检测到 Git')
+    }
+  } catch (e: any) {
+    showError(e.message || '检测失败')
+  } finally {
+    autoDetecting.value = false
+  }
+}
+
 // 安装 Git
 async function handleInstallGit() {
+  // 如果已经有 Git，先提示用户
+  if (gitStatus.value?.git_available) {
+    const os = gitStatus.value?.system_os
+    let message = '检测到您的电脑已经安装了 Git。\n\n'
+    
+    if (os === 'Windows') {
+      message += '便携版 Git 适用于没有安装 Git 的用户，如果您已经有 Git，通常不需要再下载。'
+    } else if (os === 'Linux') {
+      message += '系统将尝试使用包管理器重新安装 Git，这可能会覆盖现有版本。'
+    } else if (os === 'Darwin') {
+      message += '系统将尝试使用 Homebrew 或 Xcode 安装 Git，这可能会覆盖现有版本。'
+    }
+    
+    message += '\n\n确定要继续吗？'
+    
+    const confirmed = await showConfirm({
+      title: '确认安装',
+      message,
+      type: 'warning',
+      confirmText: '继续安装',
+      cancelText: '取消'
+    })
+    if (!confirmed) return
+  }
+  
   installing.value = true
   try {
     const result = await installGit()
     if (result.success && result.data?.success) {
       showSuccess(result.data.message || 'Git 安装成功')
-      await loadGitStatus()
+      // 安装成功后自动检测并设置路径
+      await handleAutoDetect()
     } else {
       showError(result.data?.error || result.error || '安装失败')
     }
@@ -289,24 +386,6 @@ async function handleSetPath() {
     showError(e.message || '设置失败')
   } finally {
     settingPath.value = false
-  }
-}
-
-// 清除路径
-async function handleClearPath() {
-  clearing.value = true
-  try {
-    const result = await clearGitPath()
-    if (result.success && result.data?.success) {
-      showSuccess(result.data.message || '已清除自定义路径')
-      await loadGitStatus()
-    } else {
-      showError(result.data?.error || result.error || '清除失败')
-    }
-  } catch (e: any) {
-    showError(e.message || '清除失败')
-  } finally {
-    clearing.value = false
   }
 }
 
@@ -446,6 +525,25 @@ defineExpose({
 .path-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 提示信息 */
+.portable-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 14px;
+  padding: 8px 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+.portable-tip .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--md-sys-color-primary);
 }
 
 /* 安装内容 */

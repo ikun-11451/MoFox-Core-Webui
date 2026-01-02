@@ -13,9 +13,6 @@ export interface GitEnvStatus {
   git_source: 'custom' | 'portable' | 'system' | 'unknown'
   is_portable: boolean
   system_os: string
-  is_git_repo: boolean
-  current_branch?: string
-  available_branches: string[]
 }
 
 export interface GitInstallResult {
@@ -65,10 +62,11 @@ export function setGitPath(path: string) {
 }
 
 /**
- * 清除自定义 Git 路径
+ * 自动检测 Git
+ * 清除当前配置并重新自动检测系统中的 Git
  */
-export function clearGitPath() {
-  return api.delete<GitSetPathResult>('git_env/clear-path')
+export function autoDetectGit() {
+  return api.post<GitSetPathResult>('git_env/auto-detect')
 }
 
 /**
