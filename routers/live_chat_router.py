@@ -187,7 +187,9 @@ class LiveChatRouterComponent(BaseRouterComponent):
         @self.router.get("/messages/{stream_id}", response_model=MessagesResponse)
         async def get_messages(
             stream_id: str,
-            hours: float = Query(24.0, ge=0.1, le=168, description="查询时间范围（小时）"),
+            hours: float = Query(
+                24.0, ge=0.1, le=168, description="查询时间范围（小时）"
+            ),
             limit: int = Query(100, ge=1, le=500, description="返回数量限制"),
             _=VerifiedDep,
         ):
@@ -208,7 +210,8 @@ class LiveChatRouterComponent(BaseRouterComponent):
                         stream_id=stream_id,
                         user_id=m.get("user_id"),
                         user_nickname=m.get("user_nickname"),
-                        content=m.get("processed_plain_text") or m.get("display_message"),
+                        content=m.get("processed_plain_text")
+                        or m.get("display_message"),
                         timestamp=m.get("time"),
                         is_emoji=m.get("is_emoji", False),
                         is_picid=m.get("is_picid", False),
@@ -229,7 +232,9 @@ class LiveChatRouterComponent(BaseRouterComponent):
                 logger.error(f"获取历史消息失败: {e}")
                 return MessagesResponse(success=False, messages=[], count=0)
 
-        @self.router.get("/reply/{stream_id}/{message_id}", response_model=ReplyMessageResponse)
+        @self.router.get(
+            "/reply/{stream_id}/{message_id}", response_model=ReplyMessageResponse
+        )
         async def get_reply_message(
             stream_id: str,
             message_id: str,
@@ -317,7 +322,9 @@ class LiveChatRouterComponent(BaseRouterComponent):
                     )
 
                 if success:
-                    logger.info(f"消息已发送: stream_id={request.stream_id}, type={request.message_type}")
+                    logger.info(
+                        f"消息已发送: stream_id={request.stream_id}, type={request.message_type}"
+                    )
                 else:
                     logger.warning(f"消息发送失败: stream_id={request.stream_id}")
 
@@ -410,18 +417,22 @@ class LiveChatRouterComponent(BaseRouterComponent):
             """
             # 验证 Token
             from src.config.config import global_config as bot_config
-            
+
             if not token:
                 await websocket.close(code=4001, reason="缺少 Token")
                 logger.warning("WebSocket 连接被拒绝: 缺少 Token")
                 return
-            
-            valid_keys = bot_config.plugin_http_system.plugin_api_valid_keys if bot_config else []
+
+            valid_keys = (
+                bot_config.plugin_http_system.plugin_api_valid_keys
+                if bot_config
+                else []
+            )
             if not valid_keys or token not in valid_keys:
                 await websocket.close(code=4003, reason="无效的 Token")
                 logger.warning(f"WebSocket 连接被拒绝: 无效的 Token")
                 return
-            
+
             await websocket.accept()
 
             # 获取消息广播器
@@ -463,6 +474,7 @@ class LiveChatRouterComponent(BaseRouterComponent):
                         # 尝试解析 JSON 命令
                         try:
                             import json
+
                             cmd = json.loads(data)
                             cmd_type = cmd.get("type")
 
@@ -470,21 +482,29 @@ class LiveChatRouterComponent(BaseRouterComponent):
                                 # 动态订阅
                                 new_stream_id = cmd.get("stream_id")
                                 if new_stream_id:
-                                    await broadcaster.subscribe(send_message, new_stream_id)
-                                    await websocket.send_json({
-                                        "type": "subscribed",
-                                        "stream_id": new_stream_id,
-                                    })
+                                    await broadcaster.subscribe(
+                                        send_message, new_stream_id
+                                    )
+                                    await websocket.send_json(
+                                        {
+                                            "type": "subscribed",
+                                            "stream_id": new_stream_id,
+                                        }
+                                    )
 
                             elif cmd_type == "unsubscribe":
                                 # 取消订阅
                                 old_stream_id = cmd.get("stream_id")
                                 if old_stream_id:
-                                    await broadcaster.unsubscribe(send_message, old_stream_id)
-                                    await websocket.send_json({
-                                        "type": "unsubscribed",
-                                        "stream_id": old_stream_id,
-                                    })
+                                    await broadcaster.unsubscribe(
+                                        send_message, old_stream_id
+                                    )
+                                    await websocket.send_json(
+                                        {
+                                            "type": "unsubscribed",
+                                            "stream_id": old_stream_id,
+                                        }
+                                    )
 
                         except json.JSONDecodeError:
                             # 非 JSON 消息，忽略

@@ -10,7 +10,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel
 
 from src.chat.utils.statistic import StatisticOutputTask
-from src.chat.utils.statistic_keys import *
+from src.chat.utils.statistic_keys import *  # noqa: F403
 from src.common.logger import get_logger
 from src.common.security import VerifiedDep
 from src.plugin_system import BaseRouterComponent

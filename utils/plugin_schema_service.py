@@ -139,7 +139,6 @@ def parse_plugin_schema(plugin_name: str) -> dict[str, Any] | None:
         logger.warning(f"插件未加载: {plugin_name}")
         return None
     
-    logger.info(f"正在解析插件 Schema: {plugin_name}")
     
     # 获取 config_schema
     config_schema = getattr(plugin_instance, 'config_schema', {})
@@ -151,7 +150,6 @@ def parse_plugin_schema(plugin_name: str) -> dict[str, Any] | None:
             "layout": None
         }
     
-    logger.info(f"插件 {plugin_name} 的 config_schema 包含 {len(config_schema)} 个 section: {list(config_schema.keys())}")
     
     # 获取 section 描述
     section_descriptions = getattr(plugin_instance, 'config_section_descriptions', {})
@@ -164,7 +162,7 @@ def parse_plugin_schema(plugin_name: str) -> dict[str, Any] | None:
     
     for section_name, fields in config_schema.items():
         if not isinstance(fields, dict):
-            logger.warning(f"section {section_name} 不是字典类型，跳过")
+            logger.debug(f"section {section_name} 不是字典类型，跳过")
             continue
             
         schema[section_name] = []
@@ -173,17 +171,11 @@ def parse_plugin_schema(plugin_name: str) -> dict[str, Any] | None:
             if isinstance(field_obj, ConfigField):
                 field_schema = extract_field_schema(field_name, field_obj, section_name)
                 schema[section_name].append(field_schema)
-                # 打印增强属性
-                enhanced_attrs = [k for k in ['label', 'icon', 'input_type', 'depends_on', 'min', 'max'] 
-                                  if field_schema.get(k)]
-                if enhanced_attrs:
-                    logger.info(f"  字段 {section_name}.{field_name} 增强属性: {enhanced_attrs}")
             else:
-                logger.warning(f"字段 {section_name}.{field_name} 不是 ConfigField 类型: {type(field_obj)}")
+                logger.debug(f"字段 {section_name}.{field_name} 不是 ConfigField 类型: {type(field_obj)}")
         
         # 按 order 排序（如果有）
         schema[section_name].sort(key=lambda x: x.get('order', 0))
-        logger.info(f"section {section_name} 解析完成，共 {len(schema[section_name])} 个字段")
     
     # 解析 section 元数据
     sections: list[dict[str, Any]] = []
