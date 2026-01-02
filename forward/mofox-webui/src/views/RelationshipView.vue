@@ -205,10 +205,30 @@
 
     <!-- 用户列表 -->
     <div v-else class="person-list">
-      <!-- 列表统计 -->
+      <!-- 列表统计和视图切换 -->
       <div class="list-header">
-        <h2>用户列表</h2>
-        <span class="m3-badge secondary">共 {{ totalCount }} 人</span>
+        <div class="header-left">
+          <h2>用户关系</h2>
+          <span class="m3-badge secondary">共 {{ totalCount }} 人</span>
+        </div>
+        <div class="view-toggle">
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'list' }"
+            @click="viewMode = 'list'"
+            title="列表视图"
+          >
+            <span class="material-symbols-rounded">view_list</span>
+          </button>
+          <button
+            class="toggle-btn"
+            :class="{ active: viewMode === 'graph' }"
+            @click="viewMode = 'graph'"
+            title="图谱视图"
+          >
+            <span class="material-symbols-rounded">account_tree</span>
+          </button>
+        </div>
       </div>
 
       <!-- 平台筛选 -->
@@ -239,14 +259,19 @@
         </div>
       </div>
 
+      <!-- 图谱视图 -->
+      <div v-if="viewMode === 'graph'" class="graph-view-container">
+        <RelationshipGraph @node-click="viewPersonDetail" />
+      </div>
+
       <!-- 加载状态 -->
-      <div v-if="listLoading" class="loading-state">
+      <div v-else-if="listLoading" class="loading-state">
         <span class="material-symbols-rounded spinning loading-icon">progress_activity</span>
         <p>加载中...</p>
       </div>
 
-      <!-- 用户卡片网格 -->
-      <div v-else-if="personList.length > 0" class="person-grid">
+      <!-- 用户卡片网格 (列表视图) -->
+      <div v-else-if="viewMode === 'list' && personList.length > 0" class="person-grid">
         <div 
           v-for="person in personList" 
           :key="person.person_id"
@@ -589,17 +614,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { 
+import {
   getPersonList,
-  getPersonDetail, 
-  updatePersonRelationship, 
+  getPersonDetail,
+  updatePersonRelationship,
   searchPerson,
   getPlatforms,
   type PersonDetail,
   type PersonCard,
-  type PlatformInfo 
+  type PlatformInfo
 } from '@/api/relationship'
 import { showSuccess, showError } from '@/utils/dialog'
+import RelationshipGraph from '@/components/relationship/RelationshipGraph.vue'
 
 const searchQuery = ref('')
 const loading = ref(false)
@@ -619,6 +645,9 @@ const listLoading = ref(false)
 const platforms = ref<PlatformInfo[]>([])
 const selectedPlatform = ref<string>('')
 const platformsLoading = ref(false)
+
+// 视图模式
+const viewMode = ref<'list' | 'graph'>('list')
 
 const showEditRelationshipDialog = ref(false)
 const showEditImpressionDialog = ref(false)
@@ -1628,11 +1657,58 @@ const isSearchFocused = ref(false)
   margin-bottom: 24px;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .list-header h2 {
   margin: 0;
   font-size: 22px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface);
+}
+
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--md-sys-color-surface-container-low);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.toggle-btn.active {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.toggle-btn .material-symbols-rounded {
+  font-size: 24px;
+}
+
+.graph-view-container {
+  height: 700px;
+  margin-bottom: 24px;
 }
 
 /* 平台筛选 */
