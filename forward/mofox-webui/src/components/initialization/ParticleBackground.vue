@@ -11,163 +11,267 @@ const props = defineProps<{
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let animationId: number | null = null
+let system: ParticleSystem | null = null
 
-type ParticleType = string
+interface ParticleConfig {
+  color: string
+  alpha: number
+  size: number
+  speed: number
+  glow?: boolean
+}
+
+const typeConfigs: Record<string, ParticleConfig> = {
+  'sun-sparkles': { color: '#FFD700', alpha: 0.6, size: 3, speed: 0.3, glow: true },
+  'sun-rays': { color: '#FFA500', alpha: 0.5, size: 4, speed: 0.4, glow: true },
+  'hearts': { color: '#FF69B4', alpha: 0.5, size: 8, speed: 0.5 },
+  'starry-sky': { color: '#FFFFFF', alpha: 0.7, size: 2, speed: 0.2, glow: true },
+  'moon-stars': { color: '#E6E6FA', alpha: 0.6, size: 2.5, speed: 0.15, glow: true },
+  'coffee-steam': { color: '#FFFFFF', alpha: 0.2, size: 6, speed: 0.8 },
+  'fireworks': { color: '#FFD700', alpha: 0.8, size: 4, speed: 1.2, glow: true },
+  'confetti': { color: '#FF69B4', alpha: 0.7, size: 5, speed: 1.5 },
+  'sakura': { color: '#FFB6C1', alpha: 0.6, size: 6, speed: 0.6 },
+  'snow': { color: '#FFFFFF', alpha: 0.8, size: 4, speed: 1.0 },
+  'default': { color: '#FFFFFF', alpha: 0.3, size: 3, speed: 0.3 }
+}
 
 class Particle {
-  private x: number
-  private y: number
-  private size: number
-  private speedX: number
-  private speedY: number
-  private type: ParticleType
-  private canvas: HTMLCanvasElement
+  x: number
+  y: number
+  size: number
+  baseSize: number
+  speedX: number
+  speedY: number
+  alpha: number
+  baseAlpha: number
+  color: string
+  angle: number
+  spin: number
+  pulse: number
+  pulseSpeed: number
+  type: string
+  canvas: HTMLCanvasElement
+  hue: number
 
-  constructor(canvas: HTMLCanvasElement, type: ParticleType) {
+  constructor(canvas: HTMLCanvasElement, type: string) {
     this.canvas = canvas
     this.type = type
+    const config = typeConfigs[type] ?? typeConfigs['default']!
+    
     this.x = Math.random() * canvas.width
     this.y = Math.random() * canvas.height
-    this.size = Math.random() * 5 + 2
-    this.speedX = Math.random() * 1 - 0.5
-    this.speedY = Math.random() * 1 + 0.5
+    this.baseSize = config.size * (0.5 + Math.random() * 1)
+    this.size = this.baseSize
+    this.baseAlpha = config.alpha * (0.5 + Math.random() * 0.5)
+    this.alpha = this.baseAlpha
+    this.color = config.color
+    this.angle = Math.random() * Math.PI * 2
+    this.spin = (Math.random() - 0.5) * 0.02
+    this.pulse = Math.random() * Math.PI * 2
+    this.pulseSpeed = 0.02 + Math.random() * 0.03
+    this.hue = Math.random() * 60 - 30 // Color variation
     
-    // Adjust speed based on type
-    if (type === 'snow') {
-      this.speedY = Math.random() * 2 + 1
-    } else if (type === 'sakura') {
-      this.speedX = Math.random() * 2 - 1
-      this.speedY = Math.random() * 1.5 + 0.5
+    // Movement based on type
+    const speed = config.speed
+    switch (type) {
+      case 'snow':
+        this.speedX = (Math.random() - 0.5) * speed
+        this.speedY = speed * (0.5 + Math.random() * 0.5)
+        break
+      case 'sakura':
+        this.speedX = (Math.random() - 0.3) * speed * 1.5
+        this.speedY = speed * (0.3 + Math.random() * 0.4)
+        break
+      case 'coffee-steam':
+        this.speedX = (Math.random() - 0.5) * speed * 0.3
+        this.speedY = -speed * (0.5 + Math.random() * 0.5)
+        break
+      case 'fireworks':
+      case 'confetti':
+        this.speedX = (Math.random() - 0.5) * speed * 2
+        this.speedY = speed * (0.3 + Math.random() * 0.7)
+        break
+      default:
+        // Gentle floating for stars and sparkles
+        this.speedX = (Math.random() - 0.5) * speed * 0.5
+        this.speedY = (Math.random() - 0.5) * speed * 0.5
     }
   }
 
-  update() {
+  update(time: number) {
+    // Smooth movement
     this.x += this.speedX
     this.y += this.speedY
-
-    // Reset if out of bounds
-    if (this.y > this.canvas.height) {
-      this.y = -10
+    this.angle += this.spin
+    this.pulse += this.pulseSpeed
+    
+    // Pulsing effect
+    const pulseFactor = 0.3 * Math.sin(this.pulse)
+    this.size = this.baseSize * (1 + pulseFactor * 0.3)
+    this.alpha = this.baseAlpha * (0.7 + pulseFactor * 0.3)
+    
+    // Boundary handling with smooth wrap
+    const margin = 50
+    if (this.y > this.canvas.height + margin) {
+      this.y = -margin
+      this.x = Math.random() * this.canvas.width
+    } else if (this.y < -margin) {
+      this.y = this.canvas.height + margin
       this.x = Math.random() * this.canvas.width
     }
-    if (this.x > this.canvas.width) {
-      this.x = 0
-    } else if (this.x < 0) {
-      this.x = this.canvas.width
+    
+    if (this.x > this.canvas.width + margin) {
+      this.x = -margin
+    } else if (this.x < -margin) {
+      this.x = this.canvas.width + margin
     }
   }
 
   draw(ctx: CanvasRenderingContext2D) {
     ctx.save()
+    ctx.globalAlpha = this.alpha
+    ctx.translate(this.x, this.y)
+    ctx.rotate(this.angle)
+    
+    const config = typeConfigs[this.type] ?? typeConfigs['default']!
+    
     switch (this.type) {
+      case 'hearts':
+        this.drawHeart(ctx)
+        break
       case 'sakura':
         this.drawSakura(ctx)
         break
       case 'snow':
-        this.drawSnow(ctx)
+        this.drawSnowflake(ctx)
         break
-      case 'hearts':
-        this.drawHeart(ctx)
-        break
-      case 'sun-rays':
-      case 'sun-sparkles':
-        this.drawSparkle(ctx, '#FFD700')
-        break
-      case 'moon-stars':
-      case 'starry-sky':
-        this.drawSparkle(ctx, '#FFFFFF')
+      case 'confetti':
+        this.drawConfetti(ctx)
         break
       case 'coffee-steam':
         this.drawSteam(ctx)
         break
-      case 'fireworks':
-      case 'confetti':
-        this.drawConfetti(ctx)
-        break
       default:
-        this.drawDefault(ctx)
+        this.drawSparkle(ctx, config.glow || false)
     }
-    ctx.restore()
-  }
-
-  private drawConfetti(ctx: CanvasRenderingContext2D) {
-    const colors = ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32', '#FF4500']
-    const color = colors[Math.floor(Math.random() * colors.length)]
-    ctx.fillStyle = color
-    ctx.globalAlpha = 0.8
     
-    ctx.save()
-    ctx.translate(this.x, this.y)
-    ctx.rotate(this.x * 0.05) // Rotate based on x position for variety
-    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size * 0.6)
     ctx.restore()
   }
 
-  private drawSakura(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = 'rgba(255, 182, 193, 0.6)'
+  private drawSparkle(ctx: CanvasRenderingContext2D, glow: boolean) {
+    if (glow) {
+      // Soft glow effect
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size * 2)
+      gradient.addColorStop(0, this.color)
+      gradient.addColorStop(0.4, this.color + '80')
+      gradient.addColorStop(1, 'transparent')
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(0, 0, this.size * 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    
+    // Core sparkle
+    ctx.fillStyle = this.color
     ctx.beginPath()
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  private drawSnow(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-    ctx.beginPath()
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+    ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2)
     ctx.fill()
   }
 
   private drawHeart(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = 'rgba(255, 105, 180, 0.6)'
-    const size = this.size * 2
-    ctx.font = `${size}px Arial`
-    ctx.fillText('❤', this.x, this.y)
-  }
-
-  private drawSparkle(ctx: CanvasRenderingContext2D, color: string) {
-    ctx.fillStyle = color
-    ctx.globalAlpha = Math.random() * 0.5 + 0.3
+    const size = this.size
+    ctx.fillStyle = this.color
     ctx.beginPath()
-    ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2)
+    ctx.moveTo(0, size * 0.3)
+    ctx.bezierCurveTo(-size, -size * 0.3, -size, size * 0.6, 0, size)
+    ctx.bezierCurveTo(size, size * 0.6, size, -size * 0.3, 0, size * 0.3)
     ctx.fill()
   }
-  
+
+  private drawSakura(ctx: CanvasRenderingContext2D) {
+    const size = this.size
+    ctx.fillStyle = this.color
+    
+    // Draw 5 petals
+    for (let i = 0; i < 5; i++) {
+      ctx.save()
+      ctx.rotate((i * Math.PI * 2) / 5)
+      ctx.beginPath()
+      ctx.ellipse(0, -size * 0.4, size * 0.3, size * 0.5, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
+    
+    // Center
+    ctx.fillStyle = '#FFE4E1'
+    ctx.beginPath()
+    ctx.arc(0, 0, size * 0.15, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  private drawSnowflake(ctx: CanvasRenderingContext2D) {
+    ctx.strokeStyle = this.color
+    ctx.lineWidth = this.size * 0.15
+    ctx.lineCap = 'round'
+    
+    const size = this.size
+    // Draw 6 branches
+    for (let i = 0; i < 6; i++) {
+      ctx.save()
+      ctx.rotate((i * Math.PI) / 3)
+      ctx.beginPath()
+      ctx.moveTo(0, 0)
+      ctx.lineTo(0, -size)
+      // Small branches
+      ctx.moveTo(0, -size * 0.5)
+      ctx.lineTo(-size * 0.25, -size * 0.7)
+      ctx.moveTo(0, -size * 0.5)
+      ctx.lineTo(size * 0.25, -size * 0.7)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
+  private drawConfetti(ctx: CanvasRenderingContext2D) {
+    const colors = ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32', '#FF4500', '#9370DB'] as const
+    const colorIndex = Math.floor(Math.abs(this.x + this.y) % colors.length)
+    ctx.fillStyle = colors[colorIndex]!
+    
+    // Rectangle confetti
+    ctx.fillRect(-this.size * 0.5, -this.size * 0.25, this.size, this.size * 0.5)
+  }
+
   private drawSteam(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size)
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)')
+    gradient.addColorStop(1, 'transparent')
+    ctx.fillStyle = gradient
     ctx.beginPath()
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  private drawDefault(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
-    ctx.beginPath()
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+    ctx.arc(0, 0, this.size, 0, Math.PI * 2)
     ctx.fill()
   }
 }
 
 class ParticleSystem {
-  private canvas: HTMLCanvasElement
-  private ctx: CanvasRenderingContext2D
-  private particles: Particle[] = []
-  private type: ParticleType
+  canvas: HTMLCanvasElement
+  ctx: CanvasRenderingContext2D
+  particles: Particle[] = []
+  type: string
+  time: number = 0
 
-  constructor(canvas: HTMLCanvasElement, type: ParticleType) {
+  constructor(canvas: HTMLCanvasElement, type: string) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')!
     this.type = type
     this.init()
   }
 
-  private init() {
+  init() {
     this.resizeCanvas()
     this.createParticles()
-    this.animate()
   }
 
   resizeCanvas() {
-    // Use parent container dimensions if possible, otherwise window
     const parent = this.canvas.parentElement
     if (parent) {
       this.canvas.width = parent.clientWidth
@@ -178,50 +282,60 @@ class ParticleSystem {
     }
   }
 
-  private createParticles() {
+  createParticles() {
     this.particles = []
-    const count = 50
+    // Adjust count based on canvas size
+    const area = this.canvas.width * this.canvas.height
+    const count = Math.min(80, Math.max(30, Math.floor(area / 15000)))
+    
     for (let i = 0; i < count; i++) {
       this.particles.push(new Particle(this.canvas, this.type))
     }
   }
 
-  private animate() {
+  animate() {
+    this.time += 0.016 // ~60fps
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
     
     this.particles.forEach(particle => {
-      particle.update()
+      particle.update(this.time)
       particle.draw(this.ctx)
     })
     
     animationId = requestAnimationFrame(() => this.animate())
   }
-  
+
   updateType(newType: string) {
     this.type = newType
-    this.createParticles() // Recreate particles with new type behavior
+    this.createParticles()
+  }
+
+  destroy() {
+    if (animationId) {
+      cancelAnimationFrame(animationId)
+      animationId = null
+    }
   }
 }
-
-let system: ParticleSystem | null = null
-
-onMounted(() => {
-  if (canvasRef.value) {
-    system = new ParticleSystem(canvasRef.value, props.type)
-    
-    window.addEventListener('resize', handleResize)
-  }
-})
 
 function handleResize() {
   if (system) {
     system.resizeCanvas()
+    system.createParticles()
   }
 }
 
+onMounted(() => {
+  if (canvasRef.value) {
+    system = new ParticleSystem(canvasRef.value, props.type)
+    system.animate()
+    window.addEventListener('resize', handleResize)
+  }
+})
+
 onUnmounted(() => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
+  if (system) {
+    system.destroy()
   }
   window.removeEventListener('resize', handleResize)
 })

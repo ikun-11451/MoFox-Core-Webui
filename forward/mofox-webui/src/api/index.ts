@@ -291,6 +291,87 @@ class ApiClient {
       if (endpoint === 'plugins/list') return { success: true, data: MOCK_DATA.plugins.data as unknown as T, status: 200 }
       if (endpoint === 'components/list') return { success: true, data: MOCK_DATA.components.data as unknown as T, status: 200 }
       if (endpoint === 'logs/list') return { success: true, data: MOCK_DATA.logs.data as unknown as T, status: 200 }
+      
+      // ==================== 初始化相关 API Mock ====================
+      // 初始化状态：Demo 模式下返回未初始化，让用户体验初始化配置界面
+      if (endpoint === 'initialization/status') {
+        // 检查 localStorage 中是否已完成初始化
+        const demoInitialized = localStorage.getItem('demo_initialized') === 'true'
+        return { success: true, data: { is_initialized: demoInitialized } as unknown as T, status: 200 }
+      }
+      
+      // 获取机器人配置
+      if (endpoint === 'initialization/bot-config') {
+        return {
+          success: true,
+          data: {
+            qq_account: 123456789,
+            nickname: 'MoFox',
+            alias_names: ['小狐狸', '狐狸'],
+            personality_core: '友善、活泼、乐于助人',
+            identity: '一只可爱的AI小狐狸',
+            reply_style: '活泼可爱，偶尔卖萌',
+            master_users: []
+          } as unknown as T,
+          status: 200
+        }
+      }
+      
+      // 保存机器人配置
+      if (endpoint === 'initialization/bot-config' && options.method === 'POST') {
+        return { success: true, data: { success: true, message: '配置保存成功' } as unknown as T, status: 200 }
+      }
+      
+      // 获取模型配置
+      if (endpoint === 'initialization/model-config') {
+        return {
+          success: true,
+          data: {
+            api_key: '',
+            provider_name: 'siliconflow',
+            base_url: 'https://api.siliconflow.cn/v1'
+          } as unknown as T,
+          status: 200
+        }
+      }
+      
+      // 保存模型配置
+      if (endpoint === 'initialization/model-config' && options.method === 'POST') {
+        return { success: true, data: { success: true, message: '模型配置保存成功' } as unknown as T, status: 200 }
+      }
+      
+      // 获取 Git 配置
+      if (endpoint === 'initialization/git-config') {
+        return {
+          success: true,
+          data: {
+            git_path: ''
+          } as unknown as T,
+          status: 200
+        }
+      }
+      
+      // 保存 Git 配置
+      if (endpoint === 'initialization/git-config' && options.method === 'POST') {
+        return { success: true, data: { success: true, message: 'Git配置保存成功' } as unknown as T, status: 200 }
+      }
+      
+      // 验证 API 密钥
+      if (endpoint === 'initialization/validate-api-key') {
+        return { success: true, data: { valid: true, message: 'API密钥验证成功 (Demo模式)' } as unknown as T, status: 200 }
+      }
+      
+      // 检测 Git 路径
+      if (endpoint === 'initialization/detect-git') {
+        return { success: true, data: { found: true, path: 'C:\\Program Files\\Git\\bin\\git.exe' } as unknown as T, status: 200 }
+      }
+      
+      // 完成初始化
+      if (endpoint === 'initialization/complete') {
+        // 在 localStorage 中标记已完成初始化
+        localStorage.setItem('demo_initialized', 'true')
+        return { success: true, data: { success: true, message: '初始化完成！' } as unknown as T, status: 200 }
+      }
 
       // 默认返回成功
       return { success: true, data: { success: true } as unknown as T, status: 200 }

@@ -25,9 +25,6 @@
           <p>管理 MoFox-Bot 和 WebUI 的更新</p>
         </div>
       </div>
-      <button class="m3-icon-button" @click="handleRefresh" :disabled="refreshing">
-        <span class="material-symbols-rounded" :class="{ spinning: refreshing }">refresh</span>
-      </button>
     </div>
 
     <!-- 标签页导航 -->
@@ -95,9 +92,6 @@ const tabs = [
 // 当前激活的标签页
 const activeTab = ref('ui')
 
-// 刷新状态
-const refreshing = ref(false)
-
 // 组件引用
 const uiUpdateTabRef = ref<InstanceType<typeof UIUpdateTab> | null>(null)
 const mainUpdateTabRef = ref<InstanceType<typeof MainUpdateTab> | null>(null)
@@ -107,22 +101,6 @@ const gitSettingsTabRef = ref<InstanceType<typeof GitSettingsTab> | null>(null)
 const showRestartDialog = ref(false)
 const restartType = ref<'main' | 'ui' | 'both'>('main')
 const restartChangelog = ref<string[]>([])
-
-// 刷新当前标签页
-async function handleRefresh() {
-  refreshing.value = true
-  try {
-    if (activeTab.value === 'ui' && uiUpdateTabRef.value) {
-      await uiUpdateTabRef.value.refresh?.()
-    } else if (activeTab.value === 'main' && mainUpdateTabRef.value) {
-      await mainUpdateTabRef.value.refresh?.()
-    } else if (activeTab.value === 'git' && gitSettingsTabRef.value) {
-      await gitSettingsTabRef.value.refresh?.()
-    }
-  } finally {
-    refreshing.value = false
-  }
-}
 
 // UI 更新完成
 function handleUIUpdateComplete(needsRestart: boolean) {
@@ -177,15 +155,6 @@ onMounted(() => {
   to { opacity: 1; }
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
 /* 头部 */
 .page-header {
   display: flex;
@@ -230,29 +199,6 @@ onMounted(() => {
   margin: 4px 0 0 0;
   font-size: 14px;
   color: var(--md-sys-color-on-surface-variant);
-}
-
-.m3-icon-button {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.m3-icon-button:hover:not(:disabled) {
-  background: var(--md-sys-color-surface-container-highest);
-}
-
-.m3-icon-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* 标签页导航 */
