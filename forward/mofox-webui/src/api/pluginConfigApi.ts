@@ -312,6 +312,5 @@ export function shouldShowField(
     return dependValue === field.depends_value
   }
   
-  // 如果没有指定 depends_value，则检查依赖字段是否为 truthy
   return Boolean(dependValue)
 }

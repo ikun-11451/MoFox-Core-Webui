@@ -284,7 +284,7 @@ function handleNumberInput(event: Event) {
   font-weight: 500;
   text-align: center;
   color: var(--md-sys-color-on-surface);
-  background: var(--md-sys-color-surface-container);
+  background: var(--md-sys-color-surface-container-highest);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 18px;
   transition: all 0.2s;

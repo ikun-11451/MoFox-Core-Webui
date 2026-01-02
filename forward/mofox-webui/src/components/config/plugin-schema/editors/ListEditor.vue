@@ -440,7 +440,7 @@ function onDragEnd() {
   color: var(--md-sys-color-on-surface);
   background: var(--md-sys-color-surface-container-highest);
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 20px;
   transition: all 0.2s;
 }
 

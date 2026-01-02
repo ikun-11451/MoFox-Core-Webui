@@ -59,18 +59,14 @@ function handleSwitchChange(event: Event) {
   justify-content: space-between;
   width: 100%;
   padding: 12px 16px;
-  background: var(--md-sys-color-surface-container);
+  background: var(--md-sys-color-surface-container-highest);
   border-radius: 16px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
 .switch-editor:hover {
-  background: var(--md-sys-color-surface-container-high);
-}
-
-.switch-editor.is-checked {
-  background: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-container));
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-highest));
 }
 
 .switch-editor.is-disabled {

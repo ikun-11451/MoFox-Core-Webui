@@ -99,7 +99,7 @@ function getFileIcon() {
   display: flex;
   align-items: center;
   background: var(--md-sys-color-surface-container-highest);
-  border-radius: 16px 16px 0 0;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -199,12 +199,7 @@ function getFileIcon() {
 
 /* 底部边框装饰 */
 .field-decoration {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  pointer-events: none;
+  display: none;
 }
 
 .field-border {

@@ -5,4 +5,3 @@
 
 export { default as SchemaFieldEditor } from './SchemaFieldEditor.vue'
 export { default as ConfigSection } from './ConfigSection.vue'
-export { default as SchemaConfigEditor } from './SchemaConfigEditor.vue'

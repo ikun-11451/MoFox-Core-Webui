@@ -97,15 +97,9 @@
         </button>
       </div>
       <template v-else-if="mergedSections.length > 0">
-        <!-- Schema 模式提示 -->
-        <div v-if="hasPluginSchema" class="schema-mode-banner">
-          <span class="material-symbols-rounded">auto_awesome</span>
-          <span>Schema 增强模式</span>
-        </div>
-        
         <!-- 配置导航栏 -->
         <div class="config-nav-bar" v-if="mergedSections.length > 1">
-          <div class="nav-tabs">
+          <div class="nav-tabs" ref="navTabsRef" @wheel="handleNavTabsWheel">
             <button
               v-for="(section, idx) in mergedSections"
               :key="section.name"
@@ -115,7 +109,7 @@
             >
               <span class="material-symbols-rounded">{{ section.icon || getSectionIcon(section.name) }}</span>
               {{ section.display_name }}
-              <span class="field-badge">{{ section.fields.length }}</span>
+              <span class="field-badge">{{ section.hasSchema ? (section.schemaFields?.length || 0) : section.fields.length }}</span>
               <span v-if="section.hasSchema" class="schema-badge" title="Schema 增强">
                 <span class="material-symbols-rounded">auto_awesome</span>
               </span>
@@ -144,14 +138,15 @@
             <div class="fields-list">
               <!-- Schema 增强字段 -->
               <template v-if="currentMergedSection.hasSchema && currentMergedSection.schemaFields">
-                <SchemaFieldEditor
-                  v-for="field in currentMergedSection.schemaFields"
-                  :key="field.key"
-                  :field="field"
-                  :model-value="getSchemaFieldValue(currentMergedSection.name, field.key)"
-                  :all-values="flatConfigValues"
-                  @update:model-value="(v: unknown) => updateSchemaFieldValue(currentMergedSection!.name, field.key, v)"
-                />
+                <template v-for="field in currentMergedSection.schemaFields" :key="field.key">
+                  <SchemaFieldEditor
+                    v-if="!field.depends_on || checkSchemaFieldVisibility(field)"
+                    :field="field"
+                    :model-value="getSchemaFieldValue(currentMergedSection.name, field.key)"
+                    :all-values="flatConfigValues"
+                    @update:model-value="(v: unknown) => updateSchemaFieldValue(currentMergedSection!.name, field.key, v)"
+                  />
+                </template>
               </template>
               
               <!-- 传统字段 -->
@@ -446,6 +441,9 @@ const showBackupsModal = ref(false)
 const backupsLoading = ref(false)
 const backups = ref<any[]>([])
 
+// 导航标签滚动
+const navTabsRef = ref<HTMLElement | null>(null)
+
 // Toast
 const toast = ref({ 
   show: false, 
@@ -547,6 +545,18 @@ function goBack() {
     }
   } else {
     router.back()
+  }
+}
+
+// 处理导航标签横向滚动（无需按住 Shift）
+function handleNavTabsWheel(e: WheelEvent) {
+  if (!navTabsRef.value) return
+  
+  // 只在有垂直滚动时转换为横向滚动
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    e.preventDefault()
+    // 直接修改 scrollLeft，配合 CSS scroll-behavior 实现平滑效果
+    navTabsRef.value.scrollLeft += e.deltaY * 0.3
   }
 }
 
@@ -767,6 +777,19 @@ function updateSchemaFieldValue(sectionName: string, key: string, value: unknown
     editedValues.value[sectionName] = {}
   }
   editedValues.value[sectionName][key] = value
+}
+
+// 检查 Schema 字段是否应该显示
+function checkSchemaFieldVisibility(field: SchemaField): boolean {
+  if (!field.depends_on) return true
+  
+  const dependValue = flatConfigValues.value[field.depends_on]
+  
+  if (field.depends_value !== undefined) {
+    return dependValue === field.depends_value
+  }
+  
+  return Boolean(dependValue)
 }
 
 // 格式化配置节名称
@@ -1136,16 +1159,14 @@ function getSectionIcon(sectionName: string): string {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  scrollbar-width: thin;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  padding-bottom: 2px;
 }
 
 .nav-tabs::-webkit-scrollbar {
-  height: 4px;
-}
-
-.nav-tabs::-webkit-scrollbar-thumb {
-  background: var(--md-sys-color-outline);
-  border-radius: 2px;
+  display: none; /* Chrome/Safari/Opera */
 }
 
 .nav-tab {

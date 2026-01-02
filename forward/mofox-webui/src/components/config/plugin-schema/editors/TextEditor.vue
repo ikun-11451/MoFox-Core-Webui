@@ -88,7 +88,7 @@ function clearValue() {
   color: var(--md-sys-color-on-surface);
   background: var(--md-sys-color-surface-container-highest);
   border: none;
-  border-radius: 16px 16px 0 0;
+  border-radius: 16px;
   transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   caret-color: var(--md-sys-color-primary);
 }
@@ -98,7 +98,8 @@ function clearValue() {
 }
 
 .m3-text-field:focus {
-  outline: none;
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -2px;
   background: var(--md-sys-color-surface-container-highest);
 }
 
@@ -115,12 +116,7 @@ function clearValue() {
 
 /* 底部边框装饰 */
 .field-decoration {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  pointer-events: none;
+  display: none;
 }
 
 .field-border {
@@ -156,6 +152,7 @@ function clearValue() {
 .clear-button {
   position: absolute;
   right: 8px;
+  top: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -167,7 +164,7 @@ function clearValue() {
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
   opacity: 0;
-  transform: scale(0.8);
+  transform: translateY(-50%) scale(0.8);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -183,7 +180,7 @@ function clearValue() {
 .m3-text-field-container:hover .clear-button,
 .is-focused .clear-button {
   opacity: 1;
-  transform: scale(1);
+  transform: translateY(-50%) scale(1);
 }
 
 /* 字符计数 */

@@ -76,8 +76,18 @@ function handleInput(event: Event) {
   display: flex;
   align-items: center;
   background: var(--md-sys-color-surface-container-highest);
-  border-radius: 16px 16px 0 0;
-  overflow: hidden;
+  border-radius: 16px;
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1), outline 0.2s;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+}
+
+.field-wrapper:hover {
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-highest));
+}
+
+.password-editor.is-focused .field-wrapper {
+  outline-color: var(--md-sys-color-primary);
 }
 
 .leading-icon {
@@ -127,47 +137,16 @@ function handleInput(event: Event) {
 
 /* 底部边框装饰 */
 .field-decoration {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  pointer-events: none;
+  display: none;
 }
 
-.field-border {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: var(--md-sys-color-on-surface-variant);
-  transition: opacity 0.2s;
-}
-
-.field-focus-indicator {
-  position: absolute;
-  left: 50%;
-  right: 50%;
-  bottom: 0;
-  height: 2px;
-  background: var(--md-sys-color-primary);
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.is-focused .field-border {
-  opacity: 0;
-}
-
-.is-focused .field-focus-indicator {
-  left: 0;
-  right: 0;
-}
 
 /* 密码可见性切换按�?*/
 .password-toggle {
   position: absolute;
   right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;

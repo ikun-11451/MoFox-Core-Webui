@@ -70,14 +70,27 @@ const isCollapsed = ref(false)
 
 // 扁平化的值（用于条件判断�?
 const flatValues = computed(() => {
+  // 确保响应式更新
+  const values = props.values
   const flat: Record<string, unknown> = {}
-  for (const [sectionName, sectionValues] of Object.entries(props.values)) {
-    for (const [key, value] of Object.entries(sectionValues)) {
+  
+  if (!values) return flat
+
+  for (const sectionName in values) {
+    const sectionValues = values[sectionName]
+    if (!sectionValues) continue
+    
+    for (const key in sectionValues) {
+      const value = sectionValues[key]
       flat[key] = value
       flat[`${sectionName}.${key}`] = value
     }
-  }
-  return flat
+  }  
+  console.log('[ConfigSection flatValues]', {
+    section: props.section.name,
+    flat: flat
+  })
+    return flat
 })
 
 // 可见的字段（根据 depends_on 过滤�?
@@ -95,9 +108,33 @@ function getFieldValue(key: string): unknown {
 
 // 更新字段
 function updateField(key: string, value: unknown) {
+  console.log('[ConfigSection updateField]', { section: props.section.name, key, value })
   emit('update', props.section.name, key, value)
 }
 
+// 监听 props.values 变化
+watch(() => props.values, (newVal, oldVal) => {
+  console.log('[ConfigSection values changed]', {
+    section: props.section.name,
+    newValues: newVal,
+    oldValues: oldVal
+  })
+}, { deep: true })
+
+// 组件挂载
+onMounted(() => {
+  console.log('[ConfigSection onMounted]', {
+    section: props.section.name,
+    initialValues: props.values
+  })
+})
+// 检查字段是否应该显示（供模板使用）
+function checkFieldVisibility(field: SchemaField): boolean {
+  if (!field.depends_on) return true
+  const result = shouldShowField(field, flatValues.value)
+  console.log(`[checkFieldVisibility] ${field.key}: ${result}, depends_on: ${field.depends_on}, value: ${flatValues.value[field.depends_on]}`)
+  return result
+}
 // 格式化标�?
 function formatTitle(name: string): string {
   return name
