@@ -46,7 +46,7 @@ class SPAStaticFiles(StaticFiles):
             # 如果文件不存在，返回index.html
             # 但排除API路径和插件路径
             if path.startswith("api/") or path.startswith("plugins/"):
-                logger.info("raise!")
+                logger.debug("raise!")
                 raise
             return await super().get_response("index.html", scope)
 

@@ -128,7 +128,7 @@ class WebUIStartupHandler(BaseEventHandler):
 
                 # 延迟一小段时间后打开浏览器，确保服务器已启动
                 await asyncio.sleep(2)
-                open_initialization_page(main_host, 12138)
+                open_initialization_page(main_host, DISCOVERY_PORT)
             else:
                 logger.info("✓ 系统已完成初始化配置")
 
