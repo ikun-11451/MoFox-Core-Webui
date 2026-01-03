@@ -310,7 +310,7 @@ import {
   type ConfigSection,
   type ConfigBackupInfo
 } from '@/api'
-import FieldEditor from '@/components/config/FieldEditor.vue'
+import { FieldEditor } from '@/components/config/editors'
 import ModelConfigEditor from '@/components/config/ModelConfigEditor.vue'
 import MainConfigEditor from '@/components/config/MainConfigEditor.vue'
 

@@ -108,7 +108,7 @@ function handleInput(event: Event) {
     emit('update:modelValue', parsed)
     error.value = ''
   } catch (e) {
-    error.value = '无效�?JSON 格式'
+    error.value = '无效的JSON 格式'
   }
 }
 

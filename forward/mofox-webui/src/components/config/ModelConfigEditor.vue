@@ -1216,7 +1216,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import StringArrayEditor from './StringArrayEditor.vue'
+import { StringArrayEditor } from './editors'
 import { providerPresets, modelTaskConfigs } from '@/config/configDescriptions'
 
 // API 提供商接口

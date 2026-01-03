@@ -198,7 +198,7 @@
 
 import { ref, onMounted } from 'vue'
 import { saveBotConfig, getBotConfig, type BotConfigRequest } from '@/api/initialization'
-import StringArrayEditor from '@/components/config/StringArrayEditor.vue'
+import { StringArrayEditor } from '@/components/config/editors'
 import MasterUsersEditor from '@/components/config/special/MasterUsersEditor.vue'
 
 // === 事件定义 ===

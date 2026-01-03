@@ -8,7 +8,7 @@
 export type FieldType = 'string' | 'number' | 'boolean' | 'array' | 'object' | 'password' | 'select' | 'textarea' 
 
 // 配置字段类型扩展
-export type SpecialEditorType = 'master_users' | 'expression_rules' | 'reaction_rules' | 'model_extra_params' | 'web_search_engines' | 'string_array' | 'key_value'
+export type SpecialEditorType = 'master_users' | 'expression_rules' | 'reaction_rules' | 'model_extra_params' | 'web_search_engines' | 'string_array' | 'key_value' | 'chat_list'
 
 // 配置字段定义
 export interface ConfigFieldDef {

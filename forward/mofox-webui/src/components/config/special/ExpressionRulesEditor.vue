@@ -168,7 +168,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import ChatStreamIdInput from '../ChatStreamIdInput.vue'
+import { ChatStreamIdInput } from '../editors'
 
 interface ExpressionRule {
   chat_stream_id?: string
