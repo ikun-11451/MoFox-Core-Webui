@@ -3,6 +3,7 @@
     <!-- Left Panel: Branding & Decorations -->
     <div class="left-panel animated-background">
       <ParticleBackground :type="greeting.decoration || 'sun-sparkles'" />
+      <DecorationStage :step="currentStep" />
       
       <div class="brand-content" :class="{ 'loaded': isLoaded }">
         <div 
@@ -84,6 +85,7 @@ import { useRouter } from 'vue-router'
 import { getInitStatus, completeInitialization, type InitStatusResponse } from '@/api/initialization'
 import { clearInitStatusCache } from '@/router'
 import ParticleBackground from '@/components/initialization/ParticleBackground.vue'
+import DecorationStage from '@/components/initialization/DecorationStage.vue'
 import { getGreeting, getRandomTip, funGreetings, tips, getCompletionGreeting } from '@/utils/initialization-easter-eggs'
 
 // 导入各步骤组件
@@ -395,53 +397,7 @@ onUnmounted(() => {
   max-width: 400px;
 }
 
-/* Decoration Stage */
-.decoration-stage {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.floating-item {
-  position: absolute;
-  font-size: 80px;
-  opacity: var(--opacity);
-  filter: blur(var(--blur)) drop-shadow(0 10px 20px rgba(0,0,0,0.15));
-  z-index: var(--z-index);
-  animation: float-around var(--duration) ease-in-out infinite;
-  transform: translate(var(--offset-x), var(--offset-y)) scale(var(--scale));
-  will-change: transform, opacity;
-}
-
-@keyframes float-around {
-  0%, 100% { transform: translate(var(--offset-x), var(--offset-y)) scale(var(--scale)) translateY(0) rotate(0deg); }
-  50% { transform: translate(var(--offset-x), var(--offset-y)) scale(var(--scale)) translateY(-30px) rotate(5deg); }
-}
-
-.float-item-enter-active,
-.float-item-leave-active {
-  transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.float-item-enter-from {
-  opacity: 0;
-  transform: translate(var(--offset-x), calc(var(--offset-y) + 100px)) scale(0);
-  filter: blur(10px);
-}
-
-.float-item-leave-to {
-  opacity: 0;
-  transform: translate(var(--offset-x), calc(var(--offset-y) - 100px)) scale(2);
-  filter: blur(10px);
-}
+/* Decoration Stage styles moved to DecorationStage.vue */
 
 .logo-wrapper {
   width: 120px;
