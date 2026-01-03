@@ -525,6 +525,30 @@
                           </label>
                         </div>
                       </div>
+                      
+                      <!-- extra_params JSON 编辑 -->
+                      <div class="extra-params-section">
+                        <div class="extra-params-header">
+                          <Icon icon="lucide:braces" />
+                          <span>额外参数 (extra_params)</span>
+                          <span class="extra-params-hint">JSON 格式的自定义参数</span>
+                        </div>
+                        <div class="json-editor-wrapper">
+                          <textarea 
+                            class="json-editor"
+                            :value="formatExtraParams(model.extra_params)"
+                            @input="handleExtraParamsInput(index, ($event.target as HTMLTextAreaElement).value)"
+                            @blur="validateAndUpdateExtraParams(index, ($event.target as HTMLTextAreaElement).value)"
+                            placeholder='例如: {"enable_thinking": false, "thinking_budget": 256}'
+                            rows="4"
+                            spellcheck="false"
+                          ></textarea>
+                          <div v-if="extraParamsError[index]" class="json-error">
+                            <Icon icon="lucide:alert-circle" />
+                            <span>{{ extraParamsError[index] }}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </Transition>
@@ -1196,6 +1220,29 @@
                       </label>
                     </div>
                   </div>
+                  
+                  <!-- extra_params JSON 编辑 -->
+                  <div class="extra-params-section">
+                    <div class="extra-params-header">
+                      <Icon icon="lucide:braces" />
+                      <span>额外参数 (extra_params)</span>
+                      <span class="extra-params-hint">JSON 格式的自定义参数</span>
+                    </div>
+                    <div class="json-editor-wrapper">
+                      <textarea 
+                        class="json-editor"
+                        v-model="newModelExtraParamsJson"
+                        @blur="validateNewModelExtraParams"
+                        placeholder='例如: {"enable_thinking": false, "thinking_budget": 256}'
+                        rows="4"
+                        spellcheck="false"
+                      ></textarea>
+                      <div v-if="newModelExtraParamsError" class="json-error">
+                        <Icon icon="lucide:alert-circle" />
+                        <span>{{ newModelExtraParamsError }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1384,8 +1431,16 @@ const newModel = ref({
   anti_truncation: false,
   enable_prompt_perturbation: false,
   perturbation_strength: 'light',
-  enable_semantic_variants: false
+  enable_semantic_variants: false,
+  extra_params: {} as Record<string, unknown>
 })
+
+// 新模型 extra_params JSON 编辑状态
+const newModelExtraParamsJson = ref('')
+const newModelExtraParamsError = ref('')
+
+// extra_params 错误状态（用于已有模型编辑）
+const extraParamsError = ref<Record<number, string>>({})
 
 // 计算 API 提供商列表
 const apiProviders = computed(() => {
@@ -1512,6 +1567,73 @@ function updateModel(index: number, key: string, value: unknown) {
   emit('update', 'models', newModels)
 }
 
+// 格式化 extra_params 为 JSON 字符串显示
+function formatExtraParams(extraParams: Record<string, unknown> | undefined): string {
+  if (!extraParams || Object.keys(extraParams).length === 0) {
+    return ''
+  }
+  try {
+    return JSON.stringify(extraParams, null, 2)
+  } catch {
+    return ''
+  }
+}
+
+// 处理 extra_params 输入（实时清除错误）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function handleExtraParamsInput(index: number, _value: string) {
+  if (extraParamsError.value[index]) {
+    delete extraParamsError.value[index]
+  }
+}
+
+// 验证并更新 extra_params
+function validateAndUpdateExtraParams(index: number, value: string) {
+  const trimmedValue = value.trim()
+  
+  // 空值时清除 extra_params
+  if (!trimmedValue) {
+    updateModel(index, 'extra_params', undefined)
+    delete extraParamsError.value[index]
+    return
+  }
+  
+  try {
+    const parsed = JSON.parse(trimmedValue)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      extraParamsError.value[index] = 'extra_params 必须是一个对象'
+      return
+    }
+    updateModel(index, 'extra_params', parsed)
+    delete extraParamsError.value[index]
+  } catch (e) {
+    extraParamsError.value[index] = `JSON 解析错误: ${(e as Error).message}`
+  }
+}
+
+// 验证新模型的 extra_params
+function validateNewModelExtraParams() {
+  const trimmedValue = newModelExtraParamsJson.value.trim()
+  
+  if (!trimmedValue) {
+    newModel.value.extra_params = {}
+    newModelExtraParamsError.value = ''
+    return
+  }
+  
+  try {
+    const parsed = JSON.parse(trimmedValue)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      newModelExtraParamsError.value = 'extra_params 必须是一个对象'
+      return
+    }
+    newModel.value.extra_params = parsed
+    newModelExtraParamsError.value = ''
+  } catch (e) {
+    newModelExtraParamsError.value = `JSON 解析错误: ${(e as Error).message}`
+  }
+}
+
 function selectPreset(preset: typeof providerPresets[0]) {
   selectedPreset.value = preset
   newProvider.value = {
@@ -1596,6 +1718,14 @@ function removeProvider(index: number) {
 function confirmAddModel() {
   if (!newModel.value.model_identifier || !newModel.value.name) return
   
+  // 验证 extra_params
+  if (newModelExtraParamsJson.value.trim()) {
+    validateNewModelExtraParams()
+    if (newModelExtraParamsError.value) {
+      return // 有错误时不提交
+    }
+  }
+  
   // 构建新模型对象
   const modelData: Model = {
     model_identifier: newModel.value.model_identifier,
@@ -1605,8 +1735,10 @@ function confirmAddModel() {
     price_out: newModel.value.price_out
   }
   
-  // 添加高级参数到 extra_params
-  const extraParams: Record<string, unknown> = {}
+  // 合并高级参数和用户自定义的 extra_params
+  const extraParams: Record<string, unknown> = {
+    ...(newModel.value.extra_params || {})
+  }
   if (newModel.value.max_tokens !== undefined && newModel.value.max_tokens > 0) {
     extraParams.max_tokens = newModel.value.max_tokens
   }
@@ -1624,6 +1756,12 @@ function confirmAddModel() {
   }
   if (newModel.value.enable_prompt_perturbation) {
     modelData.enable_prompt_perturbation = true
+  }
+  if (newModel.value.perturbation_strength && newModel.value.perturbation_strength !== 'light') {
+    modelData.perturbation_strength = newModel.value.perturbation_strength
+  }
+  if (newModel.value.enable_semantic_variants) {
+    modelData.enable_semantic_variants = true
   }
   
   const newModels = [...models.value, modelData]
@@ -1645,8 +1783,11 @@ function confirmAddModel() {
     anti_truncation: false,
     enable_prompt_perturbation: false,
     perturbation_strength: 'light',
-    enable_semantic_variants: false
+    enable_semantic_variants: false,
+    extra_params: {}
   }
+  newModelExtraParamsJson.value = ''
+  newModelExtraParamsError.value = ''
   
   // 展开新添加的模型
   selectedModel.value = newModels.length - 1
@@ -3925,5 +4066,100 @@ select.input {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Extra Params JSON Editor */
+.extra-params-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.extra-params-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.extra-params-header svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+}
+
+.extra-params-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.json-editor-wrapper {
+  position: relative;
+}
+
+.json-editor {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.json-editor:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-color-alpha);
+}
+
+.json-editor::placeholder {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.json-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--error-color, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius);
+}
+
+.json-error svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Modal body 中的 extra_params 编辑器 */
+.modal-body .extra-params-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+}
+
+.modal-body .extra-params-header {
+  margin-bottom: 12px;
+}
+
+.modal-body .json-editor {
+  background: var(--bg-primary);
 }
 </style>

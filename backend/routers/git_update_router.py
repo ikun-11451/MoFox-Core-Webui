@@ -3,9 +3,11 @@ Git 更新路由组件
 提供 Git 环境检测、安装、更新等 API 接口
 """
 
+import asyncio
 import os
 import platform
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 import shutil
@@ -997,15 +999,15 @@ class GitUpdater:
             logger.error(f"回滚失败: {e}")
             return {"success": False, "error": str(e)}
 
-    def get_branches(self) -> dict:
-        """获取所有分支列表"""
+    def get_branches(self, fetch_remote: bool = False) -> dict:
+        """
+        获取所有分支列表
+        
+        Args:
+            fetch_remote: 是否从远程获取最新分支，默认 False 避免网络阻塞
+        """
         try:
-            # 获取远程分支
-            fetch_result = self._run_git_command("fetch", "origin", timeout=30)
-            if fetch_result.returncode != 0:
-                logger.warning(f"获取远程分支失败: {fetch_result.stderr}")
-
-            # 获取本地和远程分支
+            # 先获取本地和已缓存的远程分支（不需要网络）
             result = self._run_git_command("branch", "-a")
             if result.returncode != 0:
                 return {"success": False, "error": "获取分支列表失败"}
@@ -1035,6 +1037,15 @@ class GitUpdater:
                         branches.append(branch_name)
                 elif line not in branches:
                     branches.append(line)
+
+            # 仅在明确要求时才从远程获取（使用较短超时）
+            if fetch_remote:
+                try:
+                    fetch_result = self._run_git_command("fetch", "origin", timeout=10)
+                    if fetch_result.returncode != 0:
+                        logger.warning(f"获取远程分支失败: {fetch_result.stderr}")
+                except subprocess.TimeoutExpired:
+                    logger.warning("获取远程分支超时，使用本地缓存的分支列表")
 
             return {
                 "success": True,
@@ -1306,6 +1317,59 @@ class GitUpdateRouterComponent(BaseRouterComponent):
                 logger.error(f"获取仓库状态失败: {e}")
                 return RepoStatusResponse(
                     is_git_repo=False,
+                    error=str(e)
+                )
+
+        @self.router.post("/refresh-branches", response_model=RepoStatusResponse)
+        async def refresh_branches(_=VerifiedDep):
+            """
+            刷新远程分支列表（需要网络）
+            
+            此端点会从远程获取最新的分支信息，可能需要较长时间。
+            建议前端使用 timeout 设置，并在网络不佳时提示用户。
+            """
+            try:
+                detector = GitDetector()
+                repo_path = Path(PROJECT_ROOT)
+                
+                if not detector.is_git_repo(repo_path):
+                    return RepoStatusResponse(
+                        is_git_repo=False,
+                        error="主程序不是 Git 仓库"
+                    )
+                
+                if not detector.is_git_available():
+                    return RepoStatusResponse(
+                        is_git_repo=True,
+                        error="Git 不可用"
+                    )
+                
+                updater = GitUpdater(repo_path)
+                
+                # 在线程池中运行阻塞的 fetch 操作，避免阻塞事件循环
+                loop = asyncio.get_event_loop()
+                with ThreadPoolExecutor() as pool:
+                    branch_info = await loop.run_in_executor(
+                        pool, 
+                        lambda: updater.get_branches(fetch_remote=True)
+                    )
+                
+                if branch_info["success"]:
+                    return RepoStatusResponse(
+                        is_git_repo=True,
+                        current_branch=branch_info["current_branch"],
+                        available_branches=branch_info["branches"],
+                    )
+                else:
+                    return RepoStatusResponse(
+                        is_git_repo=True,
+                        error=branch_info.get("error", "获取分支失败")
+                    )
+                    
+            except Exception as e:
+                logger.error(f"刷新分支失败: {e}")
+                return RepoStatusResponse(
+                    is_git_repo=True,
                     error=str(e)
                 )
 
