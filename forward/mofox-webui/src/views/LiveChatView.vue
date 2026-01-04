@@ -282,6 +282,7 @@ let pendingStreamId: string | null = null  // 待订阅的流ID
 
 // DOM 引用
 const messagesContainer = ref<HTMLElement | null>(null)
+const inputTextarea = ref<HTMLTextAreaElement | null>(null)
 
 // 引用消息缓存
 const replyCache = ref<Map<string, MessageInfo>>(new Map())
@@ -379,6 +380,7 @@ async function sendMessage() {
     if (result.success) {
       inputMessage.value = ''
       // 消息会通过 WebSocket 返回，无需手动添加
+      nextTick(adjustTextareaHeight)
     } else {
       console.error('发送失败:', result.error)
     }
@@ -565,6 +567,27 @@ function formatMessageTime(timestamp: number | null): string {
   const date = new Date(timestamp * 1000)
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
+
+// 自动调整输入框高度
+function adjustTextareaHeight() {
+  const textarea = inputTextarea.value
+  if (!textarea) return
+  
+  textarea.style.height = 'auto'
+  const newHeight = textarea.scrollHeight
+  textarea.style.height = newHeight + 'px'
+  
+  if (newHeight > 150) {
+     textarea.style.overflowY = 'auto'
+  } else {
+     textarea.style.overflowY = 'hidden'
+  }
+}
+
+// 监听输入内容变化，自动调整高度
+watch(inputMessage, () => {
+  nextTick(adjustTextareaHeight)
+})
 
 // ==================== 生命周期 ====================
 
@@ -1052,6 +1075,7 @@ watch(selectedStream, (newStream) => {
   font-family: inherit;
   color: var(--md-sys-color-on-surface-variant);
   max-height: 150px;
+  overflow-y: hidden;
   transition: background-color 0.2s;
 }
 
