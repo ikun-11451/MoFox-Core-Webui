@@ -310,7 +310,7 @@ import {
   type ConfigSection,
   type ConfigBackupInfo
 } from '@/api'
-import FieldEditor from '@/components/config/FieldEditor.vue'
+import { FieldEditor } from '@/components/config/editors'
 import ModelConfigEditor from '@/components/config/ModelConfigEditor.vue'
 import MainConfigEditor from '@/components/config/MainConfigEditor.vue'
 
@@ -1035,7 +1035,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  font-family: 'Noto Sans SC', sans-serif;
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
   color: var(--md-sys-color-on-surface-variant);
 }
 

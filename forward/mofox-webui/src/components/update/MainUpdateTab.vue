@@ -57,6 +57,15 @@
           <span class="material-symbols-rounded spinning">progress_activity</span>
           切换中...
         </span>
+        <button 
+          v-else
+          class="m3-icon-button" 
+          @click="handleRefreshBranches" 
+          :disabled="refreshingBranches"
+          :title="refreshingBranches ? '刷新中...' : '刷新远程分支列表'"
+        >
+          <span class="material-symbols-rounded" :class="{ spinning: refreshingBranches }">sync</span>
+        </button>
       </div>
     </div>
 
@@ -298,6 +307,7 @@ import {
   rollbackVersion,
   getMainBackups,
   getMainCommitDetail,
+  refreshBranches,
   type RepoStatus,
   type UpdateCheck,
   type MainBackupInfo,
@@ -305,6 +315,7 @@ import {
 } from '@/api/git_update'
 import { getGitEnvStatus, type GitEnvStatus } from '@/api/git_env'
 import { showSuccess, showError, showConfirm } from '@/utils/dialog'
+import { showToast } from '@/utils/updateChecker'
 
 // Props & Emits
 const emit = defineEmits<{
@@ -322,6 +333,7 @@ const initialLoading = ref(true)  // 初始加载状态
 const checking = ref(false)
 const updating = ref(false)
 const switching = ref(false)
+const refreshingBranches = ref(false)  // 刷新远程分支状态
 const rolling = ref(false)
 const loadingBackups = ref(false)
 const loadingDetail = ref(false)
@@ -361,6 +373,30 @@ async function loadStatus() {
 function toggleBranchDropdown() {
   if (switching.value) return
   showBranchDropdown.value = !showBranchDropdown.value
+}
+
+// 刷新远程分支列表
+async function handleRefreshBranches() {
+  if (refreshingBranches.value) return
+  
+  refreshingBranches.value = true
+  
+  try {
+    const result = await refreshBranches()
+    if (result.success && result.data) {
+      repoStatus.value = result.data
+      if (result.data.current_branch) {
+        selectedBranch.value = result.data.current_branch
+      }
+      showToast('分支列表已刷新', 'success')
+    } else {
+      showToast(result.data?.error || result.error || '刷新分支列表失败', 'error')
+    }
+  } catch (e: any) {
+    showToast(e.message || '刷新分支列表失败（网络可能不可用）', 'error')
+  } finally {
+    refreshingBranches.value = false
+  }
 }
 
 // 选择分支
@@ -1204,6 +1240,7 @@ defineExpose({
 
 .file-path {
   color: var(--md-sys-color-on-surface);
+  font-family: 'Roboto Mono', 'Noto Sans SC', monospace;
   word-break: break-all;
 }
 

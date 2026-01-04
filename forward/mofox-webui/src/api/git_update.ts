@@ -37,6 +37,13 @@ export function getRepoStatus() {
 }
 
 /**
+ * 刷新远程分支列表（需要网络，可能较慢）
+ */
+export function refreshBranches() {
+  return api.post<RepoStatus>('git_update/refresh-branches')
+}
+
+/**
  * 检查更新
  */
 export function checkUpdates() {

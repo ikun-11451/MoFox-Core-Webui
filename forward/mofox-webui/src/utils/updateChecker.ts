@@ -18,6 +18,15 @@ export function setToastCallback(callback: (message: string, type: 'success' | '
   toastCallback = callback
 }
 
+// 显示 Toast 提示（供其他模块调用）
+export function showToast(message: string, type: 'success' | 'error' = 'success') {
+  if (toastCallback) {
+    toastCallback(message, type)
+  } else {
+    console.warn('Toast callback not set, message:', message)
+  }
+}
+
 // 静默检查更新
 async function silentCheckUpdate() {
   try {

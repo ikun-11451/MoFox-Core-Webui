@@ -377,9 +377,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ConfigSection } from '@/api'
-import FieldEditor from './FieldEditor.vue'
-import StringArrayEditor from './StringArrayEditor.vue'
-import KeyValueEditor from './KeyValueEditor.vue'
+import { FieldEditor, StringArrayEditor, KeyValueEditor } from './editors'
 import MasterUsersEditor from './special/MasterUsersEditor.vue'
 import ExpressionRulesEditor from './special/ExpressionRulesEditor.vue'
 import ReactionRulesEditor from './special/ReactionRulesEditor.vue'
@@ -644,8 +642,8 @@ function getVisibleFields(group: ConfigGroupDef): ConfigFieldDef[] {
   return fields
 }
 
-// 自定义配置（未在描述中定义的）
-const customSections = computed(() => {
+// 自定义配置（未在描述中定义的）- 只处理 ConfigSection 类型
+const customSections = computed((): ConfigSection[] => {
   const definedKeys = new Set<string>()
   const objectTypeKeys = new Set<string>() // 对象类型的键，用于匹配嵌套属性
   
@@ -659,14 +657,8 @@ const customSections = computed(() => {
     })
   })
   
-  // 获取字段的完整 key（兼容 ConfigFieldDef 和 ConfigSchemaField）
-  function getFieldKey(field: any): string | undefined {
-    return field.full_key || field.key
-  }
-  
   // 检查一个键是否已被定义（包括作为对象类型的子属性）
-  function isKeyDefined(fullKey: string | undefined): boolean {
-    if (!fullKey) return false
+  function isKeyDefined(fullKey: string): boolean {
     if (definedKeys.has(fullKey)) return true
     // 检查是否是某个对象类型配置的子属性
     for (const objKey of objectTypeKeys) {
@@ -677,20 +669,22 @@ const customSections = computed(() => {
     return false
   }
   
-  // 过滤出未定义的配置节
-  return props.configSchema.filter(section => {
-    // 检查是否有任何字段不在定义中
-    return section.fields.some(field => {
-      const fieldKey = getFieldKey(field)
-      return fieldKey && !isKeyDefined(fieldKey)
+  // 判断是否为 ConfigSection 类型（后端返回的配置结构）
+  function isConfigSection(section: ConfigItem): section is ConfigSection {
+    return 'display_name' in section && section.fields.every(f => 'full_key' in f)
+  }
+  
+  // 只处理 ConfigSection 类型，过滤出未定义的配置节
+  return props.configSchema
+    .filter(isConfigSection)
+    .filter(section => {
+      // 检查是否有任何字段不在定义中
+      return section.fields.some(field => !isKeyDefined(field.full_key))
     })
-  }).map(section => ({
-    ...section,
-    fields: section.fields.filter(field => {
-      const fieldKey = getFieldKey(field)
-      return fieldKey && !isKeyDefined(fieldKey)
-    })
-  }))
+    .map(section => ({
+      ...section,
+      fields: section.fields.filter(field => !isKeyDefined(field.full_key))
+    }))
 })
 
 // 切换分组展开/折叠

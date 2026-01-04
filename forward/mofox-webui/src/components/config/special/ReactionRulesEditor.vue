@@ -148,7 +148,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import ChatStreamIdInput from '../ChatStreamIdInput.vue'
+import { ChatStreamIdInput } from '../editors'
 
 interface ReactionRule {
   chat_stream_id?: string
