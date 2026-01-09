@@ -4,11 +4,9 @@
 零侵入实现 - 使用 send_api 和 message_api 公开接口
 """
 
-import time
 from typing import Any, Optional
 
 from fastapi import Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import Response
 from pydantic import BaseModel
 
 from src.common.logger import get_logger
@@ -19,6 +17,59 @@ from src.plugin_system.apis import send_api, message_api
 from ..utils.message_broadcaster import get_message_broadcaster
 
 logger = get_logger("WebUI.LiveChatRouter")
+
+
+# ==================== 辅助函数 ====================
+
+
+async def get_image_base64(image_hash: str) -> Optional[str]:
+    """获取图片的 base64 数据 URL"""
+    try:
+        from sqlalchemy import select
+        from src.common.database.core import get_db_session
+        from src.common.database.core.models import Images
+        from src.chat.utils.utils_image import image_path_to_base64
+
+        async with get_db_session() as session:
+            stmt = select(Images).where(Images.emoji_hash == image_hash)
+            result = await session.execute(stmt)
+            image = result.scalar()
+
+            if image and image.path:
+                try:
+                    base64_data = image_path_to_base64(image.path)
+                    return f"data:image/png;base64,{base64_data}"
+                except Exception as e:
+                    logger.debug(f"读取图片文件失败: {e}")
+                    return None
+    except Exception as e:
+        logger.debug(f"获取图片失败: {e}")
+    return None
+
+
+async def get_emoji_base64(emoji_hash: str) -> Optional[str]:
+    """获取表情包的 base64 数据 URL"""
+    try:
+        from sqlalchemy import select
+        from src.common.database.core import get_db_session
+        from src.common.database.core.models import Emoji
+        from src.chat.utils.utils_image import image_path_to_base64
+
+        async with get_db_session() as session:
+            stmt = select(Emoji).where(Emoji.emoji_hash == emoji_hash)
+            result = await session.execute(stmt)
+            emoji = result.scalar()
+
+            if emoji and emoji.path:
+                try:
+                    base64_data = image_path_to_base64(emoji.path)
+                    return f"data:image/png;base64,{base64_data}"
+                except Exception as e:
+                    logger.debug(f"读取表情包文件失败: {e}")
+                    return None
+    except Exception as e:
+        logger.debug(f"获取表情包失败: {e}")
+    return None
 
 
 # ==================== 请求/响应模型 ====================
@@ -68,6 +119,8 @@ class MessageInfo(BaseModel):
     reply_to_id: Optional[str] = None
     direction: str = "incoming"
     sender_type: str = "user"
+    image_data: Optional[str] = None  # base64 图片数据 (data:image/...)
+    emoji_data: Optional[str] = None  # base64 表情包数据 (data:image/...)
 
 
 class MessagesResponse(BaseModel):
@@ -82,14 +135,6 @@ class SendResponse(BaseModel):
     """发送消息响应"""
 
     success: bool
-    error: Optional[str] = None
-
-
-class ImageResponse(BaseModel):
-    """图片响应"""
-
-    success: bool
-    data: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -205,20 +250,33 @@ class LiveChatRouterComponent(BaseRouterComponent):
                 message_list = []
                 for m in messages:
                     # message_api 返回的是字典列表
+                    content = m.get("processed_plain_text") or m.get("display_message")
+                    is_emoji = m.get("is_emoji", False)
+                    is_picid = m.get("is_picid", False)
+                    
+                    # 获取图片/表情包数据
+                    image_data = None
+                    emoji_data = None
+                    
+                    if is_picid and content:
+                        image_data = await get_image_base64(content)
+                    elif is_emoji and content:
+                        emoji_data = await get_emoji_base64(content)
+                    
                     msg_info = MessageInfo(
                         message_id=m.get("message_id"),
                         stream_id=stream_id,
                         user_id=m.get("user_id"),
                         user_nickname=m.get("user_nickname"),
-                        content=m.get("processed_plain_text")
-                        or m.get("display_message"),
+                        content=content,
                         timestamp=m.get("time"),
-                        is_emoji=m.get("is_emoji", False),
-                        is_picid=m.get("is_picid", False),
+                        is_emoji=is_emoji,
+                        is_picid=is_picid,
                         reply_to_id=m.get("reply_to"),
-                        # 历史消息默认为用户发送，后续可以根据 user_id 判断
                         direction="incoming",
                         sender_type="user",
+                        image_data=image_data,
+                        emoji_data=emoji_data,
                     )
                     message_list.append(msg_info)
 
@@ -334,64 +392,6 @@ class LiveChatRouterComponent(BaseRouterComponent):
                 logger.error(f"发送消息失败: {e}")
                 return SendResponse(success=False, error=str(e))
 
-        # ==================== 图片接口 ====================
-
-        @self.router.get("/image/{image_hash}")
-        async def get_image(image_hash: str, _=VerifiedDep):
-            """获取图片（通过哈希）"""
-            try:
-                from sqlalchemy import select
-                from src.common.database.core import get_db_session
-                from src.common.database.core.models import Images
-                from src.chat.utils.utils_image import image_path_to_base64
-
-                async with get_db_session() as session:
-                    stmt = select(Images).where(Images.emoji_hash == image_hash)
-                    result = await session.execute(stmt)
-                    image = result.scalar()
-
-                    if image and image.path:
-                        try:
-                            base64_data = image_path_to_base64(image.path)
-                            return ImageResponse(success=True, data=base64_data)
-                        except Exception as e:
-                            logger.error(f"读取图片文件失败: {e}")
-                            return ImageResponse(success=False, error="读取图片失败")
-
-                    return ImageResponse(success=False, error="图片不存在")
-
-            except Exception as e:
-                logger.error(f"获取图片失败: {e}")
-                return ImageResponse(success=False, error=str(e))
-
-        @self.router.get("/emoji/{emoji_hash}")
-        async def get_emoji(emoji_hash: str, _=VerifiedDep):
-            """获取表情包（通过哈希）"""
-            try:
-                from sqlalchemy import select
-                from src.common.database.core import get_db_session
-                from src.common.database.core.models import Emoji
-                from src.chat.utils.utils_image import image_path_to_base64
-
-                async with get_db_session() as session:
-                    stmt = select(Emoji).where(Emoji.emoji_hash == emoji_hash)
-                    result = await session.execute(stmt)
-                    emoji = result.scalar()
-
-                    if emoji and emoji.path:
-                        try:
-                            base64_data = image_path_to_base64(emoji.path)
-                            return ImageResponse(success=True, data=base64_data)
-                        except Exception as e:
-                            logger.error(f"读取表情包文件失败: {e}")
-                            return ImageResponse(success=False, error="读取表情包失败")
-
-                    return ImageResponse(success=False, error="表情包不存在")
-
-            except Exception as e:
-                logger.error(f"获取表情包失败: {e}")
-                return ImageResponse(success=False, error=str(e))
-
         # ==================== WebSocket 实时推送 ====================
 
         @self.router.websocket("/realtime")
@@ -430,7 +430,7 @@ class LiveChatRouterComponent(BaseRouterComponent):
             )
             if not valid_keys or token not in valid_keys:
                 await websocket.close(code=4003, reason="无效的 Token")
-                logger.warning(f"WebSocket 连接被拒绝: 无效的 Token")
+                logger.warning("WebSocket 连接被拒绝: 无效的 Token")
                 return
 
             await websocket.accept()

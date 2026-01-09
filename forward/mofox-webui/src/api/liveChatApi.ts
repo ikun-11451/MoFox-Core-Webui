@@ -32,6 +32,8 @@ export interface MessageInfo {
   reply_to_id: string | null
   direction: 'incoming' | 'outgoing'
   sender_type: 'user' | 'bot' | 'webui'
+  image_data?: string | null  // base64 图片数据 (data:image/...)
+  emoji_data?: string | null  // base64 表情包数据 (data:image/...)
 }
 
 /** 聊天流列表响应 */

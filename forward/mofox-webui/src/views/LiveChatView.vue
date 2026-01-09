@@ -180,16 +180,16 @@
             <div class="message-content">
               <!-- 图片消息 -->
               <img 
-                v-if="msg.is_picid && msg.content" 
-                :src="getImageUrl(msg.content)"
+                v-if="msg.is_picid && msg.image_data" 
+                :src="msg.image_data"
                 class="message-image"
                 @click="previewImage(msg.content || '')"
                 loading="lazy"
               />
               <!-- 表情消息 -->
               <img 
-                v-else-if="msg.is_emoji" 
-                :src="getEmojiUrl(msg.content)"
+                v-else-if="msg.is_emoji && msg.emoji_data" 
+                :src="msg.emoji_data"
                 class="message-emoji"
               />
               <!-- 文本消息 -->
@@ -246,8 +246,6 @@ import {
   getStreams,
   getMessages,
   sendMessage as apiSendMessage,
-  getImageUrl,
-  getEmojiUrl,
   createWebSocketUrl,
   maskWebSocketUrl
 } from '@/api/liveChatApi'
