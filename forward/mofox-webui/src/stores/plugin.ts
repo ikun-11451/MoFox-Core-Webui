@@ -114,7 +114,7 @@ export const usePluginStore = defineStore('plugin', () => {
       const response = await getPluginList()
       
       console.log('插件列表响应:', response)
-      if (response.success && response.data) {
+      if (response.data.success && response.data) {
         plugins.value = response.data.plugins
         failedPlugins.value = response.data.failed_plugins || []
         return true
@@ -140,7 +140,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await getPluginDetail(pluginName)
       
-      if (response.success && response.data?.plugin) {
+      if (response.data.success && response.data?.plugin) {
         currentPlugin.value = response.data.plugin
         currentComponents.value = response.data.plugin.components || []
         return true
@@ -173,7 +173,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await getPluginComponents(pluginName)
       
-      if (response.success && response.data) {
+      if (response.data.success && response.data) {
         currentComponents.value = response.data.components
         return true
       } else {
@@ -193,7 +193,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await enablePlugin(pluginName)
       
-      if (response.success) {
+      if (response.data.success) {
         // 更新本地状态
         const plugin = plugins.value.find(p => p.name === pluginName)
         if (plugin) {
@@ -218,7 +218,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await disablePlugin(pluginName)
       
-      if (response.success) {
+      if (response.data.success) {
         // 更新本地状态
         const plugin = plugins.value.find(p => p.name === pluginName)
         if (plugin) {
@@ -243,7 +243,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await reloadPlugin(pluginName)
       
-      if (response.success) {
+      if (response.data.success) {
         // 刷新插件列表和详情
         await fetchPlugins()
         if (currentPlugin.value?.name === pluginName) {
@@ -265,7 +265,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await unloadPlugin(pluginName)
       
-      if (response.success) {
+      if (response.data.success) {
         // 从列表中移除
         const index = plugins.value.findIndex(p => p.name === pluginName)
         if (index !== -1) {
@@ -290,7 +290,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await deletePlugin(pluginName)
       
-      if (response.success) {
+      if (response.data.success) {
         // 从列表中移除
         const index = plugins.value.findIndex(p => p.name === pluginName)
         if (index !== -1) {
@@ -314,8 +314,8 @@ export const usePluginStore = defineStore('plugin', () => {
   async function loadPluginAction(pluginName: string) {
     try {
       const response = await loadPlugin(pluginName)
-      
-      if (response.success) {
+  
+      if (response.data.success) {
         // 刷新插件列表
         await fetchPlugins()
         return { success: true, message: response.data?.message }
@@ -334,7 +334,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await enableComponent(pluginName, componentName, componentType)
       
-      if (response.success) {
+      if (response.data.success) {
         // 更新本地状态
         const component = currentComponents.value.find(c => c.name === componentName)
         if (component) {
@@ -356,7 +356,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await disableComponent(pluginName, componentName, componentType)
       
-      if (response.success) {
+      if (response.data.success) {
         // 更新本地状态
         const component = currentComponents.value.find(c => c.name === componentName)
         if (component) {
@@ -380,7 +380,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await scanPlugins(loadAfterRegister)
       
-      if (response.success) {
+      if (response.data.success) {
         // 刷新插件列表
         await fetchPlugins()
         return { 
@@ -406,7 +406,7 @@ export const usePluginStore = defineStore('plugin', () => {
     try {
       const response = await reloadAllPlugins()
       
-      if (response.success) {
+      if (response.data.success) {
         // 刷新插件列表
         await fetchPlugins()
         return { success: true, message: response.data?.message }
