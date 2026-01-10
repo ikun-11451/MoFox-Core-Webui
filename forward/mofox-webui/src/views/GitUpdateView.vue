@@ -152,7 +152,6 @@ onMounted(() => {
   padding: 16px;
   gap: 16px;
   animation: fadeIn 0.3s ease;
-  background: var(--md-sys-color-surface);
   overflow-y: auto;
 }
 

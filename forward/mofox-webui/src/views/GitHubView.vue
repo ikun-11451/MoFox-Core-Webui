@@ -353,7 +353,6 @@ onMounted(() => {
   height: 100%;
   padding: 16px;
   overflow-y: auto;
-  background: var(--md-sys-color-surface);
 }
 
 .github-container {

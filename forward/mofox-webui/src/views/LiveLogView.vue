@@ -601,7 +601,6 @@ onUnmounted(() => {
   padding: 16px;
   gap: 16px;
   animation: fadeIn 0.4s cubic-bezier(0.2, 0, 0, 1);
-  background: var(--md-sys-color-surface);
 }
 
 @keyframes fadeIn {
