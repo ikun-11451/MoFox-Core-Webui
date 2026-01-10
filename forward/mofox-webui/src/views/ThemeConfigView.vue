@@ -71,6 +71,7 @@
             </div>
             <video 
               v-else-if="themeStore.wallpaperType === 'video'"
+              disablePictureInPicture
               class="preview-video"
               :src="themeStore.wallpaper"
               autoplay

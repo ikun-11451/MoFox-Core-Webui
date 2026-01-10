@@ -740,9 +740,69 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+/* Material Design 3 开关样式 */
+.m3-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 32px;
+}
+
+.m3-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 2px solid var(--md-sys-color-outline);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 16px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 6px;
+  bottom: 6px;
+  background-color: var(--md-sys-color-outline);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+}
+
+.m3-switch input:checked + .slider {
+  background-color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.m3-switch input:checked + .slider:before {
+  background-color: var(--md-sys-color-on-primary);
+  transform: translateX(20px);
+}
+
+.m3-switch input:focus + .slider {
+  box-shadow: 0 0 0 4px rgba(var(--md-sys-color-primary-rgb, 103, 80, 164), 0.12);
+}
+
+.m3-switch input:disabled + .slider {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
 .switch-label {
   font-size: 14px;
   color: var(--md-sys-color-on-surface);
+  user-select: none;
+  cursor: pointer;
 }
 
 .m3-button.error {

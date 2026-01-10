@@ -96,6 +96,10 @@
                 <span class="material-symbols-rounded">check_circle</span>
                 已安装
               </span>
+              <span v-else-if="isFailed(plugin)" class="status-badge error">
+                <span class="material-symbols-rounded">error</span>
+                异常
+              </span>
             </div>
           </div>
           
@@ -125,9 +129,20 @@
             <button class="m3-button text" @click="viewPluginDetail(plugin.id)">
               详情
             </button>
-            <button 
-              v-if="!isInstalled(plugin)"
-              class="m3-button filled" 
+            <button
+              v-if="isFailed(plugin)"
+              class="m3-button filled error-button"
+              @click="installPluginAction(plugin)"
+              :disabled="installingPlugins.has(plugin.id)"
+            >
+              <span class="material-symbols-rounded" :class="{ spinning: installingPlugins.has(plugin.id) }">
+                {{ installingPlugins.has(plugin.id) ? 'progress_activity' : 'refresh' }}
+              </span>
+              {{ installingPlugins.has(plugin.id) ? '重新安装中...' : '重新安装' }}
+            </button>
+            <button
+              v-else-if="!isInstalled(plugin)"
+              class="m3-button filled"
               @click="installPluginAction(plugin)"
               :disabled="installingPlugins.has(plugin.id)"
             >
@@ -136,9 +151,9 @@
               </span>
               {{ installingPlugins.has(plugin.id) ? '安装中...' : '安装' }}
             </button>
-            <button 
+            <button
               v-else
-              class="m3-button tonal" 
+              class="m3-button tonal"
               @click="viewPluginConfig(plugin)"
             >
               <span class="material-symbols-rounded">settings</span>
@@ -177,6 +192,7 @@ const loading = ref(true)
 const loadError = ref('')
 const plugins = ref<MarketplacePlugin[]>([])
 const installedPlugins = ref<Record<string, string | null>>({})
+const failedPlugins = ref<string[]>([])  // 已安装但未加载的插件
 const searchQuery = ref('')
 const selectedCategory = ref('全部')
 const installingPlugins = ref(new Set<string>())
@@ -234,9 +250,18 @@ function isInstalled(plugin: MarketplacePlugin): boolean {
   if (!plugin?.manifest?.repository_url) {
     return false
   }
-  // 使用仓库名检查是否安装
+  // 使用仓库名检查是否已加载（只有已加载才算已安装）
   const repoName = plugin.manifest.repository_url.split('/').pop() || ''
   return Object.prototype.hasOwnProperty.call(installedPlugins.value, repoName)
+}
+
+function isFailed(plugin: MarketplacePlugin): boolean {
+  // 检查插件是否已安装但未加载（异常状态）
+  if (!plugin?.manifest?.repository_url) {
+    return false
+  }
+  const repoName = plugin.manifest.repository_url.split('/').pop() || ''
+  return failedPlugins.value.includes(repoName)
 }
 
 function getPluginIcon(plugin: MarketplacePlugin): string {
@@ -276,13 +301,14 @@ async function installPluginAction(plugin: MarketplacePlugin) {
       // 处理双重嵌套
       const responseData = res.data as any
       if (responseData.success) {
-        // 后端已经自动加载了，直接提示成功
+        // 安装成功且已加载
         showToast(`插件 ${plugin.manifest.name} 安装成功！`, 'success')
         // 使用仓库名添加到已安装列表
         const repoName = plugin.manifest.repository_url.split('/').pop() || ''
         installedPlugins.value[repoName] = responseData.plugin_name || null
       } else {
-        showToast(`安装失败: ${responseData.error || '未知错误'}`, 'error')
+        // 安装失败或加载失败
+        showToast(`${responseData.message || '安装失败'}`, 'error')
       }
     } else {
       showToast(`安装请求失败: ${res.error || '未知错误'}`, 'error')
@@ -310,20 +336,24 @@ async function refreshMarketplace() {
       if (responseData.success && responseData.data) {
         plugins.value = responseData.data.plugins || []
         installedPlugins.value = responseData.data.installed_plugins || {}
+        failedPlugins.value = responseData.data.failed_plugins || []
       } else {
         loadError.value = responseData.error || '获取插件市场数据失败'
         plugins.value = []
         installedPlugins.value = {}
+        failedPlugins.value = []
       }
     } else {
       loadError.value = res.error || '获取插件市场数据失败'
       plugins.value = []
       installedPlugins.value = {}
+      failedPlugins.value = []
     }
   } catch (e) {
     loadError.value = '加载插件市场时发生错误'
     plugins.value = []
     installedPlugins.value = {}
+    failedPlugins.value = []
     console.error(e)
   } finally {
     loading.value = false
@@ -560,8 +590,23 @@ onMounted(() => {
   color: var(--md-sys-color-on-primary-container);
 }
 
+.status-badge.error {
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
+}
+
 .status-badge .material-symbols-rounded {
   font-size: 16px;
+}
+
+.error-button {
+  background: var(--md-sys-color-error) !important;
+  color: var(--md-sys-color-on-error) !important;
+}
+
+.error-button:hover {
+  background: var(--md-sys-color-error) !important;
+  opacity: 0.9;
 }
 
 .plugin-info h3 {

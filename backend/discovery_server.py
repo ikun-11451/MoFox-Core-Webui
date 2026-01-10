@@ -9,7 +9,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional
 
-import httpx
+import aiohttp
 import uvicorn
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,12 +80,14 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
     )
     
     # 创建 HTTP 客户端用于转发请求
-    http_client = httpx.AsyncClient(timeout=30.0)
+    http_client = aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(total=30.0)
+    )
     
     @app.on_event("shutdown")
     async def shutdown_event():
         """关闭时清理HTTP客户端"""
-        await http_client.aclose()
+        await http_client.close()
     
     # 先定义API路由，确保它们不会被静态文件拦截
     @app.get("/api/health", summary="服务状态检查")
@@ -133,24 +135,27 @@ def create_discovery_app(main_host: str, main_port: int) -> FastAPI:
         
         try:
             # 转发请求到主程序
-            response = await http_client.request(
+            async with http_client.request(
                 method=request.method,
                 url=target_url,
                 params=query_params,
                 headers=headers,
-                content=body,
-                follow_redirects=True
-            )
+                data=body,
+                allow_redirects=True
+            ) as response:
+                # 读取响应内容
+                response_content = await response.read()
+                response_headers = dict(response.headers)
+                
+                # 返回响应
+                return Response(
+                    content=response_content,
+                    status_code=response.status,
+                    headers=response_headers,
+                    media_type=response_headers.get("content-type")
+                )
             
-            # 返回响应
-            return Response(
-                content=response.content,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.headers.get("content-type")
-            )
-            
-        except httpx.RequestError as e:
+        except aiohttp.ClientError as e:
             logger.error(f"代理请求失败 [{request.method} {target_url}]: {e}")
             return Response(
                 content=f'{{"error": "无法连接到主程序服务器: {str(e)}"}}',

@@ -12,6 +12,7 @@
         :value="modelValue"
         :placeholder="field.placeholder || '输入密码'"
         :disabled="field.disabled"
+        autocomplete="off"
         :maxlength="field.max_length"
         @input="handleInput"
         @focus="isFocused = true"

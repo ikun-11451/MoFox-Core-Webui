@@ -19,6 +19,7 @@
           <div class="input-with-action">
             <input
               v-model="formData.api_key"
+              autocomplete="off"
               @input="handleApiKeyInput"
               :type="showApiKey ? 'text' : 'password'"
               class="m3-input"

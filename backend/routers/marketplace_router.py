@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-import httpx
+import aiohttp
 from pydantic import BaseModel
 
 from src.common.logger import get_logger
@@ -97,13 +97,16 @@ class MarketplaceRouterComponent(BaseRouterComponent):
             """获取插件市场列表"""
             try:
                 # 从 GitHub 获取插件列表
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(PLUGIN_REPO_URL, timeout=10.0)
-                    response.raise_for_status()
-                    plugins = response.json()
+                timeout = aiohttp.ClientTimeout(total=10.0)
+                async with aiohttp.ClientSession(timeout=timeout) as client:
+                    async with client.get(PLUGIN_REPO_URL) as response:
+                        response.raise_for_status()
+                        plugins = await response.json()
 
-                # 获取已安装插件列表 (Mapping: repo_name -> real_plugin_name)
-                installed_plugins = {}
+                # 获取已安装且已加载的插件列表 (Mapping: repo_name -> real_plugin_name)
+                # 和已安装但未加载的插件列表 (用于显示异常状态)
+                installed_plugins = {}  # 已加载的插件
+                failed_plugins = []     # 已安装但未加载的插件
                 
                 from src.plugin_system.core.plugin_manager import plugin_manager
 
@@ -126,27 +129,37 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                     for plugin_dir in PLUGINS_DIR.iterdir():
                         if plugin_dir.is_dir() and (plugin_dir / "__init__.py").exists():
                             repo_name = plugin_dir.name
-                            real_name = None
                             
-                            # Try to find if this dir is loaded
+                            # 检查此目录是否已加载
                             try:
                                 dir_abs_path = str(plugin_dir.resolve())
                                 if dir_abs_path in loaded_paths:
+                                    # 已加载，添加到已安装列表
                                     real_name = loaded_paths[dir_abs_path]
+                                    installed_plugins[repo_name] = real_name
+                                else:
+                                    # 已安装但未加载，添加到失败列表
+                                    failed_plugins.append(repo_name)
                             except Exception:
-                                pass
-                                
-                            installed_plugins[repo_name] = real_name
+                                # 路径解析失败，也算作未加载
+                                failed_plugins.append(repo_name)
                             
-                    logger.info(f"已安装的插件: {list(installed_plugins.keys())}")
+                    logger.info(f"已加载的插件: {list(installed_plugins.keys())}")
+                    if failed_plugins:
+                        logger.warning(f"已安装但未加载的插件: {failed_plugins}")
 
                 return MarketplaceListResponse(
-                    success=True, data={"plugins": plugins, "installed_plugins": installed_plugins}
+                    success=True,
+                    data={
+                        "plugins": plugins,
+                        "installed_plugins": installed_plugins,
+                        "failed_plugins": failed_plugins
+                    }
                 )
-            except httpx.HTTPStatusError as e:
-                logger.error(f"获取插件市场数据HTTP错误: {e.response.status_code} - {e}")
-                return MarketplaceListResponse(success=False, error=f"HTTP错误 {e.response.status_code}: {str(e)}")
-            except httpx.RequestError as e:
+            except aiohttp.ClientResponseError as e:
+                logger.error(f"获取插件市场数据HTTP错误: {e.status} - {e}")
+                return MarketplaceListResponse(success=False, error=f"HTTP错误 {e.status}: {str(e)}")
+            except aiohttp.ClientError as e:
                 logger.error(f"获取插件市场数据网络错误: {e}")
                 return MarketplaceListResponse(success=False, error=f"网络连接失败: {str(e)}")
             except Exception as e:
@@ -158,10 +171,11 @@ class MarketplaceRouterComponent(BaseRouterComponent):
             """获取插件详情"""
             try:
                 # 获取插件列表
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(PLUGIN_REPO_URL, timeout=10.0)
-                    response.raise_for_status()
-                    plugins = response.json()
+                timeout = aiohttp.ClientTimeout(total=10.0)
+                async with aiohttp.ClientSession(timeout=timeout) as client:
+                    async with client.get(PLUGIN_REPO_URL) as response:
+                        response.raise_for_status()
+                        plugins = await response.json()
 
                 # 查找指定插件
                 plugin = next((p for p in plugins if p["id"] == plugin_id), None)
@@ -180,12 +194,13 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                 readme = None
                 # 从 GitHub 获取 README
                 try:
-                    async with httpx.AsyncClient() as client:
+                    readme_timeout = aiohttp.ClientTimeout(total=5.0)
+                    async with aiohttp.ClientSession(timeout=readme_timeout) as client:
                         # 构建 README 的 raw URL
                         readme_url = f"{repo_url.replace('github.com', 'raw.githubusercontent.com')}/main/README.md"
-                        response = await client.get(readme_url, timeout=5.0)
-                        if response.status_code == 200:
-                            readme = response.text
+                        async with client.get(readme_url) as response:
+                            if response.status == 200:
+                                readme = await response.text()
                 except Exception as e:
                     logger.warning(f"无法获取 README: {e}")
 
@@ -224,10 +239,10 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                         "readme": readme,
                     },
                 )
-            except httpx.HTTPStatusError as e:
-                logger.error(f"获取插件详情HTTP错误: {e.response.status_code} - {e}")
-                return PluginDetailResponse(success=False, error=f"HTTP错误 {e.response.status_code}: {str(e)}")
-            except httpx.RequestError as e:
+            except aiohttp.ClientResponseError as e:
+                logger.error(f"获取插件详情HTTP错误: {e.status} - {e}")
+                return PluginDetailResponse(success=False, error=f"HTTP错误 {e.status}: {str(e)}")
+            except aiohttp.ClientError as e:
                 logger.error(f"获取插件详情网络错误: {e}")
                 return PluginDetailResponse(success=False, error=f"网络连接失败: {str(e)}")
             except Exception as e:
@@ -261,14 +276,16 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                 zip_url = f"{repo_url}/archive/refs/heads/main.zip"
                 logger.info(f"正在下载插件: {zip_url}")
 
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(zip_url, timeout=30.0, follow_redirects=True)
-                    response.raise_for_status()
+                download_timeout = aiohttp.ClientTimeout(total=30.0)
+                async with aiohttp.ClientSession(timeout=download_timeout) as client:
+                    async with client.get(zip_url, allow_redirects=True) as response:
+                        response.raise_for_status()
+                        response_content = await response.read()
 
-                    # 保存到临时文件
-                    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as temp_file:
-                        temp_file.write(response.content)
-                        temp_zip_path = temp_file.name
+                        # 保存到临时文件
+                        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as temp_file:
+                            temp_file.write(response_content)
+                            temp_zip_path = temp_file.name
 
                 try:
                     # 解压 ZIP 文件
@@ -383,16 +400,26 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                             logger.warning(f"自动加载插件失败: {e}")
                             load_error = str(e)
 
+                    # 构建响应消息和状态
+                    # 如果请求自动加载但加载失败，则视为安装失败
+                    if request.auto_load and not loaded:
+                        message = f"插件 {repo_name} 安装成功，但加载失败：{load_error}"
+                        return InstallPluginResponse(
+                            success=False,
+                            message=message,
+                            plugin_name=repo_name,
+                            loaded=False
+                        )
+                    
+                    # 安装成功且已加载，或者不需要自动加载
                     message = f"插件 {repo_name} 安装成功"
                     if loaded:
                         message += f"并已加载 ({real_plugin_name})" if real_plugin_name else "并已加载"
-                    elif request.auto_load:
-                        message += f"，但加载失败：{load_error}"
-
+                    
                     return InstallPluginResponse(
-                        success=True, 
-                        message=message, 
-                        plugin_name=real_plugin_name if real_plugin_name else repo_name, 
+                        success=True,
+                        message=message,
+                        plugin_name=real_plugin_name if real_plugin_name else repo_name,
                         loaded=loaded
                     )
 
@@ -401,16 +428,16 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                     if temp_zip_path:
                         Path(temp_zip_path).unlink(missing_ok=True)
 
-            except httpx.HTTPStatusError as e:
-                logger.error(f"下载插件HTTP错误: {e.response.status_code} - {e}")
+            except aiohttp.ClientResponseError as e:
+                logger.error(f"下载插件HTTP错误: {e.status} - {e}")
                 # 清理临时文件(仅在文件已创建时)
                 if temp_zip_path:
                     Path(temp_zip_path).unlink(missing_ok=True)
                 return InstallPluginResponse(
                     success=False,
-                    message=f"下载失败 (HTTP {e.response.status_code}): {str(e)}"
+                    message=f"下载失败 (HTTP {e.status}): {str(e)}"
                 )
-            except httpx.RequestError as e:
+            except aiohttp.ClientError as e:
                 logger.error(f"下载插件网络错误: {e}")
                 # 清理临时文件(仅在文件已创建时)
                 if temp_zip_path:
@@ -440,10 +467,11 @@ class MarketplaceRouterComponent(BaseRouterComponent):
             """更新插件（重新下载并覆盖）"""
             try:
                 # 从插件列表获取仓库 URL
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(PLUGIN_REPO_URL, timeout=10.0)
-                    response.raise_for_status()
-                    plugins = response.json()
+                timeout = aiohttp.ClientTimeout(total=10.0)
+                async with aiohttp.ClientSession(timeout=timeout) as client:
+                    async with client.get(PLUGIN_REPO_URL) as response:
+                        response.raise_for_status()
+                        plugins = await response.json()
 
                 plugin = next((p for p in plugins if p["id"] == plugin_id), None)
                 if not plugin:
@@ -504,10 +532,11 @@ class MarketplaceRouterComponent(BaseRouterComponent):
             """检查插件更新"""
             try:
                 # 获取远程插件列表
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(PLUGIN_REPO_URL, timeout=10.0)
-                    response.raise_for_status()
-                    remote_plugins = response.json()
+                timeout = aiohttp.ClientTimeout(total=10.0)
+                async with aiohttp.ClientSession(timeout=timeout) as client:
+                    async with client.get(PLUGIN_REPO_URL) as response:
+                        response.raise_for_status()
+                        remote_plugins = await response.json()
 
                 updates = []
 

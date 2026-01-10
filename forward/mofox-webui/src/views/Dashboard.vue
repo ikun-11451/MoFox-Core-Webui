@@ -23,6 +23,7 @@
       <video 
         v-if="themeStore.wallpaper && themeStore.wallpaperType === 'video'"
         class="wallpaper-video"
+        controlsList="nodownload noplaybackrate"
         :src="themeStore.wallpaper"
         autoplay
         loop

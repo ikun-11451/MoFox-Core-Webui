@@ -260,7 +260,7 @@ const formData = ref<BotConfigRequest>({
 function handleNicknameInput() {
   const value = formData.value.nickname
   // 定义常见的AI助手名称列表（不区分大小写）
-  const aiNames = ['小冰', '小爱', 'xiaoai', 'xiaobing']
+  const aiNames = ['小冰', '小爱', 'xiaoai', 'xiaobing',"fairy"]
   
   // 如果输入的名称在列表中，显示友好提示
   if (aiNames.includes(value.toLowerCase())) {

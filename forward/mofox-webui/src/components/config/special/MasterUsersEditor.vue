@@ -121,7 +121,7 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
-// 解析用户列表
+// 解析用户列表 - 用于显示
 const users = computed(() => {
   if (Array.isArray(props.value)) {
     return props.value.filter(item => Array.isArray(item) && item.length === 2) as string[][]
@@ -129,29 +129,71 @@ const users = computed(() => {
   return []
 })
 
+// 获取原始用户数据（包括无效数据，用于编辑时保留完整性）
+const rawUsers = computed(() => {
+  if (Array.isArray(props.value)) {
+    return props.value as any[]
+  }
+  return []
+})
+
 // 添加用户
 function addUser() {
-  const newUsers = [...users.value, ['qq', '']]
+  const newUsers = [...rawUsers.value, ['qq', '']]
   emit('update', newUsers)
 }
 
 // 删除用户
 function removeUser(index: number) {
-  const newUsers = users.value.filter((_, i) => i !== index)
-  emit('update', newUsers)
+  // 找到要删除的用户在原始数据中的实际索引
+  let validCount = 0
+  let rawIndex = -1
+  
+  for (let i = 0; i < rawUsers.value.length; i++) {
+    const item = rawUsers.value[i]
+    if (Array.isArray(item) && item.length === 2) {
+      if (validCount === index) {
+        rawIndex = i
+        break
+      }
+      validCount++
+    }
+  }
+  
+  if (rawIndex !== -1) {
+    const newUsers = rawUsers.value.filter((_, i) => i !== rawIndex)
+    emit('update', newUsers)
+  }
 }
 
 // 更新用户
 function updateUser(index: number, field: number, value: string) {
-  const newUsers = users.value.map((user, i) => {
-    if (i === index) {
-      const newUser = [...user]
-      newUser[field] = value
-      return newUser
+  // 找到要更新的用户在原始数据中的实际索引
+  let validCount = 0
+  let rawIndex = -1
+  
+  for (let i = 0; i < rawUsers.value.length; i++) {
+    const item = rawUsers.value[i]
+    if (Array.isArray(item) && item.length === 2) {
+      if (validCount === index) {
+        rawIndex = i
+        break
+      }
+      validCount++
     }
-    return user
-  })
-  emit('update', newUsers)
+  }
+  
+  if (rawIndex !== -1) {
+    const newUsers = rawUsers.value.map((user, i) => {
+      if (i === rawIndex && Array.isArray(user)) {
+        const newUser = [...user]
+        newUser[field] = value
+        return newUser
+      }
+      return user
+    })
+    emit('update', newUsers)
+  }
 }
 </script>
 
