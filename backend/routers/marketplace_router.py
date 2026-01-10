@@ -3,6 +3,7 @@
 提供插件市场浏览、搜索、下载、安装等API接口
 """
 
+import os
 import tempfile
 import zipfile
 from pathlib import Path
@@ -142,8 +143,14 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                 return MarketplaceListResponse(
                     success=True, data={"plugins": plugins, "installed_plugins": installed_plugins}
                 )
+            except httpx.HTTPStatusError as e:
+                logger.error(f"获取插件市场数据HTTP错误: {e.response.status_code} - {e}")
+                return MarketplaceListResponse(success=False, error=f"HTTP错误 {e.response.status_code}: {str(e)}")
+            except httpx.RequestError as e:
+                logger.error(f"获取插件市场数据网络错误: {e}")
+                return MarketplaceListResponse(success=False, error=f"网络连接失败: {str(e)}")
             except Exception as e:
-                logger.error(f"获取插件市场数据失败: {e}")
+                logger.error(f"获取插件市场数据失败: {e}", exc_info=True)
                 return MarketplaceListResponse(success=False, error=f"获取插件市场数据失败: {str(e)}")
 
         @self.router.get("/detail/{plugin_id}", response_model=PluginDetailResponse)
@@ -171,16 +178,16 @@ class MarketplaceRouterComponent(BaseRouterComponent):
 
                 # 获取 README (从 GitHub 或本地)
                 readme = None
-                    # 从 GitHub 获取 README
+                # 从 GitHub 获取 README
                 try:
-                        async with httpx.AsyncClient() as client:
-                            # 构建 README 的 raw URL
-                            readme_url = f"{repo_url.replace('github.com', 'raw.githubusercontent.com')}/main/README.md"
-                            response = await client.get(readme_url, timeout=5.0)
-                            if response.status_code == 200:
-                                readme = response.text
+                    async with httpx.AsyncClient() as client:
+                        # 构建 README 的 raw URL
+                        readme_url = f"{repo_url.replace('github.com', 'raw.githubusercontent.com')}/main/README.md"
+                        response = await client.get(readme_url, timeout=5.0)
+                        if response.status_code == 200:
+                            readme = response.text
                 except Exception as e:
-                        logger.warning(f"无法获取 README: {e}")
+                    logger.warning(f"无法获取 README: {e}")
 
                 # 获取真实的插件名称（通过路径映射）
                 real_plugin_name = None
@@ -217,13 +224,22 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                         "readme": readme,
                     },
                 )
+            except httpx.HTTPStatusError as e:
+                logger.error(f"获取插件详情HTTP错误: {e.response.status_code} - {e}")
+                return PluginDetailResponse(success=False, error=f"HTTP错误 {e.response.status_code}: {str(e)}")
+            except httpx.RequestError as e:
+                logger.error(f"获取插件详情网络错误: {e}")
+                return PluginDetailResponse(success=False, error=f"网络连接失败: {str(e)}")
             except Exception as e:
-                logger.error(f"获取插件详情失败: {e}")
+                logger.error(f"获取插件详情失败: {e}", exc_info=True)
                 return PluginDetailResponse(success=False, error=f"获取插件详情失败: {str(e)}")
 
         @self.router.post("/install", response_model=InstallPluginResponse)
         async def install_plugin(request: InstallPluginRequest, _= VerifiedDep):
             """安装插件（下载 ZIP 并解压）"""
+            # 初始化临时文件路径变量,确保在任何异常情况下都可以安全访问
+            temp_zip_path = None
+            
             try:
                 # 从仓库 URL 提取仓库名作为插件文件夹名
                 repo_url = request.repository_url
@@ -381,14 +397,43 @@ class MarketplaceRouterComponent(BaseRouterComponent):
                     )
 
                 finally:
-                    # 清理临时文件
-                    Path(temp_zip_path).unlink(missing_ok=True)
+                    # 清理临时文件(仅在文件已创建时)
+                    if temp_zip_path:
+                        Path(temp_zip_path).unlink(missing_ok=True)
 
-            except Exception as e:
-                logger.error(f"安装插件失败: {e}")
+            except httpx.HTTPStatusError as e:
+                logger.error(f"下载插件HTTP错误: {e.response.status_code} - {e}")
+                # 清理临时文件(仅在文件已创建时)
+                if temp_zip_path:
+                    Path(temp_zip_path).unlink(missing_ok=True)
+                return InstallPluginResponse(
+                    success=False,
+                    message=f"下载失败 (HTTP {e.response.status_code}): {str(e)}"
+                )
+            except httpx.RequestError as e:
+                logger.error(f"下载插件网络错误: {e}")
+                # 清理临时文件(仅在文件已创建时)
+                if temp_zip_path:
+                    Path(temp_zip_path).unlink(missing_ok=True)
+                return InstallPluginResponse(
+                    success=False,
+                    message=f"网络连接失败: {str(e)}"
+                )
+            except zipfile.BadZipFile as e:
+                logger.error(f"ZIP文件损坏: {e}")
                 # 清理临时文件
-                Path(temp_zip_path).unlink(missing_ok=True)
-                return InstallPluginResponse(success=False, message=f"安装插件失败: {e!s}")
+                if temp_zip_path:
+                    Path(temp_zip_path).unlink(missing_ok=True)
+                return InstallPluginResponse(
+                    success=False,
+                    message=f"下载的文件损坏，请重试"
+                )
+            except Exception as e:
+                logger.error(f"安装插件失败: {e}", exc_info=True)
+                # 清理临时文件(仅在文件已创建时)
+                if temp_zip_path:
+                    Path(temp_zip_path).unlink(missing_ok=True)
+                return InstallPluginResponse(success=False, message=f"安装插件失败: {str(e)}")
 
         @self.router.post("/update/{plugin_id}", response_model=UpdatePluginResponse)
         async def update_plugin(plugin_id: str, _= VerifiedDep):
