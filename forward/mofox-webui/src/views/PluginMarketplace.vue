@@ -364,7 +364,7 @@ onMounted(() => {
 .page-header {
   padding: 24px;
   background: var(--md-sys-color-surface-container);
-  border-radius: 24px;
+  border-radius: 32px;
 }
 
 .header-content {
@@ -516,6 +516,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 16px;
   transition: all 0.2s;
+  border-radius: 24px;
 }
 
 .plugin-card:hover {
