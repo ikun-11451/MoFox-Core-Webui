@@ -526,29 +526,11 @@
                         </div>
                       </div>
                       
-                      <!-- extra_params JSON 编辑 -->
-                      <div class="extra-params-section">
-                        <div class="extra-params-header">
-                          <Icon icon="lucide:braces" />
-                          <span>额外参数 (extra_params)</span>
-                          <span class="extra-params-hint">JSON 格式的自定义参数</span>
-                        </div>
-                        <div class="json-editor-wrapper">
-                          <textarea 
-                            class="json-editor"
-                            :value="formatExtraParams(model.extra_params)"
-                            @input="handleExtraParamsInput(index, ($event.target as HTMLTextAreaElement).value)"
-                            @blur="validateAndUpdateExtraParams(index, ($event.target as HTMLTextAreaElement).value)"
-                            placeholder='例如: {"enable_thinking": false, "thinking_budget": 256}'
-                            rows="4"
-                            spellcheck="false"
-                          ></textarea>
-                          <div v-if="extraParamsError[index]" class="json-error">
-                            <Icon icon="lucide:alert-circle" />
-                            <span>{{ extraParamsError[index] }}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <!-- extra_params 编辑器 -->
+                      <ExtraParamsEditor
+                        :model-value="model.extra_params"
+                        @update:model-value="updateModel(index, 'extra_params', $event)"
+                      />
                     </div>
                   </div>
                 </Transition>
@@ -1067,9 +1049,21 @@
                     <Icon icon="lucide:refresh-cw" />
                   </button>
                 </div>
+                <div class="model-search-box">
+                  <Icon icon="lucide:search" />
+                  <input
+                    type="text"
+                    v-model="modelSearchQuery"
+                    placeholder="搜索模型..."
+                    class="model-search-input"
+                  />
+                  <button v-if="modelSearchQuery" class="clear-model-search" @click="modelSearchQuery = ''">
+                    <Icon icon="lucide:x" />
+                  </button>
+                </div>
                 <div class="models-list">
                   <button
-                    v-for="model in availableModels"
+                    v-for="model in filteredAvailableModels"
                     :key="model.id"
                     class="model-option"
                     :class="{ active: newModel.model_identifier === model.id }"
@@ -1082,6 +1076,10 @@
                     </div>
                     <Icon v-if="newModel.model_identifier === model.id" icon="lucide:check" class="check-icon" />
                   </button>
+                  <div v-if="filteredAvailableModels.length === 0" class="no-models-found">
+                    <Icon icon="lucide:search-x" />
+                    <span>无匹配的模型</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1221,28 +1219,10 @@
                     </div>
                   </div>
                   
-                  <!-- extra_params JSON 编辑 -->
-                  <div class="extra-params-section">
-                    <div class="extra-params-header">
-                      <Icon icon="lucide:braces" />
-                      <span>额外参数 (extra_params)</span>
-                      <span class="extra-params-hint">JSON 格式的自定义参数</span>
-                    </div>
-                    <div class="json-editor-wrapper">
-                      <textarea 
-                        class="json-editor"
-                        v-model="newModelExtraParamsJson"
-                        @blur="validateNewModelExtraParams"
-                        placeholder='例如: {"enable_thinking": false, "thinking_budget": 256}'
-                        rows="4"
-                        spellcheck="false"
-                      ></textarea>
-                      <div v-if="newModelExtraParamsError" class="json-error">
-                        <Icon icon="lucide:alert-circle" />
-                        <span>{{ newModelExtraParamsError }}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <!-- extra_params 编辑器 -->
+                  <ExtraParamsEditor
+                    v-model="newModel.extra_params"
+                  />
                 </div>
               </div>
             </div>
@@ -1264,6 +1244,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { StringArrayEditor } from './editors'
+import ExtraParamsEditor from './editors/ExtraParamsEditor.vue'
 import { providerPresets, modelTaskConfigs } from '@/config/configDescriptions'
 
 // API 提供商接口
@@ -1772,11 +1753,12 @@ function confirmAddModel() {
   showAddModelAdvanced.value = false
   availableModels.value = []
   fetchModelsError.value = null
-  newModel.value = { 
-    model_identifier: '', 
-    name: '', 
-    api_provider: '', 
-    price_in: 0, 
+  modelSearchQuery.value = ''
+  newModel.value = {
+    model_identifier: '',
+    name: '',
+    api_provider: '',
+    price_in: 0,
     price_out: 0,
     max_tokens: undefined,
     temperature: undefined,
@@ -1922,6 +1904,7 @@ const modelTestResults = ref<Record<string, {
 const fetchingModels = ref(false)
 const availableModels = ref<Array<{ id: string; name: string }>>([])
 const fetchModelsError = ref<string | null>(null)
+const modelSearchQuery = ref('')
 
 // 测试模型连通性
 async function testModelConnection(modelName: string) {
@@ -1983,6 +1966,16 @@ function getTestButtonText(modelName: string): string {
   if (modelTestResults.value[modelName]) return '重新测试'
   return '测试连接'
 }
+
+// 过滤后的可用模型列表
+const filteredAvailableModels = computed(() => {
+  if (!modelSearchQuery.value) return availableModels.value
+  const query = modelSearchQuery.value.toLowerCase()
+  return availableModels.value.filter(m =>
+    m.id.toLowerCase().includes(query) ||
+    m.name.toLowerCase().includes(query)
+  )
+})
 
 // 获取可用模型列表
 async function fetchAvailableModels() {
@@ -3734,12 +3727,86 @@ select.input {
   color: var(--primary);
 }
 
+.model-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.model-search-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-bg);
+}
+
+.model-search-box svg {
+  color: var(--text-tertiary);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.model-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.model-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.clear-model-search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clear-model-search:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .models-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
   max-height: 240px;
   overflow-y: auto;
+}
+
+.no-models-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-tertiary);
+}
+
+.no-models-found svg {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.no-models-found span {
+  font-size: 12px;
 }
 
 .model-option {

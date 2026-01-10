@@ -14,8 +14,16 @@ export const useThemeStore = defineStore('theme', () => {
   const sourceColor = ref(localStorage.getItem('sourceColor') || '#6750A4')
   const wallpaper = ref(localStorage.getItem('wallpaper') || '')
   const wallpaperType = ref<'image' | 'video' | null>(localStorage.getItem('wallpaperType') as 'image' | 'video' | null)
-  const wallpaperOpacity = ref(Number(localStorage.getItem('wallpaperOpacity')) || 0.5)
-  const wallpaperBlur = ref(Number(localStorage.getItem('wallpaperBlur')) || 20)
+  const wallpaperOpacity = ref(
+    localStorage.getItem('wallpaperOpacity') !== null
+      ? Number(localStorage.getItem('wallpaperOpacity'))
+      : 0.5
+  )
+  const wallpaperBlur = ref(
+    localStorage.getItem('wallpaperBlur') !== null
+      ? Number(localStorage.getItem('wallpaperBlur'))
+      : 20
+  )
   const extractedColors = ref<string[]>(JSON.parse(localStorage.getItem('extractedColors') || '[]'))
 
   const toggleTheme = () => {
