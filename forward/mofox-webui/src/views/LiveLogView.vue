@@ -249,74 +249,196 @@ const formatTimestamp = (timestamp: string) => {
   return timestamp.replace('T', ' ').substring(0, 19)
 }
 
+// Python 字典转 JSON 的状态机解析器
+const pythonDictToJson = (pythonStr: string): string => {
+  let inString = false
+  let stringChar = ''
+  let escaped = false
+  let result = ''
+  
+  for (let i = 0; i < pythonStr.length; i++) {
+    const char = pythonStr[i]
+    
+    if (!inString) {
+      // 不在字符串内
+      if ((char === "'" || char === '"') && !escaped) {
+        // 开始字符串 - 统一转换为双引号
+        inString = true
+        stringChar = char
+        result += '"'
+      } else if (char === ':' && pythonStr.substring(i + 1).match(/^\s*(True|False|None)\b/)) {
+        // 处理 Python 的 True/False/None
+        const match = pythonStr.substring(i + 1).match(/^\s*(True|False|None)\b/)
+        if (match) {
+          if (match[1] === 'True') result += ': true'
+          else if (match[1] === 'False') result += ': false'
+          else if (match[1] === 'None') result += ': null'
+          i += match[0].length
+        }
+      } else {
+        result += char
+      }
+    } else {
+      // 在字符串内
+      if (escaped) {
+        // 处理转义字符
+        if (char === stringChar) {
+          // 转义的引号：保留反斜杠和引号
+          // 如果原字符串是单引号，转义后的单引号在 JSON 中不需要转义
+          // 如果是双引号，需要转义
+          if (stringChar === "'") {
+            result += char  // JSON 中单引号不需要转义，直接输出
+          } else {
+            result += '\\' + char  // JSON 中双引号需要转义
+          }
+        } else if (char === '\\') {
+          result += '\\\\'  // 反斜杠需要双重转义
+        } else if (char === 'n') {
+          result += '\\n'
+        } else if (char === 'r') {
+          result += '\\r'
+        } else if (char === 't') {
+          result += '\\t'
+        } else if (char === '"') {
+          // 字符串内的双引号需要转义
+          result += '\\"'
+        } else {
+          // 其他转义字符保持原样
+          result += '\\' + char
+        }
+        escaped = false
+      } else if (char === '\\') {
+        // 转义字符开始
+        escaped = true
+      } else if (char === stringChar) {
+        // 字符串结束
+        inString = false
+        stringChar = ''
+        result += '"'
+      } else if (char === '"') {
+        // 字符串内部的双引号需要转义
+        result += '\\"'
+      } else {
+        // 普通字符
+        result += char
+      }
+    }
+  }
+  
+  return result
+}
+
 // 格式化日志消息（处理 ANSI 转义序列和 JSON）
 const formatLogMessage = (message: string) => {
   if (!message) return ''
   
-  // 尝试解析 JSON 格式的日志（包括 Python 字典格式）
-  try {
-    // 先尝试直接解析 JSON
-    let parsed = null
+  // 检查是否是 Python 字典格式的字符串
+  const trimmedMessage = message.trim()
+  if (trimmedMessage.startsWith('{') && trimmedMessage.endsWith('}')) {
     try {
-      parsed = JSON.parse(message)
-    } catch {
-      // 如果失败，尝试将 Python 字典格式转换为 JSON
-      const jsonMessage = message
-        .replace(/'/g, '"')  // 单引号转双引号
-        .replace(/True/g, 'true')  // Python True -> JSON true
-        .replace(/False/g, 'false')  // Python False -> JSON false
-        .replace(/None/g, 'null')  // Python None -> JSON null
-      parsed = JSON.parse(jsonMessage)
-    }
-    
-    if (parsed && typeof parsed === 'object') {
-      // 只返回 event 内容
-      if (parsed.event) {
+      // 使用改进的 Python 字典解析逻辑
+      // 1. 先尝试直接解析（可能已经是标准 JSON）
+      let parsed = null
+      try {
+        parsed = JSON.parse(trimmedMessage)
+      } catch {
+        // 2. 如果直接解析失败，使用状态机解析器
+        const jsonStr = pythonDictToJson(trimmedMessage)
+        parsed = JSON.parse(jsonStr)
+      }
+      
+      // 如果成功解析且包含 event 字段，提取并返回
+      if (parsed && typeof parsed === 'object' && parsed.event) {
         return escapeHtml(parsed.event)
       }
+    } catch (e) {
+      console.warn('解析 Python 字典格式失败，将作为普通文本处理:', e)
+      // 解析失败，继续作为普通文本处理
     }
-  } catch (e) {
-    // 不是 JSON，继续处理
   }
   
-  // 处理 ANSI 转义序列
-  const ansiRegex = /\x1b\[(\d+)m/g
+  // 处理 ANSI 转义序列 - 改进版本，支持更多格式
+  // 匹配 ANSI 颜色代码: \x1b[<codes>m 或 \033[<codes>m
+  const ansiRegex = /[\x1b\x9b]\[([0-9;]+)m/g
+  
+  // 完整的 ANSI 颜色映射表
   const colorMap: Record<string, string> = {
+    // 标准前景色 (30-37)
     '30': '#000000', '31': '#e74c3c', '32': '#2ecc71', '33': '#f39c12',
     '34': '#3498db', '35': '#9b59b6', '36': '#1abc9c', '37': '#ecf0f1',
-    '90': '#7f8c8d', '91': '#e74c3c', '92': '#2ecc71', '93': '#f39c12',
-    '94': '#3498db', '95': '#9b59b6', '96': '#1abc9c', '97': '#ffffff'
+    // 亮色前景色 (90-97)
+    '90': '#7f8c8d', '91': '#ff6b6b', '92': '#51cf66', '93': '#ffd43b',
+    '94': '#74c0fc', '95': '#da77f2', '96': '#3bc9db', '97': '#ffffff',
+    // 标准背景色 (40-47)
+    '40': '#000000', '41': '#e74c3c', '42': '#2ecc71', '43': '#f39c12',
+    '44': '#3498db', '45': '#9b59b6', '46': '#1abc9c', '47': '#ecf0f1',
+    // 亮色背景色 (100-107)
+    '100': '#7f8c8d', '101': '#ff6b6b', '102': '#51cf66', '103': '#ffd43b',
+    '104': '#74c0fc', '105': '#da77f2', '106': '#3bc9db', '107': '#ffffff'
   }
   
   let result = ''
   let lastIndex = 0
   let currentColor = ''
+  let currentBgColor = ''
+  let isBold = false
   let match: RegExpExecArray | null
   
   while ((match = ansiRegex.exec(message)) !== null) {
+    // 提取两个转义序列之间的文本
     const text = message.substring(lastIndex, match.index)
     if (text) {
-      if (currentColor) {
-        result += `<span style="color: ${currentColor}">${escapeHtml(text)}</span>`
+      // 应用当前样式
+      let style = ''
+      if (currentColor) style += `color: ${currentColor};`
+      if (currentBgColor) style += ` background-color: ${currentBgColor};`
+      if (isBold) style += ' font-weight: bold;'
+      
+      if (style) {
+        result += `<span style="${style}">${escapeHtml(text)}</span>`
       } else {
         result += escapeHtml(text)
       }
     }
     
-    const code = match[1]
-    if (code === '0') {
-      currentColor = ''
-    } else if (code && colorMap[code]) {
-      currentColor = colorMap[code]
+    // 解析 ANSI 代码 (可能是多个代码用分号分隔，如 "1;31")
+    const codes = match[1]?.split(';') || []
+    for (const code of codes) {
+      if (code === '0' || code === '') {
+        // 重置所有样式
+        currentColor = ''
+        currentBgColor = ''
+        isBold = false
+      } else if (code === '1') {
+        // 粗体
+        isBold = true
+      } else if (code === '22') {
+        // 取消粗体
+        isBold = false
+      } else if (colorMap[code]) {
+        // 前景色或背景色
+        const codeNum = parseInt(code)
+        if ((codeNum >= 30 && codeNum <= 37) || (codeNum >= 90 && codeNum <= 97)) {
+          currentColor = colorMap[code]
+        } else if ((codeNum >= 40 && codeNum <= 47) || (codeNum >= 100 && codeNum <= 107)) {
+          currentBgColor = colorMap[code]
+        }
+      }
     }
     
     lastIndex = ansiRegex.lastIndex
   }
   
+  // 处理剩余文本
   const remainingText = message.substring(lastIndex)
   if (remainingText) {
-    if (currentColor) {
-      result += `<span style="color: ${currentColor}">${escapeHtml(remainingText)}</span>`
+    let style = ''
+    if (currentColor) style += `color: ${currentColor};`
+    if (currentBgColor) style += ` background-color: ${currentBgColor};`
+    if (isBold) style += ' font-weight: bold;'
+    
+    if (style) {
+      result += `<span style="${style}">${escapeHtml(remainingText)}</span>`
     } else {
       result += escapeHtml(remainingText)
     }
